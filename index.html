@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Économie Game : l'hiver sobre</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❄️</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="ciel">
+  <div class="titre"><h1>Économie Game</h1><span class="sous">Gagner en dépensant moins · Hiver, 8 semaines</span></div>
+  <div class="horloge"><span id="astre">☀️</span> <span id="date">Semaine 1 · Jour 1</span> <span id="heure">7 h</span></div>
+  <div id="jauges"></div>
+</header>
+<main>
+  <section class="col">
+    <div class="carte"><h2>🏠 La maison</h2><div id="maison"></div><p class="aide" id="aideMaison"></p></div>
+    <div class="carte"><h2>📈 Dernières 24 h</h2><canvas id="graphe" width="520" height="200"></canvas><p class="aide" id="legende"></p></div>
+    <div class="carte"><h2>📄 Factures</h2><div id="factures"></div></div>
+  </section>
+  <section class="col">
+    <div class="carte"><h2>🌡️ Thermostats</h2><div id="thermostats"></div></div>
+    <div class="carte"><h2>🪟 Gestes</h2><div id="gestes"></div></div>
+    <div class="carte"><h2>👕 Garde-robe</h2><div id="vetements"></div><div id="lessive"></div></div>
+    <div class="actions">
+      <button id="btnJour" class="primaire">Jour suivant ▶</button>
+      <button id="btnSemaine">Semaine suivante ⏩</button>
+    </div>
+  </section>
+  <section class="col">
+    <div class="carte"><h2>🌤️ Météo et prévisions à 3 jours</h2><div id="meteo"></div></div>
+    <div class="carte"><h2>🛒 Quincaillerie</h2><div id="boutique"></div></div>
+    <div class="carte"><h2>💡 Principes (<span id="nbPrincipes">0</span>/12)</h2><div id="principes"></div></div>
+    <div class="carte"><h2>📓 Journal</h2><div id="journal"></div></div>
+  </section>
+</main>
+<div id="toasts"></div>
+<div id="fin" class="modal cache"><div class="modal-contenu" id="finContenu"></div></div>
+<div id="intro" class="modal"><div class="modal-contenu">
+  <h2>Bienvenue dans l'hiver sobre ❄️</h2>
+  <p>Tu emménages dans une petite maison de 3 pièces, mal isolée, au début de décembre. Tu as <b>900 €</b> pour passer <b>8 semaines</b> d'hiver.</p>
+  <p>Ton voisin, lui, chauffe tout à 21 °C sans réfléchir. <b>Ton but : dépenser beaucoup moins que lui, sans tomber malade.</b></p>
+  <ul>
+    <li>Au début, tu ne vois que la <b>facture de la semaine</b>. Achète des thermomètres pour savoir quelle pièce coûte cher.</li>
+    <li>Chaque nouveau geste coûte de la <b>volonté</b>, jusqu'à devenir une <b>habitude</b>. Si la volonté tombe à zéro, tu rechutes.</li>
+    <li>La <b>température ressentie</b> = pièce + vêtements − courants d'air. Chauffe les gens, pas les murs.</li>
+    <li>Regarde la météo : le soleil d'hiver est gratuit.</li>
+  </ul>
+  <button id="btnCommencer" class="primaire">Commencer l'hiver</button>
+</div></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
