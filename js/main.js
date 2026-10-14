@@ -3,7 +3,9 @@ import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
 import { etatUI } from './onglets.js';
-import { actions } from './simulation.js';
+import { actions, prendreTemps, payer } from './simulation.js';
+import { viderRegard, changerFiltre, reprendrePente } from './passif.js';
+import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from './transport.js';
 import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from './systemes.js';
 
 function regler(chemin, brut) {
@@ -69,11 +71,16 @@ document.addEventListener('click', (e) => {
       case 'lheure': options.lessive.midi = v === 'midi'; options.lessive.hc = v === 'hc'; break;
     }
   } else if (d.onglet) etatUI.onglet = d.onglet;
+  else if (d.tri) { if (etatUI.roiTri === d.tri) etatUI.roiSens *= -1; else { etatUI.roiTri = d.tri; etatUI.roiSens = d.tri === 'nom' || d.tri === 'payback' ? 1 : -1; } }
+  else if (d.filtre) etatUI.filtrePrincipes = d.filtre;
+  else if (d.principe) etatUI.principeOuvert = etatUI.principeOuvert === d.principe ? null : d.principe;
   else if (d.set) regler(d.set, d.v);
   else if (d.action) {
     const c = actions(s);
     ({ tarif: () => changerTarif(s, d.v, c), releves: () => faireReleves(s, c), resilier: () => resilier(s, d.v, c), renegocier: () => renegocier(s, c),
-      revendre: () => revendre(s, d.v, c), degivrer: () => degivrer(s, c), mediatheque: () => prendreMediatheque(s, c) })[d.action]?.();
+      revendre: () => revendre(s, d.v, c), degivrer: () => degivrer(s, c), mediatheque: () => prendreMediatheque(s, c),
+      reparerVelo: () => reparerVelo(s, d.v, c), pression: () => verifierPression(s, c), vendreVoiture: () => { if (confirm('Vendre la voiture ? Tu ne pourras plus l\'utiliser.')) vendreVoiture(s, c); }, coutReel: () => calculerCoutReel(s, c),
+      regard: () => viderRegard(s, prendreTemps), filtre: () => changerFiltre(s, prendreTemps, payer), pente: () => { if (confirm('Faire reprendre la pente par un pro ?')) reprendrePente(s, payer); } })[d.action]?.();
   } else if (d.acheter) acheter(s, d.acheter, d.occasion === '1');
   else if (d.acheterVet) acheterVetement(s, d.acheterVet, d.q);
   else if (d.porter) { const v = s.vetements[d.porter]; v.porte = !v.porte; }
@@ -86,7 +93,7 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnJour') return avancer(1);
   else if (b.id === 'btnSemaine') return avancer(7);
   else if (b.id === 'btnCommencer') { $('intro').classList.add('cache'); return; }
-  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') s = c; else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
+  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') { s = c; if (s.migre === 3) { toast('Sauvegarde v0.3 mise à jour : le transport et la rentabilité démarrent aujourd\'hui.'); delete s.migre; } } else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
   else if (b.id === 'btnSauver') { autoSauvegarde(); toast('💾 Partie sauvegardée dans ce navigateur.'); return; }
   else if (b.id === 'btnCharger') { const c = charger(); if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible avec cette version : elle a été effacée.'); else if (c) { s = c; $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else toast('Aucune sauvegarde trouvée.'); }
   else if (b.id === 'btnNouvelle' || b.id === 'btnRejouer') {

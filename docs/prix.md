@@ -155,3 +155,70 @@ Changer d'option est gratuit, mais l'effet arrive à la relève suivante : le je
 - Ballon à 65 °C, douche de 10 minutes avec un vieux pommeau, vaisselle à l'eau courante.
 - Courses classiques, 20 €/semaine de plaisirs, tous ses abonnements.
 - Lessive à 40 °C avec sèche-linge, tous les 3 jours.
+
+## v0.4 : transport, rentabilité, stockage solaire, ventilation passive
+
+### Transport
+| Poste | Valeur | Source |
+|---|---|---|
+| Trajet domicile-travail | 9 km aller | distance médiane, INSEE |
+| Courses / loisirs | 4 km A-R / 12 km A-R (2 sorties/sem.) | hypothèse |
+| SP95-E10 | 2,17 €/L | moyenne nationale 12 oct. 2026, flux prix-carburants (data.economie.gouv.fr) |
+| Gazole (repère) | ~2,36 €/L | même source |
+| Consommation citadine | 6,5 L/100 km ; −10 % en écoconduite ; +2 %/mois sans contrôle de pression | ADEME (écoconduite 10-15 %) |
+| Usure voiture | 0,06 €/km (pneus, vidange, freins) | hypothèse ; barème fiscal 2026 5 CV : 0,636 €/km tout compris |
+| Assurance | 54 €/mois | moyenne 2026 (~650 €/an) |
+| Parking | 3 €/jour de bureau | hypothèse centre-ville |
+| Revente voiture | 3 800 € (citadine 12 ans) | cote argus ; capital libéré, non compté comme économie |
+| Ticket / abonnement TC | 2,10 € / 75,90 €/mois | TCL Lyon, mai 2026 |
+| Prise en charge employeur | 50 % de l'abonnement | art. L3261-2 Code du travail |
+| Covoiturage | 2 €/trajet | BlaBlaCar Daily (souvent 0-2 € avec aides locales) |
+| Repas acheté / boissons | 11,50 € / 2,20 € (gourde : 0,40 €) | prix moyens 2026 |
+| Vélo de ville | 420 € neuf, 160 € d'occasion | |
+| VAE | 1 790 € neuf, 900 € d'occasion ; 1 kWh/100 km | |
+| Casque + éclairage + gilet / tenue de pluie / outils / gourde | 55 € / 45 € / 30 € / 22 € | |
+| Pièces vélo | pneus 28 € (3 000 km), chaîne 18 € (2 500 km), freins 9 € (1 200 km) ; atelier 70 € | prix 2026 |
+| Accident léger à vélo | 0,00012 par km (×0,4 avec équipement) | ordre de grandeur ONISR |
+
+Le voisin de référence en v0.4 fait tout en voiture et va au bureau 3 jours par semaine. Il achète son repas et ses boissons au travail. Il fait ses courses 4 fois par semaine, avec +6 % d'achats d'impulsion.
+
+### Rentabilité (projection sur 5 ans)
+- Coût d'opportunité : Livret A à 1,70 % depuis le 1er août 2026 (arrêté du 28 juillet 2026).
+- Inflation supposée : énergie +3 %/an, eau +3 %/an, carburant +2 %/an, alimentation +2 %/an.
+- Jours par saison pour l'annualisation : hiver 151 (nov.-mars), printemps et automne 122, été 92.
+- Pour chaque équipement, `ROI_ITEMS` (js/data.js) donne l'entretien en €/an, la perte d'efficacité, la part de revente et le poste d'inflation. Exemples : VAE 60 €/an et −4 %/an pour la batterie ; clim 10 €/an ; puits pro 60 €/an ; puits fait maison 30 €/an.
+
+### Stockage solaire
+| Objet | Prix | Remarque |
+|---|---|---|
+| Routeur solaire | 299 € (posé 250-500 €) | Ekosia SmartSun ; modèles artisanaux 139-159 € |
+| Batterie 2 kWh | 1 190 € (~500-650 €/kWh), rendement 88 % | kit EcoFlow 2 090 € HT comme repère |
+| Thermos 1 L | 20 € | τ ≈ 30 h |
+| Bidon 10 L + caisse isolée + thermoplongeur 300 W | 40 € | τ ≈ 20 h |
+| Eau chauffée à 90 °C ; τ sans isolant 2 h, torchon 3,5 h, housse 6 h | | refroidissement de Newton |
+
+### Ventilation passive (docs/cheminee-solaire-puits-canadien.md)
+Les prix sont des estimations reconstituées, sans barème officiel. Le jeu affiche la fourchette.
+
+| Objet | Prix du jeu | Fourchette | Chantier | Entretien |
+|---|---|---|---|---|
+| Cheminée solaire faite maison | 450 € | 300-1 200 € | 3 jours | vitrage 1 h/an |
+| Capteur solaire à air posé (pro) | 2 500 € | 1 000-3 000 € (3 000-8 000 € intégré au bâti) | 1 jour | 30 €/an |
+| Puits canadien fait maison 45 m Ø160 | 2 200 € | 1 500-3 000 € | 5 jours, 15 % de pente ratée | filtres 2 × 15 €/an |
+| Puits canadien pro | 5 800 € | 4 000-10 000 € [P1][P2] | 2 jours | filtres 30 €/an + inspection 150 €/5 ans |
+| Puits hydraulique | 3 500 € | 1 900-4 500 € [P1] | 2 jours | 20 €/an |
+| Kit étanchéité radon | 300 € | estimation | 2 h | |
+| Reprise de pente (pro) | 900 € | 600-1 200 € (estimation) | 1 jour | |
+| Clim évitée (ROI) | 1 500 € comptés | 1 500-3 000 € | | |
+
+Calage du modèle :
+- capteur fait maison ~3 m² avec un rendement de 0,5 en mode Trombe ;
+- extracteur de 30 W pour le puits seul ;
+- renouvellement d'air hygiénique remplacé de 100 m³/h.
+
+Retours obtenus, comparés à la cible du document :
+- cheminée seule : 3,4 à 4,1 ans (cible 4-8) ;
+- puits pro seul : plus de 170 ans (cible > 35) ;
+- puits fait maison + cheminée qui remplace une clim : 5 à 6 ans (cible 8-12).
+
+Le gain attribué correspond au gaz réellement économisé à ±40 % près, ce que vérifie `test/passif-test.mjs`. Le document annonce lui-même 100 à 160 €/an pour le puits ; avec ce gain et la clim évitée, le retour tombe à 5-6 ans, pas à 8-12 ans.

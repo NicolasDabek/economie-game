@@ -61,6 +61,7 @@ function repartir(elecH, kwh, heures, pMax) {
 const plage = (a, b) => { const r = []; for (let h = a; h !== b; h = (h + 1) % 24) r.push(h); return r; };
 
 // ---------------------------------------------------------------- journée du joueur
+const attr = (s, id, eur) => { if (s.possede[id] && eur) s.attribution[id] = (s.attribution[id] || 0) + eur; };
 export function systemesJour(s, ctx) {
   const { jm, chap, faits } = ctx;
   const y = s.sys;
@@ -74,8 +75,10 @@ export function systemesJour(s, ctx) {
     y.tarif = y.tarifFutur; y.tarifFutur = null;
     ctx.msg(`⚡ Ton contrat est maintenant en option ${TARIFS[y.tarif].nom}.`, 'info');
     if (y.tarif !== 'base') ctx.debloquer('decaler');
+    ctx.debloquer('contrat');
   }
 
+  if (y.ballon.mode === 'hc' && y.tarif === 'base') ctx.debloquer('faussePiste');
   // ---------- Électricité de fond ----------
   const veilles = s.possede.multiprise && faits.multiprise ? ELEC.veillesCoupees : ELEC.veilles;
   const lumW = s.possede.led ? ELEC.eclairageLED : ELEC.eclairageVieux;
@@ -85,6 +88,13 @@ export function systemesJour(s, ctx) {
     const [soir, matin] = chap.lumiere;
     if ((h >= Math.floor(soir) && h < 23) || (h >= 7 && h < matin)) elecH[h] += lumW;
     if (ete && faits.voletsJour && h >= 9 && h < 18) elecH[h] += lumW * 0.4; // maison sombre volets fermés
+  }
+  {
+    const pe = TARIFS[y.tarif].prix(20, jm.tempo || 'bleu');
+    const [soir, matin] = chap.lumiere;
+    const hLum = (23 - Math.floor(soir)) + Math.max(0, matin - 7);
+    attr(s, 'led', (ELEC.eclairageVieux - ELEC.eclairageLED) * hLum / 1000 * pe);
+    if (faits.multiprise) attr(s, 'multiprise', (ELEC.veilles - ELEC.veillesCoupees) * 24 / 1000 * pe);
   }
   // frigo
   y.frigo.givre = Math.min(0.35, y.frigo.givre + 0.008);
@@ -96,9 +106,10 @@ export function systemesJour(s, ctx) {
   // ---------- Cuisine ----------
   const R = REGIMES[y.regime];
   let kwhCuisson = R.kwh;
+  const peC = TARIFS[y.tarif].prix(19, jm.tempo || 'bleu');
   if (faits.couvercle) kwhCuisson *= 0.8;
-  if (s.possede.autocuiseur && y.regime !== 'livraison') kwhCuisson *= 0.65;
-  if (s.possede.marmite && ['maison', 'batch', 'austere'].includes(y.regime)) kwhCuisson *= 0.8;
+  if (s.possede.autocuiseur && y.regime !== 'livraison') { attr(s, 'autocuiseur', kwhCuisson * 0.35 * peC); kwhCuisson *= 0.65; }
+  if (s.possede.marmite && ['maison', 'batch', 'austere'].includes(y.regime)) { attr(s, 'marmite', kwhCuisson * 0.2 * peC); kwhCuisson *= 0.8; }
   if (faits.bouilloire) kwhCuisson = Math.max(0.1, kwhCuisson - 0.1);
   if (y.pain === 'maison') kwhCuisson += y.regime === 'batch' ? 0.1 : CUISINE.painMaisonKwh;
   let solaireCuisine = 0;
@@ -108,6 +119,7 @@ export function systemesJour(s, ctx) {
     if (s.possede.fourSolaire) f = Math.max(f, hiver ? 0.25 : 0.6);
     if (s.possede.fresnel) f = Math.max(f, hiver ? 0.45 : 0.6);
     solaireCuisine = kwhCuisson * f;
+    attr(s, s.possede.fourSolaire ? 'fourSolaire' : 'fresnel', solaireCuisine * peC);
     kwhCuisson -= solaireCuisine;
     if (f > 0) ctx.debloquer('soleilCuit');
     if (s.possede.fresnel && !s.possede.fourSolaire && !s.possede.lunettes && rng() < 0.2) {
@@ -115,7 +127,7 @@ export function systemesJour(s, ctx) {
       ctx.msg('🔥 Éblouissement et petite brûlure avec la lentille de Fresnel ! Des lunettes de protection s\'imposent.', 'alerte');
       ctx.debloquer('danger');
     }
-    if (hiver && s.possede.fresnel && s.possede.pierre) for (let h = 18; h < 22; h++) chaleur.salon[h] += 300;
+    if (hiver && s.possede.fresnel && s.possede.pierre) { for (let h = 18; h < 22; h++) chaleur.salon[h] += 300; attr(s, 'pierre', 1.2 / 0.85 * PRIX.gazKwh); }
   }
   ctx.kwh.cuisson = kwhCuisson; ctx.kwh.cuissonSolaire = solaireCuisine;
   elecH[12] += kwhCuisson * 400; elecH[19] += kwhCuisson * 600;
@@ -131,12 +143,16 @@ export function systemesJour(s, ctx) {
   if (faits.prixKilo) nourriture *= 0.92;
   if (y.vrac) nourriture *= faits.prixKilo ? 0.96 : 1.08;
   nourriture += y.pain === 'maison' ? CUISINE.painMaison : CUISINE.painBaguette;
-  if (s.possede.herbes) nourriture -= 0.2;
+  if (s.possede.herbes) { nourriture -= 0.2; attr(s, 'herbes', 0.2); }
+  if (y.regime === 'batch' && s.possede.boites) attr(s, 'boites', 0.05 * R.cout / (1 + CUISINE.gaspillageBase));
+  attr(s, 'sechoir', 0.02 * R.cout / (1 + CUISINE.gaspillageBase));
   // potager
   let recolte = 0;
   if (s.possede.potager && y.potagerDepuis !== null && chap.id !== 'hiver' && s.jour - y.potagerDepuis >= 21 && faits.jardiner) {
     recolte = (ete ? 1.3 : 0.5) * (s.possede.composteur ? 1.3 : 1);
     ctx.debloquer('cycles');
+    attr(s, 'potager', recolte / (s.possede.composteur ? 1.3 : 1));
+    attr(s, 'composteur', recolte - recolte / (s.possede.composteur ? 1.3 : 1));
   }
   nourriture = Math.max(1, nourriture - recolte);
   ctx.couts.nourriture += nourriture;
@@ -154,18 +170,22 @@ export function systemesJour(s, ctx) {
     else {
       const debit = s.possede.pommeau ? DOUCHE.debitEco : DOUCHE.debitVieux;
       lMix = debit * y.douche.minutes * (faits.couperEau ? 1 - DOUCHE.coupureSavon : 1);
-      if (faits.recupEau && s.possede.seau) eauFroide -= DOUCHE.recupFroide;
+      if (s.possede.pommeau) { const l = (DOUCHE.debitVieux - DOUCHE.debitEco) * y.douche.minutes * (faits.couperEau ? 1 - DOUCHE.coupureSavon : 1);
+        attr(s, 'pommeau', l * KWH_L_K * (38 - chap.tEauFroide) * TARIFS[y.tarif].prix(y.ballon.mode === 'hc' ? 2 : 13, jm.tempo || 'bleu') + l / 1000 * PRIX.eauM3); }
+      if (faits.recupEau && s.possede.seau) { eauFroide -= DOUCHE.recupFroide; attr(s, 'seau', 2 * DOUCHE.recupFroide / 1000 * PRIX.eauM3); }
       else eauFroide += DOUCHE.recupFroide;
     }
   }
   const V = VAISSELLE[y.vaisselle];
   const lvJour = y.vaisselle === 'lvQuotidien' || (y.vaisselle === 'lvPleinEco' && s.jour % 2 === 0);
   let lChaudVaisselle = (V.litresChauds || 0) * (y.vaisselle === 'courante' && s.possede.mousseurs ? 0.6 : 1);
+  if (y.vaisselle === 'courante' && s.possede.mousseurs) { const l = V.litresChauds * 0.4; attr(s, 'mousseurs', l * KWH_L_K * (45 - chap.tEauFroide) * 0.2 + l / 1000 * PRIX.eauM3); }
   eauFroide += lvJour ? V.litresFroids : 0;
   const kwhECS = lMix * KWH_L_K * (38 - tf) + lChaudVaisselle * KWH_L_K * (45 - tf);
   const tAmb = ctx.tCuisine;
   const pertesW = BALLON.UA * (s.possede.jaquette ? 1 - BALLON.jaquette : 1) * Math.max(0, y.ballon.consigne - tAmb);
   const kwhPertes = pertesW * 24 / 1000;
+  if (s.possede.jaquette) attr(s, 'jaquette', BALLON.UA * BALLON.jaquette * Math.max(0, y.ballon.consigne - tAmb) * 24 / 1000 * TARIFS[y.tarif].prix(y.ballon.mode === 'hc' ? 2 : 13, jm.tempo || 'bleu'));
   for (let h = 0; h < 24; h++) chaleur.cuisine[h] += pertesW;
   const kwhBallon = kwhECS + kwhPertes;
   const heuresBallon = y.ballon.mode === 'hc' ? plage(22, 6) : y.ballon.mode === 'midi' ? plage(11, 16) : [8, 9, 20, 21, 7, 10, 19, 22];
@@ -175,7 +195,7 @@ export function systemesJour(s, ctx) {
   const stock = BALLON.litres * KWH_L_K * (y.ballon.consigne - tf);
   if (y.ballon.mode !== 'continu' && kwhECS > stock * 0.85) {
     ctx.d.hygiene -= 1; ctx.d.bienetre -= 1.5; ctx.d.confort -= 5;
-    ctx.msg('🚿 Le ballon est vide avant la fin de la douche : douche froide !', 'alerte');
+    ctx.msg('🚿 Le ballon est vide avant la fin de la douche : douche froide !', 'alerte'); ctx.debloquer('dimensionner');
   }
   // légionelles
   if (y.ballon.consigne < BALLON.legionelles) {
@@ -192,7 +212,7 @@ export function systemesJour(s, ctx) {
     arrosage = ete ? (jm.canicule ? 30 : 20) : 8;
     if (jm.nuage > 0.75 && s.possede.cuve) y.pluie = Math.min(300, y.pluie + 60);
     const dePluie = s.possede.cuve ? Math.min(y.pluie, arrosage) : 0;
-    y.pluie -= dePluie; arrosage -= dePluie;
+    y.pluie -= dePluie; arrosage -= dePluie; attr(s, 'cuve', dePluie / 1000 * PRIX.eauM3);
     if (faits.recupEau && s.possede.seau) arrosage = Math.max(0, arrosage - DOUCHE.recupFroide);
   }
   const litresEau = lMix + lChaudVaisselle + eauFroide + arrosage;

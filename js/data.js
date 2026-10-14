@@ -139,10 +139,31 @@ export const ACHATS = {
                   desc: 'Électrique (0,20 €/kWh) et mobile : chauffe seulement la pièce où tu es. (35-60 €)' },
   solaire:      { nom: 'Panneau solaire plug-and-play 400 Wc', prix: 449, temps: 2, invest: true, vie: 20, cat: 'Production',
                   desc: 'Sans batterie : seule l\'électricité consommée au moment où il produit est économisée. En hiver, ~0,5-1 kWh/jour. (350-600 €)' },
+  routeur:      { nom: 'Routeur solaire pour le ballon', prix: 299, temps: 2, invest: true, vie: 12, cat: 'Production',
+                  desc: 'Envoie le surplus du panneau dans le ballon au lieu de le perdre. (SmartSun Ekosia 299 € ; artisanaux 139-159 € ; posé 250-500 €)' },
+  batterie:     { nom: 'Batterie domestique 2 kWh (plug-and-play)', prix: 1190, temps: 1, invest: true, vie: 10, cat: 'Production',
+                  desc: 'Stocke le surplus pour le soir. ~500-650 €/kWh en 2026 (station type EcoFlow Delta 2 Max seule ~1 000-1 300 €). À comparer au ballon.' },
+  thermos:      { nom: 'Thermos 1 L', prix: 20, temps: 0, invest: true, vie: 8, cat: 'Production',
+                  desc: 'Garde l\'eau chaude ~24 h : thé, bouillotte du soir, pâtes. (15-25 €)' },
+  caisse:       { nom: 'Bidon 10 L + caisse isolée + thermoplongeur 300 W', prix: 40, temps: 1.5, invest: true, vie: 8, cat: 'Production',
+                  desc: 'Bidon alimentaire dans une caisse garnie de laine ou de polystyrène : une batterie thermique de ~0,8 kWh. (bidon 10 €, isolant 15 €, thermoplongeur 300 W 15 € : chauffe lentement au rythme du panneau)' },
   bouillotte:   { nom: 'Bouillotte', prix: 8, temps: 0, invest: true, vie: 3, cat: 'Confort',
                   desc: 'Deux litres d\'eau chaude au lit (0,12 kWh). (6-12 € en pharmacie)' },
   housse:       { nom: 'Housse de bouillotte tricotée', prix: 8, temps: 0, invest: true, vie: 5, cat: 'Confort',
                   desc: 'Isoler pour prolonger : la bouillotte tient toute la nuit. (6-10 €)' },
+  // --- Transport (v0.4) ---
+  velo:         { nom: 'Vélo de ville', prix: 420, temps: 0.3, invest: true, vie: 10, cat: 'Transport', occasion: 160,
+                  desc: 'Vélo urbain neuf (Decathlon/Btwin 350-500 €) ; d\'occasion 120-200 € sur Leboncoin ou en bourse aux vélos.' },
+  vae:          { nom: 'Vélo électrique', prix: 1790, temps: 0.3, invest: true, vie: 8, cat: 'Transport', occasion: 900,
+                  desc: 'VAE urbain neuf 1 500-2 200 € ; d\'occasion 700-1 100 € (batterie à vérifier : 500 € à remplacer après ~5 ans).' },
+  kitSecu:      { nom: 'Casque + éclairage + gilet', prix: 55, temps: 0, invest: true, vie: 5, cat: 'Transport',
+                  desc: 'Casque 25-40 €, éclairage USB 15-25 €, gilet 5 € : divise le risque d\'accident grave.' },
+  tenuePluie:   { nom: 'Tenue de pluie (veste + surpantalon)', prix: 45, temps: 0, invest: true, vie: 5, cat: 'Transport',
+                  desc: 'Pédaler sous la pluie sans arriver trempé. (35-60 €)' },
+  outilsVelo:   { nom: 'Outils vélo (pompe, démonte-pneus, clés)', prix: 30, temps: 0, invest: true, vie: 10, cat: 'Transport',
+                  desc: 'Pour entretenir soi-même : pneus, chaîne, freins. (25-40 €)' },
+  gourde:       { nom: 'Gourde + mug isotherme', prix: 22, temps: 0, invest: true, vie: 5, cat: 'Transport',
+                  desc: 'Eau et café de la maison au lieu de bouteilles et cafés achetés. (15-30 €)' },
   // --- Eau chaude ---
   pommeau:      { nom: 'Pommeau de douche économe', prix: 18, temps: 0.2, invest: true, vie: 10, cat: 'Eau chaude',
                   desc: '7 l/min au lieu de 12, même sensation grâce à l\'air injecté. (12-25 €)' },
@@ -174,6 +195,19 @@ export const ACHATS = {
                   desc: 'Coupe d\'un geste les veilles de la télé, de la console et des chargeurs. (8-15 €)' },
   led:          { nom: 'Ampoules LED (×6)', prix: 24, temps: 0.3, invest: true, vie: 15, cat: 'Électricité',
                   desc: '25 W au lieu de 150 W pour le même éclairage. (3-5 € pièce)' },
+  // --- Ventilation passive (docs/cheminee-solaire-puits-canadien.md §5 ; prix = estimations reconstituées, fourchettes affichées) ---
+  chemineeDIY:  { nom: 'Cheminée solaire faite maison', prix: 450, temps: 0, chantier: 3, invest: true, vie: 20, cat: 'Ventilation passive', fourchette: [300, 1200],  // polycarbonate 30-60 €/m², tôle noire, ossature, clapets, grille (doc §2)
+                  desc: 'Une colonne vitrée noire au soleil : l\'air chauffé monte et aspire l\'air de la maison sans ventilateur. Clapet été (purge) / hiver (mode Trombe). 3 jours de chantier.' },
+  chemineePro:  { nom: 'Capteur solaire à air posé (pro)', prix: 2500, temps: 0, chantier: 1, invest: true, vie: 25, cat: 'Ventilation passive', fourchette: [1000, 3000],  // SolarVenti / Grammer / TWINSOLAR posé (doc §2)
+                  desc: 'Débit 1,2 fois plus fort, clapets automatiques (pas de contre-tirage). 1 jour de pose.' },
+  puitsDIY:     { nom: 'Puits canadien fait maison (45 m, Ø160)', prix: 2200, temps: 0, chantier: 5, invest: true, vie: 40, cat: 'Ventilation passive', fourchette: [1500, 3000],  // tube alimentaire 900-1500 € + mini-pelle 250 €/j (doc §3, [P1])
+                  desc: 'Tube enterré à 2 m : l\'air entre à la température du sol. 5 jours de chantier, risque de pente ratée (15 %) : condensats qui stagnent.' },
+  puitsPro:     { nom: 'Puits canadien posé (pro)', prix: 5800, temps: 0, chantier: 2, invest: true, vie: 50, cat: 'Ventilation passive', fourchette: [4000, 10000],  // moyenne ~5 800 € [P1][P2]
+                  desc: 'Pente garantie vers un regard à siphon. Filtres 2×/an, inspection tous les 5 ans. 2 jours de chantier.' },
+  puitsHydro:   { nom: 'Puits hydraulique (eau glycolée)', prix: 3500, temps: 0, chantier: 2, invest: true, vie: 30, cat: 'Ventilation passive', fourchette: [1900, 4500],  // [P1]
+                  desc: 'Une boucle d\'eau enterrée alimente une batterie dans la gaine : ni radon ni condensation dans le sol, efficacité 0,8 fois celle du puits à air.' },
+  kitRadon:     { nom: 'Kit étanchéité radon (joints NF EN 1277)', prix: 300, temps: 2, invest: true, vie: 30, cat: 'Ventilation passive',  // estimation, pas de barème (doc §5)
+                  desc: 'Indispensable pour un puits à air en zone radon, sinon la santé baisse.' },
   // --- Été ---
   ventilateur:  { nom: 'Ventilateur sur pied', prix: 35, temps: 0, invest: true, vie: 8, cat: 'Été', occasion: 15,
                   desc: '45 W : −2,5 °C ressentis, mais ne refroidit pas l\'air. (25-50 €)' },
@@ -218,59 +252,13 @@ export const GESTES = {
   voletsJour:{ nom: 'Fermer les volets le jour (été)', cout: 2, temps: 0.03 },
   ventNuit:  { nom: 'Ouvrir grand la nuit (été)', cout: 2, temps: 0.03 },
   jardiner:  { nom: 'Jardiner un quart d\'heure', cout: 0, temps: 0.25 },
+  ecoconduite:{ nom: 'Écoconduite (anticiper, 2e vitesse tôt)', cout: 2, temps: 0 },
+  gamelle:   { nom: 'Préparer sa gamelle la veille', cout: 2, temps: 0 },
 };
 
-// ---------- Principes (dont cartes transversales) ----------
-export const PRINCIPES = {
-  mesure:     { titre: 'On n\'optimise que ce qu\'on mesure', texte: 'Les instruments révèlent où part l\'argent. Sans mesure, on ne voit que la facture totale.' },
-  ecart:      { titre: 'La perte suit l\'écart de température', texte: 'Perte = coefficient × (T intérieure − T extérieure). Chaque degré en moins réduit la facture d\'environ 7 %.' },
-  gens:       { titre: 'Chauffer les gens, pas les murs', texte: 'Une couche de vêtement vaut 1 à 3 °C ressentis, gratuitement, jour après jour.' },
-  zones:      { titre: 'Zoner la maison', texte: 'Portes fermées et une consigne par pièce : on ne chauffe que là où l\'on vit.' },
-  rideau:     { titre: 'La fenêtre, point faible de la nuit', texte: 'Rideaux et volets fermés la nuit, ouverts au soleil.' },
-  soleil:     { titre: 'Le soleil est gratuit', texte: 'Par temps clair, une fenêtre au sud chauffe comme un radiateur.' },
-  calfeutrer: { titre: 'Boucher avant de chauffer', texte: 'Un courant d\'air fait perdre de la chaleur et fait sentir 1 °C de moins.' },
-  lit:        { titre: 'Chauffer le lit, pas la chambre', texte: 'Une bouillotte (0,12 kWh) remplace des heures de radiateur la nuit.' },
-  habitude:   { titre: 'Une habitude ne coûte plus rien', texte: 'Répété assez longtemps, un geste devient automatique : plus de volonté, moins de temps.' },
-  sale:       { titre: 'Un vêtement sale isole mal', texte: 'Les fibres tassées et grasses retiennent moins l\'air.' },
-  masse:      { titre: 'La masse thermique lisse', texte: 'Murs et meubles stockent la chaleur : la pièce ne refroidit pas d\'un coup.' },
-  humidite:   { titre: 'L\'humidité refroidit', texte: 'Un air trop humide donne froid et fait moisir. Respirer, cuisiner et sécher le linge humidifient.' },
-  aeration:   { titre: 'Aérer vite, pas longtemps', texte: '5 minutes en grand renouvellent l\'air sans refroidir les murs ; une fenêtre entrouverte toute la journée vide la maison de sa chaleur.' },
-  local:      { titre: 'Chauffer local', texte: 'Un appoint qui suit la personne remplace le chauffage de toute la maison.' },
-  purge:      { titre: 'Entretenir pour mieux chauffer', texte: 'Un radiateur purgé chauffe à pleine puissance : la maison se réchauffe vite.' },
-  rentabilite:{ titre: 'Un investissement doit se rentabiliser', texte: 'Compare le prix au gain par jour : combien de jours, de mois ou d\'années pour rentrer dans ses frais ?' },
-  coutUsage:  { titre: 'Coût par usage', texte: 'Le prix divisé par le nombre de jours portés : le durable est souvent moins cher à l\'usage.' },
-  aererVet:   { titre: 'Aérer plutôt que laver', texte: 'Un pull qui n\'est pas sale a seulement besoin d\'air : pas d\'eau, pas d\'énergie, pas d\'usure.' },
-  temps:      { titre: 'Le temps est une ressource', texte: 'Chaque économie prend du temps. Ce qui en reste devient du repos et de la volonté.' },
-  eauChaude:  { titre: 'L\'eau chaude, c\'est de l\'énergie', texte: 'Chaque litre chauffé de 10 à 38 °C coûte 0,03 kWh. Une douche de 10 min au vieux pommeau, c\'est 4 kWh.' },
-  legionelles:{ titre: 'Pas sous 55 °C', texte: 'Baisser le ballon réduit ses pertes, mais en dessous de 55 °C les légionelles prolifèrent. Le bon réglage : 55 °C.' },
-  tempo:      { titre: 'Effacer les jours rouges', texte: 'Un kWh en heure pleine de jour rouge coûte 0,73 €, presque 4 fois le prix normal : ce jour-là, on décale tout.' },
-  veilles:    { titre: 'La consommation fantôme', texte: 'Les veilles tournent 24 h sur 24 : 45 W, c\'est près de 400 kWh par an pour rien.' },
-  lumiere:    { titre: 'La bonne ampoule', texte: 'Une LED éclaire autant qu\'un halogène pour six fois moins d\'électricité.' },
-  frigo:      { titre: 'Un frigo bien traité', texte: '4 °C suffisent ; le givre isole l\'évaporateur et un plat chaud le fait tourner pour rien.' },
-  gaspillage: { titre: 'Le moins cher est ce qu\'on ne jette pas', texte: 'Près d\'un cinquième des courses finit à la poubelle. Liste, restes et grandes quantités réduisent la facture plus que les promos.' },
-  prixKilo:   { titre: 'Le prix au kilo ne ment pas', texte: 'Le grand format, la promo ou le vrac ne sont des économies que si le prix au kilo est plus bas… et qu\'on ne jette rien.' },
-  vrac:       { titre: 'Le vrac n\'est pas toujours moins cher', texte: 'Sans comparer le prix au kilo, le rayon vrac peut coûter plus cher que le paquet.' },
-  pression:   { titre: 'Cuire plus vite, cuire moins', texte: 'Couvercle, autocuiseur, marmite norvégienne : la même cuisson pour bien moins d\'énergie.' },
-  soleilCuit: { titre: 'Le soleil cuit', texte: 'Par temps clair, four solaire ou lentille de Fresnel remplacent les plaques. Mais pas de soleil, pas de repas solaire : il faut un plan B.' },
-  danger:     { titre: 'Concentrer le soleil, c\'est dangereux', texte: 'Une lentille de Fresnel brûle la peau et les yeux en une seconde : lunettes obligatoires.' },
-  inverse:    { titre: 'L\'été, tout s\'inverse', texte: 'Volets fermés le jour, fenêtres ouvertes la nuit, cuisson dehors : ce qui gardait la chaleur l\'hiver doit maintenant la repousser.' },
-  fraicheur:  { titre: 'Stocker la fraîcheur de la nuit', texte: 'La masse de la maison se refroidit la nuit fenêtres ouvertes et garde le frais le jour, volets fermés.' },
-  clim:       { titre: 'La clim, dernier recours', texte: 'Ventilateur, volets et nuits ouvertes d\'abord : la clim coûte 20 fois plus qu\'un ventilateur.' },
-  oublis:     { titre: 'Les petites fuites mensuelles', texte: 'Un relevé bancaire révèle les abonnements oubliés : quelques euros par mois, des centaines par an.' },
-  regle48:    { titre: 'La règle des 48 heures', texte: 'Attendre deux jours avant un achat non prévu : l\'envie passe souvent toute seule.' },
-  revendre:   { titre: 'Ce qui dort peut se vendre', texte: 'Un objet inutilisé est de l\'argent immobilisé.' },
-  occasion:   { titre: 'L\'occasion d\'abord', texte: 'Un appareil d\'occasion coûte souvent moitié prix pour le même service.' },
-  plaisir:    { titre: 'La sobriété doit rester heureuse', texte: 'Supprimer tous les plaisirs fait craquer. Un petit budget plaisir protège toutes les autres économies.' },
-  cycles:     { titre: 'Boucler les cycles', texte: 'Épluchures en compost, compost au potager, pluie au potager, légumes en cuisine : rien ne se perd.' },
-  hygiene:    { titre: 'Propre sans gaspiller', texte: 'Douche courte, sous-couche lavée à la main, bassine : l\'hygiène ne demande pas de gaspiller.' },
-  // Cartes transversales (servent dans plusieurs domaines)
-  volume:     { titre: 'Réduire le volume', texte: 'Machine pleine, basse température, sous-couche lavable : on lave moins de choses, moins souvent. Vaut aussi pour l\'eau, les courses, les déchets.', transversal: true },
-  prolonger:  { titre: 'Isoler pour prolonger', texte: 'Housse de bouillotte, rideau thermique, marmite norvégienne : ralentir la perte, c\'est garder plus longtemps.', transversal: true },
-  reparer:    { titre: 'Réparer avant de remplacer', texte: 'Une couture, une pièce de lave-linge : vêtements, électroménager, vélo, chaussures.', transversal: true },
-  decaler:    { titre: 'Décaler la consommation', texte: 'Lancer la machine quand le soleil produit ou aux heures creuses : même usage, facture plus basse.', transversal: true },
-};
+// ---------- Principes : voir principes.js ----------
+export { PRINCIPES, DOMAINES_PRINCIPES } from './principes.js';
 
-// ---------- Événements et dilemmes annoncés ----------
 export const EVENEMENTS = [
   { jour: 8,  annonce: 3, id: 'invites',  titre: 'Des invités pour le week-end', texte: 'Ta sœur et son conjoint arrivent samedi pour deux jours. Ils sont frileux.' },
   { jour: 17, annonce: 0, id: 'promo',    titre: 'Tentation : promo flash', texte: 'Doudoune d\'intérieur premier prix à −50 % (12,50 €) en vitrine, aujourd\'hui seulement.' },
@@ -367,7 +355,8 @@ export const ABONNEMENTS = {
   forfait:   { nom: 'Forfait mobile 100 Go', mois: 24.99, plaisir: 0, cache: false, renegocie: 9.99 },
 };
 export const MEDIATHEQUE = 20;   // €/an : abonnement à la médiathèque municipale (souvent gratuit)
-export const PLAISIRS = { 0: -1.6, 10: 0.4, 20: 1.0, 35: 1.4 };  // €/semaine -> bien-être/jour (rendements décroissants)
+export const PLAISIRS = { 0: -1.6, 10: 0.4, 20: 1.0, 35: 1.4 };
+export const PLAISIRS_MORAL = { 0: -0.3, 10: 0.15, 20: 0.2, 35: 0.22 };  // moral/jour : un petit plaisir régulier recharge la volonté  // €/semaine -> bien-être/jour (rendements décroissants)
 
 // ---------- Grenier : objets à revendre (prix d'occasion constatés) ----------
 export const GRENIER = {
@@ -375,4 +364,156 @@ export const GRENIER = {
   console: { nom: 'Console de jeux inutilisée', prix: 110, temps: 1, bienetre: -3 },
   livres:  { nom: 'Carton de livres', prix: 25, temps: 0.5 },
   robot:   { nom: 'Robot pâtissier jamais sorti du carton', prix: 90, temps: 1 },
+};
+
+// ---------- Transport (v0.4, prix France octobre 2026) ----------
+export const TRANSPORT = {
+  kmTravail: 9,            // km aller (distance domicile-travail médiane ~9-10 km, INSEE)
+  joursBureauMax: 5,
+  kmCourses: 4,            // km aller-retour vers le supermarché
+  kmLoisirs: 12,           // km aller-retour par sortie (2 sorties/semaine)
+  carburant: 2.17,         // €/L SP95-E10, moyenne nationale 12 oct. 2026 (flux officiel prix-carburants, data.economie.gouv.fr)
+  conso: 6.5,              // L/100 km en ville, citadine essence
+  ecoconduite: 0.10,       // −10 % de carburant (ADEME : 10-15 %)
+  pressionPerteMois: 0.02, // +2 % de conso par mois sans vérifier la pression (sous-gonflage ~0,3 bar)
+  usureVoiture: 0.06,      // €/km : pneus, vidange, freins (hors dépréciation)
+  bareme: 0.636,           // €/km : barème kilométrique fiscal 2026, 5 CV, ≤ 5 000 km (dépréciation incluse)
+  assuranceMois: 54,       // € : assurance auto tous risques moyenne 2026 (~650 €/an)
+  parkingJour: 3,          // € : stationnement en centre-ville les jours de bureau
+  valeurVoiture: 3800,     // € : revente d'une citadine de 12 ans (argus)
+  ticket: 2.10,            // € : TCL Lyon 1 voyage, mai 2026
+  abonnementTC: 75.90,     // €/mois : TCL zones 1-2, mai 2026
+  remboursementEmployeur: 0.5, // prise en charge obligatoire de 50 % de l'abonnement (art. L3261-2 Code du travail)
+  covoiturage: 2.0,        // €/trajet passager (BlaBlaCar Daily, souvent 0-2 € grâce aux aides locales)
+  repasAchete: 11.5,       // € : formule sandwich/menu le midi (titre-restaurant moyen ~11 € en 2026)
+  boissons: 2.2,           // € : café 1,50 + bouteille d'eau 0,70 par jour de bureau
+  boissonsGourde: 0.4,     // € : café de la maison
+  veloEntretienAtelier: 70,// € : révision en atelier
+  pieces: { pneus: { prix: 28, km: 3000 }, chaine: { prix: 18, km: 2500 }, freins: { prix: 9, km: 1200 } }, // pièces vélo 2026
+  vaeKwh100: 1.0,          // kWh/100 km
+  modes: {
+    voiture:     { nom: 'Voiture',               hAR: 0.6, effort: 0,    sante: 0,    bienetre: -0.2 },
+    commun:      { nom: 'Transports en commun',  hAR: 1.0, effort: 0,    sante: 0.05, bienetre: 0 },
+    covoiturage: { nom: 'Covoiturage',           hAR: 0.8, effort: 0,    sante: 0,    bienetre: 0.2 },
+    velo:        { nom: 'Vélo',                  hAR: 1.0, effort: 1,    sante: 0.45, bienetre: 0.4 },
+    vae:         { nom: 'Vélo électrique',       hAR: 0.7, effort: 0.4,  sante: 0.25, bienetre: 0.4 },
+    marche:      { nom: 'Marche',                hAR: 3.6, effort: 1,    sante: 0.5,  bienetre: 0.2 },
+  },
+  accidentKm: 0.00012,     // probabilité d'accident léger par km à vélo (ordre de grandeur ONISR, ×0,4 avec équipement)
+};
+
+// ---------- Rentabilité des investissements (v0.4) ----------
+export const FINANCE = {
+  livretA: 0.017,          // 1,70 % depuis le 1er août 2026 (arrêté du 28 juillet 2026) : coût d'opportunité
+  inflationEnergie: 0.03,  // +3 %/an : hypothèse (moyenne 2015-2025 des prix de l'énergie domestique, Insee ~+4 %)
+  inflationEau: 0.03,      // +3 %/an : hausse moyenne du prix de l'eau (SISPEA)
+  inflationCarburant: 0.02,// +2 %/an : hypothèse
+  inflationAlim: 0.02,     // +2 %/an : hypothèse (après le pic 2022-2023)
+  annees: 5,               // horizon de projection
+  joursSaison: { hiver: 151, printemps: 122, ete: 92 }, // hiver = nov.-mars ; printemps = avril-juin + sept.-oct. ; été = juil.-août
+};
+// entretien (€/an), consommables, perte d'efficacité (%/an), part de revente (du prix payé, par an d'âge décroît), poste d'inflation
+export const ROI_ITEMS = {
+  calfeutrage: { entretien: 0, degr: 0.15, revente: 0, poste: 'energie' },
+  boudin: { entretien: 0, degr: 0.05, revente: 0, poste: 'energie' },
+  rideauxTh: { entretien: 0, degr: 0.02, revente: 0.3, poste: 'energie' },
+  robinets: { indirect: 'permet de zoner : le gain dépend de tes consignes', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  purge: { entretien: 0, degr: 0.5, revente: 0, poste: 'energie', note: 'à refaire chaque automne' },
+  appoint: { indirect: 'permet de chauffer local', entretien: 0, degr: 0, revente: 0.3, poste: 'energie' },
+  solaire: { entretien: 0, degr: 0.005, revente: 0.4, poste: 'energie', note: 'production ~3× plus forte en été qu\'en hiver' },
+  bouillotte: { indirect: 'permet de baisser la chambre la nuit', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  housse: { indirect: 'prolonge la bouillotte', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  pommeau: { entretien: 2, degr: 0.05, revente: 0, poste: 'energie', note: 'détartrage (vinaigre)' },
+  mousseurs: { entretien: 1, degr: 0.05, revente: 0, poste: 'energie', note: 'détartrage' },
+  jaquette: { entretien: 0, degr: 0.02, revente: 0, poste: 'energie' },
+  seau: { entretien: 0, degr: 0, revente: 0, poste: 'eau' },
+  boites: { entretien: 0, degr: 0, revente: 0.2, poste: 'alim' },
+  autocuiseur: { entretien: 12, degr: 0, revente: 0.4, poste: 'energie', note: 'joint à changer chaque année (~12 €)' },
+  marmite: { entretien: 0, degr: 0.05, revente: 0, poste: 'energie' },
+  fresnel: { entretien: 0, degr: 0.03, revente: 0.3, poste: 'energie' },
+  lunettes: { indirect: 'protège les yeux : gain en santé', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  fourSolaire: { entretien: 5, degr: 0.03, revente: 0.4, poste: 'energie', note: 'vitre et réflecteurs à nettoyer' },
+  sechoir: { entretien: 0, degr: 0.05, revente: 0, poste: 'alim' },
+  pierre: { entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  multiprise: { entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  led: { entretien: 0, degr: 0.01, revente: 0, poste: 'energie' },
+  ventilateur: { entretien: 0, degr: 0, revente: 0.3, poste: 'energie', note: 'son « gain » est du confort : il coûte son électricité' },
+  clim: { entretien: 10, degr: 0.02, revente: 0.35, poste: 'energie', note: 'filtre et nettoyage ; son « gain » est du confort' },
+  moustiquaire: { indirect: 'gain en sommeil', entretien: 0, degr: 0.1, revente: 0, poste: 'energie' },
+  corde: { indirect: 'évite l\'humidité et le sèche-linge', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  herbes: { entretien: 3, degr: 0, revente: 0, poste: 'alim', note: 'terreau, rempotage' },
+  composteur: { entretien: 0, degr: 0, revente: 0.4, poste: 'alim' },
+  potager: { entretien: 28, degr: 0, revente: 0, poste: 'alim', note: 'graines et plants à racheter chaque année' },
+  cuve: { entretien: 0, degr: 0, revente: 0.4, poste: 'eau' },
+  velo: { entretien: 0, degr: 0, revente: 0.55, poste: 'carburant', note: 'pièces comptées à l\'usure (pneus, chaîne, freins)' },
+  vae: { entretien: 60, degr: 0.04, revente: 0.5, poste: 'carburant', note: 'batterie −4 %/an d\'autonomie, ~500 € à remplacer vers 5 ans' },
+  kitSecu: { indirect: 'réduit le risque d\'accident', entretien: 0, degr: 0, revente: 0, poste: 'carburant' },
+  tenuePluie: { indirect: 'gain en confort sous la pluie', entretien: 0, degr: 0.1, revente: 0, poste: 'carburant' },
+  outilsVelo: { entretien: 0, degr: 0, revente: 0.3, poste: 'carburant' },
+  gourde: { entretien: 0, degr: 0, revente: 0, poste: 'alim' },
+  routeur: { entretien: 0, degr: 0, revente: 0.3, poste: 'energie', note: 'valorise le surplus du panneau dans le ballon' },
+  batterie: { entretien: 0, degr: 0.03, revente: 0.3, poste: 'energie', note: 'perd ~3 %/an de capacité ; rendement 88 %' },
+  thermos: { entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  caisse: { entretien: 0, degr: 0.03, revente: 0, poste: 'energie' },
+  chemineeDIY: { entretien: 0, degr: 0.01, revente: 0, poste: 'energie', note: 'nettoyage du vitrage 1 h/an ; gagne l\'hiver (Trombe) et l\'été (purge de nuit)' },
+  chemineePro: { entretien: 30, degr: 0.005, revente: 0, poste: 'energie', note: 'contrat d\'entretien ~30 €/an' },
+  puitsDIY: { entretien: 30, degr: 0, revente: 0, poste: 'energie', climEvitee: [1500, 3000], note: 'filtres 2×/an à 15 € ; rentable surtout s\'il remplace une clim' },
+  puitsPro: { entretien: 60, degr: 0, revente: 0, poste: 'energie', climEvitee: [1500, 3000], note: 'filtres 30 €/an + inspection 150 € tous les 5 ans' },
+  puitsHydro: { entretien: 20, degr: 0, revente: 0, poste: 'energie', climEvitee: [1500, 3000], note: 'contrôle du glycol ~20 €/an' },
+  kitRadon: { entretien: 0, degr: 0, revente: 0, poste: 'energie', indirect: 'santé : évite d\'aspirer du radon par le tube' },
+};
+
+// ---------- Stocker le surplus solaire en chaleur (v0.4) ----------
+// Refroidissement de Newton : T(t) = T_amb + (T0 − T_amb)·exp(−t/τ). τ = constante de temps du contenant (h).
+export const STOCKAGE = {
+  tChauffe: 90,                 // °C atteints à la bouilloire
+  contenants: {
+    aucun:   { nom: 'Casserole à l\'air libre', tau: 2,  litres: 2 },
+    torchon: { nom: 'Bouillotte dans un torchon', tau: 3.5, litres: 2 },
+    housse:  { nom: 'Bouillotte avec housse tricotée', tau: 6, litres: 2, requiert: 'housse' },
+    thermos: { nom: 'Thermos 1 L', tau: 30, litres: 1, requiert: 'thermos' },
+    caisse:  { nom: 'Bidon 10 L en caisse isolée', tau: 20, litres: 10, requiert: 'caisse' },
+  },
+  usages: { the: 0.12, bouillotte: 0.12, vaisselle: 0.3 },   // kWh/jour utiles au maximum : thé et cuisson, bouillotte, bassine de vaisselle
+  batterieRendement: 0.88,      // rendement aller-retour d'une batterie LFP
+  batterieUtile: 2.0,           // kWh
+};
+// ---------- Combos : techniques qui s'enchaînent ----------
+export const COMBOS = {
+  soleilBouillotte: { nom: 'Soleil → eau chaude → bouillotte isolée', principe: 'stockageChaleur', texte: 'Le surplus de midi chauffe l\'eau, la housse la garde jusqu\'au coucher : un lit chaud gratuit.' },
+  ballonBatterie:   { nom: 'Panneau → routeur → ballon isolé', principe: 'routeur', texte: 'Le ballon devient une batterie thermique de 10 kWh : la jaquette garde la chaleur de midi jusqu\'au lendemain matin.' },
+  fresnelPierre:    { nom: 'Lentille de Fresnel → pierres → soirée', principe: 'masse', texte: 'La chaleur concentrée à midi est rendue par les pierres pendant la soirée.' },
+  cuissonChaleur:   { nom: 'Cuisson → chaleur de la pièce (hiver)', principe: 'combo', texte: 'Four ouvert après usage, casseroles couvertes : la chaleur de cuisson chauffe la cuisine au lieu de partir par la hotte.' },
+  eauJardinCompost: { nom: 'Eau froide de douche → jardin → compost → récolte', principe: 'cycles', texte: 'L\'eau perdue arrose, les épluchures nourrissent la terre, la terre nourrit la cuisine.' },
+  batchGamelle:     { nom: 'Batch cooking → boîtes → gamelle au travail', principe: 'gamelle', texte: 'Cuisiner une fois pour trois repas, dont le midi au bureau : 9 € économisés par jour de bureau.' },
+  veloSport:        { nom: 'Vélo au travail → salle de sport résiliée', principe: 'exercice', texte: 'Le trajet devient l\'activité physique : 30 € par mois en moins, et la santé en plus.' },
+  heuresCreuses:    { nom: 'Option HC → ballon + lessive en heures creuses', principe: 'decaler', texte: 'Tout ce qui peut attendre la nuit passe à 0,1589 € au lieu de 0,2142 €.' },
+  nuitsFraiches:    { nom: 'Volets fermés le jour → nuits grandes ouvertes', principe: 'fraicheur', texte: 'La maison stocke la fraîcheur de la nuit et la garde le jour.' },
+  lessiveSoleil:    { nom: 'Panneau → lessive à midi → séchage dehors', principe: 'airLibre', texte: 'Le soleil lave et sèche : électricité autoconsommée et sèche-linge inutile.' },
+  climTerre:        { nom: 'Puits canadien → maison → cheminée solaire (été)', principe: 'inertieSol', texte: 'La cheminée tire, le sol rafraîchit : une clim douce sans électricité.' },
+  respirationHiver: { nom: 'Puits + mode Trombe + clapets fermés la nuit', principe: 'bypass', texte: 'Air neuf préchauffé par le sol puis par le soleil, sans pertes la nuit.' },
+  purgeNocturne:    { nom: 'Cheminée à masse + volets le jour + fenêtres basses la nuit', principe: 'tirage', texte: 'La masse chauffée le jour continue de tirer la nuit et vide la chaleur.' },
+  sechoirTirage:    { nom: 'Linge dans le flux de la cheminée', principe: 'tirage', texte: 'Le courant d\'air emporte l\'humidité : séchage 2 fois plus rapide, sans sèche-linge.' },
+  caveNaturelle:    { nom: 'Sortie du puits dans le cellier', principe: 'inertieSol', texte: 'Un cellier à 12-16 °C toute l\'année : les légumes se gardent plus longtemps.' },
+  serreHumide:      { nom: '⚠️ Anti-combo « serre humide »', principe: 'pointRosee', anti: true, texte: 'Puits à plein débit un jour lourd : l\'air saturé entre dans des pièces fraîches, l\'humidité dépasse 80 %.' },
+};
+
+// Ventilation passive : constantes du modèle (docs/cheminee-solaire-puits-canadien.md §5)
+export const PASSIF = {
+  solMoy: 12, solAmp: 5, solPic: 220,    // T_sol(j) = 12 + 5·cos(2π(j − 220)/365) à 2 m [P2][P5]
+  dTmax: 7, dTmasse: 2, demiVieMasse: 4, // ΔT cheminée = k·irr/600·7 ; masse 2 K, demi-vie 4 h
+  A: 0.1, H: 3, facteurPro: 1.2,         // Q = 0,5·A·√(2gHΔT/300)·3600 m³/h
+  gainTrombe: 5, rendementCapteur: 0.5, surfaceCapteur: 3,   // capteur DIY ~3 m² (polycarbonate), rendement 0,5                        // capteur à air : l'air recirculé gagne ~2× le ΔT de tirage (calage : cheminée seule rentable en 4-8 ans)
+  facteurContre: 0.35,                    // contre-tirage nocturne, clapet bas ouvert
+  qTubeMax: 250, L: 45, L0: 12,           // Ø160 : 250 m³/h ; L0 = 12·(Q/150)^0,8
+  efficaciteHydro: 0.8,
+  debitVentilo: 100, ventiloW: 30,        // puits seul : extracteur 30 W (≈ 12 €/an pour 2 000 h)
+  bypassBas: 14, bypassHaut: 20,          // by-pass : puits sous 14 °C et au-dessus de 20 °C [P4]
+  Qhyg: 100,                              // renouvellement hygiénique remplacé (m³/h, ~0,5 vol/h pour 200 m³)
+  part: { salon: 0.5, chambre: 0.3, cuisine: 0.2 }, volume: { salon: 90, chambre: 60, cuisine: 50 },
+  hrExt: { hiver: 0.85, printemps: 0.72, ete: 0.62 }, wLourd: 18.7,  // jour lourd : rosée ~21 °C
+  risquePente: 0.15, reprisePente: 900, reprisePenteFourchette: [600, 1200],  // reprise de pente : estimation
+  seuilStagnant: 2, seuilRegard: 6, radonSante: 0.6,
+  climEvitee: [1500, 3000],
+  noms: { chemineeDIY: 'la cheminée solaire', chemineePro: 'le capteur solaire à air', puitsDIY: 'le puits canadien', puitsPro: 'le puits canadien', puitsHydro: 'le puits hydraulique' },
 };

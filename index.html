@@ -19,8 +19,9 @@
   <section class="col">
     <div class="carte"><h2>🏠 La maison</h2><div id="maison"></div><p class="aide" id="aideMaison"></p></div>
     <div class="carte"><h2>📈 Dernières 24 h</h2><canvas id="graphe" width="520" height="200"></canvas><p class="aide" id="legende"></p></div>
+    <div class="carte"><h2>⚡ Électricité heure par heure (hier)</h2><canvas id="grapheElec" width="520" height="150"></canvas><p class="aide" id="legendeElec"></p></div>
     <div class="carte"><h2>📄 Factures</h2><div id="factures"></div></div>
-    <div class="carte"><h2>🏗️ Investissements</h2><div id="investissements"></div></div>
+    <div class="carte"><h2>📈 Rentabilité des équipements</h2><div id="investissements"></div></div>
   </section>
   <section class="col">
     <nav id="onglets" class="onglets"></nav>
@@ -35,6 +36,7 @@
       <div class="carte"><h2>🧺 Linge</h2><div id="lessive"></div></div>
     </div>
     <div class="panneau cache" data-panneau="elec"><div class="carte"><h2>⚡ Électricité</h2><div id="pElec"></div></div></div>
+    <div class="panneau cache" data-panneau="transport"><div class="carte"><h2>🚲 Transport</h2><div id="pTransport"></div></div></div>
     <div class="panneau cache" data-panneau="jardin"><div class="carte"><h2>🌱 Jardin</h2><div id="pJardin"></div></div></div>
     <div class="panneau cache" data-panneau="budget"><div class="carte"><h2>💶 Budget, abonnements et tentations</h2><div id="pBudget"></div></div></div>
     <div class="actions">
@@ -45,7 +47,8 @@
   <section class="col">
     <div class="carte"><h2>🌤️ Météo et prévisions à 3 jours</h2><div id="meteo"></div></div>
     <div class="carte"><h2>🛒 Boutique du domaine</h2><div id="boutique"></div></div>
-    <div class="carte"><h2>💡 Principes (<span id="nbPrincipes">0</span>/<span id="totPrincipes">0</span>)</h2><div id="principes"></div></div>
+    <div class="carte"><h2>📚 Encyclopédie des principes (<span id="nbPrincipes">0</span>/<span id="totPrincipes">0</span>)</h2><div id="principes"></div></div>
+    <div class="carte"><h2>🔗 Combos</h2><div id="combos"></div></div>
     <div class="carte"><h2>📓 Journal</h2><div id="journal"></div></div>
   </section>
 </main>
@@ -57,7 +60,8 @@
   <p>Tu emménages en décembre dans une petite maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude électrique. Tu as <b>3 000 €</b> pour vivre <b>18 semaines</b> (hors loyer), en télétravail : 8 semaines d'hiver, 4 de printemps, 6 d'été.</p>
   <p>Ton voisin vit sans réfléchir. <b>Ton but : dépenser beaucoup moins que lui</b>, sans sacrifier ton <b>confort</b>, ta <b>santé</b>, ton <b>moral</b>, ton <b>hygiène</b> ni ton <b>bien-être</b>. Les prix sont ceux de 2026.</p>
   <ul>
-    <li>Les onglets regroupent les domaines : maison, eau chaude, cuisine, linge, électricité, jardin, budget.</li>
+    <li>Les onglets regroupent les domaines : maison, eau chaude, cuisine, linge, électricité, transport, jardin, budget. Tu vas au bureau 3 jours par semaine (9 km).</li>
+    <li>Le tableau de rentabilité mesure ce que chaque équipement fait vraiment gagner. Enchaîne les techniques pour découvrir des combos.</li>
     <li>Chaque nouveau geste coûte du <b>moral</b> et du <b>temps</b>, jusqu'à devenir une <b>habitude</b>. Moral à zéro : rechute.</li>
     <li>L'austérité totale (douche au seau, pâtes, zéro plaisir) fait des économies… et ruine hygiène et bien-être. L'équilibre gagne.</li>
     <li>En été, tout s'inverse : volets fermés le jour, fenêtres ouvertes la nuit.</li>

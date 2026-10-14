@@ -1,5 +1,8 @@
 // Test headless v0.3 : 6 stratégies sur les 126 jours (hiver → printemps → été), plusieurs graines
 import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
+import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
+import { tableauROI } from '../js/roi.js';
+import { PRINCIPES } from '../js/data.js';
 import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from '../js/systemes.js';
 let GRAINE = 2026;
 let HOOK = null;
@@ -83,7 +86,7 @@ ajoute('ne rien toucher', defaut);
 ajoute('naïf', () => {
   const s = nouvellePartie(GRAINE);
   s.central = { consigneJour: 22, consigneNuit: 21 };
-  s.sys.douche.minutes = 15; s.sys.regime = 'livraison'; s.sys.plaisirs = 35;
+  s.sys.douche.minutes = 15; s.sys.regime = 'livraison'; s.sys.plaisirs = 35; s.transport.teletravail = 0;
   return jouer(s, (s) => {
     saisons(s, false);
     if (s.jour === 84) { acheter(s, 'clim'); s.climActive = true; s.climConsigne = 23; }
@@ -100,6 +103,7 @@ ajoute('austère extrême', () => {
   s.central = { consigneJour: 14, consigneNuit: 12 };
   Object.assign(s.sys, { regime: 'austere', plaisirs: 0, vaisselle: 'bassine' });
   s.sys.douche.seau = true; s.sys.ballon.consigne = 45; s.aeration = 'jamais';
+  Object.assign(s.transport, { mode: 'commun', modeCourses: 'marche', modeLoisirs: 'marche', repas: 'emporte', courses: 'regroupees', teletravail: 3 });
   return jouer(s, (s) => {
     if (s.jour === 0) { acheter(s, 'seau'); for (const id of ['streaming', 'musique', 'sport']) resilier(s, id, c); }
     if (s.jour === 1) { faireReleves(s, c); for (const id of ['cloud', 'assurance', 'appli']) resilier(s, id, c); renegocier(s, c); }
@@ -121,6 +125,10 @@ const HOOKS = {
     if (j === 6) { faireReleves(s, c); }
     if (j === 7) { resilier(s, 'cloud', c); resilier(s, 'appli', c); }
     if (j === 20) acheter(s, 'led');
+    if (j === 9) { calculerCoutReel(s, c); }
+    if (j === 10) { Object.assign(s.transport, { mode: 'commun', abonnementTC: true, courses: 'regroupees' }); }
+    if (j === 24) s.transport.repas = 'emporte';
+    if (j % 30 === 15) verifierPression(s, c);
     if (j === 60) s.sys.vaisselle = 'bassine';
     if (j === 84) acheter(s, 'ventilateur', true), s.ventilateur = true;
     saisons(s, true); rafraichirVet(s);
@@ -129,15 +137,25 @@ const HOOKS = {
     const c = actions(s), j = s.jour, y = s.sys;
     if (j === 0) { changerTarif(s, 'hphc', c); acheter(s, 'pommeau'); acheter(s, 'mousseurs'); y.ballon.consigne = 55; y.douche.minutes = 6; }
     if (j === 3) { acheter(s, 'jaquette'); acheter(s, 'multiprise'); faireReleves(s, c); }
+    if (j === 16) y.multipriseGeste = true;
     if (j === 4) { for (const id of ['cloud', 'assurance', 'appli', 'sport']) resilier(s, id, c); renegocier(s, c); }
     if (j === 6) { revendre(s, 'console', c); prendreMediatheque(s, c); y.plaisirs = 10; }
     if (j === 8) { acheter(s, 'boites'); acheter(s, 'autocuiseur', true); y.regime = 'batch'; }
     if (j === 12) acheter(s, 'led');
+    if (j === 10) { acheter(s, 'velo', true); acheter(s, 'kitSecu'); }
+    if (j === 11) { Object.assign(s.transport, { mode: 'velo', modeLoisirs: 'velo', modeCourses: 'velo', courses: 'regroupees' }); acheter(s, 'outilsVelo'); }
+    if (j === 18) { acheter(s, 'tenuePluie'); acheter(s, 'gourde'); }
+    if (j === 21) s.transport.repas = 'emporte';
+    if (j === 35) vendreVoiture(s, c);
+    if (s.transport.veloEnPanne) reparerVelo(s, 'diy', c);
+    if (j === 58) { acheter(s, 'caisse'); y.stockage = { actif: true, contenant: 'caisse' }; }
     if (j === 15) y.ballon.mode = 'hc';
     if (j === 25) y.vaisselle = 'bassine';
     if (j === 30) { revendre(s, 'velo', c); }
     if (j === 40) degivrer(s, c);
-    if (j === 56) { acheter(s, 'composteur'); acheter(s, 'potager'); acheter(s, 'herbes'); acheter(s, 'corde'); acheter(s, 'cuve'); }
+    if (j === 54) acheter(s, 'solaire');
+    if (j === 55) { acheter(s, 'composteur'); acheter(s, 'potager'); acheter(s, 'herbes'); }
+    if (j === 56) { acheter(s, 'corde'); acheter(s, 'cuve'); }
     if (j === 60) { acheter(s, 'fourSolaire', true); y.cuisineSolaire = true; y.ballon.mode = 'midi'; }
     if (j === 84) { acheter(s, 'ventilateur', true); acheter(s, 'moustiquaire'); s.ventilateur = true; }
     saisons(s, true); rafraichirVet(s);
@@ -167,7 +185,12 @@ for (const g of graines) {
     const m = r.moy;
     console.log(`${pad(nom, 16)} coût ${r.cout.toFixed(0)} € | voisin ${r.base.toFixed(0)} € | éco ${r.economies.toFixed(0)} € (${r.pct.toFixed(1)} %) | confort ${m.confort.toFixed(0)} santé ${m.sante.toFixed(0)} moral ${m.moral.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} | rechutes ${s.rechutes} hab ${r.habitudes} princ ${r.principes} | ${r.titre}${r.note ? ' (' + r.note + ')' : ''}`);
     (tous[nom] ||= []).push(r);
-    if (g === 2026 && nom === 'maître') console.log('   domaines maître :', r.domaines.map(d => `${d.nom} ${d.valeur.toFixed(0)}`).join(' · '));
+    if (g === 2026 && nom === 'maître') {
+      console.log('   domaines maître :', r.domaines.map(d => `${d.nom} ${d.valeur.toFixed(0)}`).join(' · '));
+      console.log('   combos maître :', Object.keys(s.combos).join(', '));
+      console.log('   rentabilité maître :', tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `${x.nom.slice(0, 22)} payé ${x.prix} mesuré ${x.mesure.toFixed(0)} net5 ${x.net5.toFixed(0)}`).join(' | '));
+      if (Object.keys(s.combos).length < 3) { ok = false; console.log('✗ combos'); }
+    }
   }
 }
 const R = (n) => tous[n];
@@ -179,6 +202,8 @@ for (let i = 0; i < graines.length; i++) {
   ch(R('austère extrême')[i].rang <= 2, 'austère plafonné');
   ch(R('glacial')[i].rang <= 1, 'glacial perd');
   ch(R('naïf')[i].rang === 0, 'naïf perd');
+  ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
+  ch(R('austère extrême')[i].economies > R('maître')[i].economies - 200 && R('austère extrême')[i].rang < R('maître')[i].rang, 'l\'austère économise autant mais perd');
   ch(R('ne rien toucher')[i].rang <= 1, 'défaut perd');
 }
 // sauvegarde aller-retour + ancienne sauvegarde
@@ -187,4 +212,10 @@ GRAINE = 2026; const sv = defaut(); sauvegarder(sv, mem); const sv2 = charger(me
 if (!(sv2.jour === sv.jour && sv2.meteo.length === sv.meteo.length && sv2.sys && sv2.hygiene === sv.hygiene)) { ok = false; console.log('✗ sauvegarde'); }
 mem.setItem('economie-game-sauvegarde', JSON.stringify({ version: 2, jour: 5 }));
 if (charger(mem) !== 'ancienne' || mem.getItem('economie-game-sauvegarde') !== null) { ok = false; console.log('✗ migration ancienne sauvegarde'); }
+// migration v0.3 -> v0.4 : la partie continue
+{ const v3 = defaut(); const o = JSON.parse(JSON.stringify(v3)); delete o.meteo; delete o.transport; delete o.roi; o.version = 3; delete o.depenses.transport; delete o.base.transport;
+  mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
+  if (!(m && m.version === 4 && m.transport && m.jour === v3.jour)) { ok = false; console.log('✗ migration v3'); } }
+console.log('principes :', Object.keys(PRINCIPES).length);
+if (Object.keys(PRINCIPES).length < 75) ok = false;
 console.log(ok ? '\nOK' : '\nÉCHEC'); process.exit(ok ? 0 : 1);

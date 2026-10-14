@@ -1,8 +1,10 @@
 // Rendu de l'interface (DOM uniquement, aucune règle de jeu ici)
 import { PIECES, ORDRE_PIECES, VETEMENTS, ACHATS, GESTES, JOURS_HABITUDE, PRINCIPES, PRIX, LESSIVE, SEUIL_ENCOMBREMENT, EVENEMENTS, ARGENT_DEPART } from './data.js';
 import { prevision, chapitreDuJour } from './meteo.js';
-import { ONGLETS, etatUI, rendreEte, rendreEau, rendreCuisine, rendreElec, rendreJardin, rendreBudget } from './onglets.js';
-import { JOURS } from './data.js';
+import { ONGLETS, etatUI, rendreEte, rendrePassif, rendreEau, rendreCuisine, rendreElec, rendreJardin, rendreBudget, rendreTransport, rendreEncyclopedie, rendreCombos } from './onglets.js';
+import { tableauROI, estimationAchat } from './roi.js';
+import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
+import { JOURS, COMBOS } from './data.js';
 import {
   isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, NOMS_JOURS, humiditeRelative,
   coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, evenementsAVenir, prixGaz, LAVAGE_MAIN,
@@ -68,6 +70,27 @@ export function rendreMaison(s) {
     ? (pire ? `🔴 Pièce la plus coûteuse hier : <b>${PIECES[pire].nom}</b>.` : 'Passe une journée pour voir les coûts par pièce.')
     : 'Tu ne vois que la facture globale. Les thermomètres révèlent la pièce qui coûte le plus.') + buee
     + ` Gaz : ${num(prixGaz(s), 4)} €/kWh · électricité : ${num(PRIX.elecKwh, 4)} €/kWh.`;
+}
+
+export function rendreGrapheElec(s) {
+  const c = $('grapheElec'); if (!c) return;
+  const g = c.getContext('2d'), W = c.width, H = c.height;
+  g.clearRect(0, 0, W, H);
+  const d = s.dernierJour?.elecH;
+  if (!d) { $('legendeElec').textContent = ''; return; }
+  const mx = Math.max(500, ...d.map(x => Math.max(x?.prod || 0, x?.demande || 0)));
+  const x = (h) => 30 + h * (W - 40) / 24, y = (w) => H - 18 - w / mx * (H - 28), bw = (W - 40) / 24 - 2;
+  g.font = '10px system-ui'; g.fillStyle = '#6b7280';
+  for (let h = 0; h < 24; h += 3) g.fillText(h + 'h', x(h), H - 4);
+  g.fillText(Math.round(mx) + ' W', 0, 10);
+  d.forEach((e, h) => { if (!e) return;
+    g.fillStyle = '#93c5fd'; g.fillRect(x(h), y(e.demande), bw, H - 18 - y(e.demande));
+    if (e.prod > 0) { g.fillStyle = 'rgba(250,204,21,0.55)'; g.fillRect(x(h), y(e.prod), bw, H - 18 - y(e.prod)); }
+    if (e.surplus > 0) { g.fillStyle = '#dc2626'; g.fillRect(x(h), y(e.prod), bw, Math.max(2, y(e.prod - e.surplus) - y(e.prod))); }
+  });
+  const perdu = d.reduce((a, e) => a + (e?.surplus || 0), 0) / 1000;
+  const st = s.dernierJour.stockage;
+  $('legendeElec').innerHTML = `<span style="color:#3b82f6">■ consommation</span> · <span style="color:#ca8a04">■ production solaire</span> · <span style="color:#dc2626">■ surplus perdu</span>${s.possede.solaire ? ` · surplus perdu hier : <b>${num(perdu, 2)} kWh</b>${st?.solaire ? `, eau chauffée au soleil ${num(st.solaire, 2)} kWh` : ''}${st?.routed ? `, routé vers le ballon ${num(st.routed, 2)} kWh` : ''}` : ' · (pas de panneau solaire)'}`;
 }
 
 export function rendreGraphe(s) {
@@ -194,30 +217,58 @@ export function rendreBoutique(s) {
   $('boutique').innerHTML = Object.entries(cats).map(([cat, items]) => `<h3>${cat}</h3>` + items.map(([id, a]) => {
     const bloque = id === 'housse' && !s.possede.bouillotte;
     const btn = s.possede[id] ? '<span class="tag habitude">acquis</span>' : `<div class="acts"><button class="btn" data-acheter="${id}" ${(s.argent < a.prix || bloque || tempsLibre(s) < (a.temps || 0)) ? 'disabled' : ''}>${eur(a.prix)}</button>${a.occasion ? `<button class="btn" data-acheter="${id}" data-occasion="1" title="Chercher d'occasion : 1 h de recherche" ${(s.argent < a.occasion || bloque || tempsLibre(s) < (a.temps || 0) + 1) ? 'disabled' : ''}>Occasion ${eur(a.occasion)}</button>` : ''}</div>`;
-    return `<div class="article"><div><b>${a.nom}</b>${a.temps ? ` <span class="tag">⏳ ${fmtH(a.temps)}</span>` : ''}<div class="d">${a.desc}${bloque ? ' (il faut d\'abord une bouillotte)' : ''}</div></div>${btn}</div>`;
+    const est = !s.possede[id] && estimationAchat(id);
+    const estTxt = est ? (est.mois === null ? (ROI_ITEMS[id]?.indirect ? `<div class="estim">📈 Gain indirect : ${ROI_ITEMS[id].indirect}</div>` : `<div class="estim">📈 Pas d'économie directe estimée (${eur(est.annuel)}/an)</div>`)
+      : `<div class="estim">📈 Retour estimé : ~${dureeTxt(est.mois)} (${dureeTxt(est.min)} à ${dureeTxt(est.max)}) · ~${eur(est.annuel)}/an${a.occasion ? ` · d'occasion ~${dureeTxt(estimationAchat(id, true).mois)}` : ''}</div>`) : '';
+    return `<div class="article"><div><b>${a.nom}</b>${a.temps ? ` <span class="tag">⏳ ${fmtH(a.temps)}</span>` : ''}<div class="d">${a.desc}${a.fourchette ? ` <i>Fourchette réelle ${a.fourchette[0]}-${a.fourchette[1]} € (estimation, pas de barème officiel).</i>` : ''}${bloque ? ' (il faut d\'abord une bouillotte)' : ''}</div>${estTxt}</div>${btn}</div>`;
   }).join('')).join('');
 }
 
+const dureeTxt = (m) => (m == null || !isFinite(m) ? '∞' : m < 1 ? `${Math.max(1, Math.round(m * 30))} j` : m < 24 ? `${Math.round(m)} mois` : `${num(m / 12)} ans`);
+function sparkline(r) {
+  const W = 110, H = 30, serie = r.serie.length ? r.serie : [0];
+  const projAns = r.proj.map(p => p.cumul);
+  const vals = [...serie, ...projAns, r.prix, 0];
+  const mx = Math.max(...vals), mn = Math.min(...vals);
+  const n = serie.length, tot = n + projAns.length * 20;
+  const X = (i) => i / Math.max(1, tot) * W, Y = (v) => H - 2 - (v - mn) / Math.max(1e-6, mx - mn) * (H - 4);
+  const pts = serie.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const proj = [`${X(n).toFixed(1)},${Y(serie.at(-1)).toFixed(1)}`, ...projAns.map((v, k) => `${X(n + (k + 1) * 20).toFixed(1)},${Y(v).toFixed(1)}`)].join(' ');
+  return `<svg width="${W}" height="${H}" class="spark"><line x1="0" x2="${W}" y1="${Y(r.prix)}" y2="${Y(r.prix)}" stroke="#b91c1c" stroke-dasharray="3 2"/><polyline points="${proj}" fill="none" stroke="#94a3b8" stroke-dasharray="2 2"/><polyline points="${pts}" fill="none" stroke="#16a34a" stroke-width="2"/></svg>`;
+}
+const COLS = [['nom', 'Équipement'], ['prix', 'Payé'], ['mesure', 'Mesuré'], ['annuel', '€/an'], ['entretienAn', 'Entretien/an'], ['payback', 'Retour'], ['residuelAuj', 'Valeur rés.'], ['net5', 'Net 5 ans'], ['ratio', 'Net / €']];
 export function rendreInvestissements(s) {
-  const r = scoreFinal(s);
-  const lignes = r.invest.filter(i => i.prix > 0).map(i => `<tr><td>${i.nom}</td><td>${eur(i.prix)}</td><td>${eur(i.gain)}</td><td>${i.rentable ? '✅ rentabilisé' : i.gain > 0 ? `${Math.round(i.gain / i.prix * 100)} %` : '—'}</td></tr>`).join('');
-  let solaire = '';
-  if (s.possede.solaire) {
-    const jours = Math.max(1, s.jour - (s.solaireDepuis ?? 0));
-    const parJour = s.attribution.solaire / jours;
-    const annuel = parJour * 365 * 2.2; // printemps-été produisent ~3 fois plus qu'en hiver
-    solaire = `<p class="aide">☀️ Panneau : ${num(s.solaire.prod)} kWh produits, ${num(s.solaire.auto)} kWh autoconsommés (${s.solaire.prod ? Math.round(s.solaire.auto / s.solaire.prod * 100) : 0} %) = ${eur(s.attribution.solaire)}. À ce rythme, il ne sera <b>pas rentabilisé avant la fin de l'hiver</b> ; retour estimé sur l'année : <b>${annuel > 0 ? num(ACHATS.solaire.prix / annuel) + ' ans' : '∞'}</b>. Décaler la lessive à midi augmente l'autoconsommation.</p>`;
-  }
-  $('investissements').innerHTML = `<p>Capital investi : <b>${eur(r.capital)}</b> (équipements et vêtements). Économies estimées par équipement :</p>
-    ${lignes ? `<table><tr><th>Équipement</th><th>Prix</th><th>Gain</th><th></th></tr>${lignes}</table>` : '<p class="aide">Aucun équipement d\'isolation, de chauffage ou de production pour l\'instant.</p>'}${solaire}`;
+  const rows = tableauROI(s);
+  const k = etatUI.roiTri, sens = etatUI.roiSens;
+  const cle = (r) => k === 'payback' ? (r.atteint !== null ? -1e6 + r.atteint : r.payback ?? 1e9) : r[k];
+  rows.sort((a, b) => (typeof cle(a) === 'string' ? cle(a).localeCompare(cle(b)) : cle(a) - cle(b)) * sens);
+  const ligneR = (r) => {
+    const sais = ['hiver', 'printemps', 'ete'].map(x => `${x === 'ete' ? 'été' : x} ${num(r.pj[x].v, 2)}${r.pj[x].mesure ? '' : '*'}`).join(' · ');
+    const retour = r.atteint !== null ? `✅ jour ${r.atteint + 1}` : r.payback !== null ? `~${dureeTxt(r.payback)} (±${Math.round(r.incertitude * 100)} %)` : (ROI_ITEMS[r.id].indirect ? 'indirect' : '∞');
+    return `<tr><td><b>${r.nom}</b>${r.occasion ? ' <span class="tag">occasion</span>' : ''}<br><small>€/jour : ${sais}${r.note ? ' · ' + r.note : ''}${ROI_ITEMS[r.id].indirect ? ' · ' + ROI_ITEMS[r.id].indirect : ''}${r.climEvitee ? ` · clim évitée comptée ${eur(r.climEvitee)} (fourchette ${r.climEviteeFourchette.join('-')} €)` : ''}${ACHATS[r.id].fourchette ? ` · prix réel ${ACHATS[r.id].fourchette.join('-')} €` : ''}</small><br>${sparkline(r)}</td>
+      <td>${eur(r.prix)}</td><td>${eur(r.mesure)}<br><small>${r.jours} j</small></td><td>${eur(r.annuel)}</td><td>${eur(r.entretienAn)}</td><td>${retour}</td><td>${eur(r.residuelAuj)}<br><small>vie ${num(r.vieAns, 0)} ans, −${Math.round(r.degr * 100)} %/an</small></td>
+      <td style="color:${r.net5 >= 0 ? '#16a34a' : '#b91c1c'}">${eur(r.net5)}</td><td>${num(r.ratio, 2)}</td></tr>`;
+  };
+  const head = COLS.map(([c, l]) => `<th><button class="lien" data-tri="${c}">${l}${k === c ? (sens > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('');
+  // batterie contre ballon
+  const perdu = s.solaire?.perdu || 0;
+  const joursSol = s.possede.solaire ? Math.max(1, s.jour - (s.solaireDepuis ?? 0)) : 0;
+  const comp = s.possede.solaire ? `<h3>🔋 Stocker le surplus : batterie ou eau chaude ?</h3>
+    <table><tr><th>Solution</th><th>Prix</th><th>Capacité</th><th>€ par kWh stockable</th></tr>
+    <tr><td>Batterie plug-and-play</td><td>${eur(ACHATS.batterie.prix)}</td><td>${num(STOCKAGE.batterieUtile)} kWh électriques (rendement ${Math.round(STOCKAGE.batterieRendement * 100)} %)</td><td>${eur(ACHATS.batterie.prix / STOCKAGE.batterieUtile)}</td></tr>
+    <tr><td>Routeur → ballon 200 L</td><td>${eur(ACHATS.routeur.prix)}</td><td>~10 kWh de chaleur (ballon existant)</td><td>${eur(ACHATS.routeur.prix / 10)}</td></tr>
+    <tr><td>Bidon 10 L en caisse isolée</td><td>${eur(ACHATS.caisse.prix)}</td><td>~0,8 kWh de chaleur</td><td>${eur(ACHATS.caisse.prix / 0.8)}</td></tr>
+    <tr><td>Thermos 1 L</td><td>${eur(ACHATS.thermos.prix)}</td><td>~0,08 kWh</td><td>${eur(ACHATS.thermos.prix / 0.08)}</td></tr></table>
+    <p class="aide">Surplus solaire perdu depuis l'installation : <b>${num(perdu, 1)} kWh</b> (${num(perdu / joursSol, 2)} kWh/jour, soit ~${eur(perdu / joursSol * 0.2)}/jour à valoriser au mieux). Avec un seul panneau de 400 Wc, aucun stockage ne se rentabilise vite. La chaleur se stocke 10 à 50 fois moins cher que l'électricité, mais elle ne rallume pas la télé le soir.</p>` : '';
+  $('investissements').innerHTML = `<p>Capital investi : <b>${eur(capitalInvesti(s))}</b>. Gains <b>mesurés</b> (même usage sans l'équipement), puis projection sur ${FINANCE.annees} ans avec l'énergie à +${Math.round(FINANCE.inflationEnergie * 100)} %/an, la perte d'efficacité, l'entretien, la valeur de revente et le coût d'opportunité (Livret A ${num(FINANCE.livretA * 100)} %).</p>
+    ${rows.length ? `<div class="tableau"><table class="roi"><tr>${head}</tr>${rows.map(ligneR).join('')}</table></div><p class="aide">* saison pas encore vécue avec l'équipement : estimation issue de simulations types. Courbe verte : gains cumulés mesurés ; grise : projection annuelle ; rouge : prix payé.</p>` : '<p class="aide">Aucun équipement pour l\'instant. La boutique affiche une estimation de retour avant chaque achat.</p>'}${comp}`;
 }
 
 export function rendrePrincipes(s) {
   $('nbPrincipes').textContent = s.principes.length;
   $('totPrincipes').textContent = Object.keys(PRINCIPES).length;
-  $('principes').innerHTML = Object.entries(PRINCIPES).map(([id, p]) => s.principes.includes(id)
-    ? `<div class="principe-item ${p.transversal ? 'transversal' : ''}"><b>${p.transversal ? '🔁 ' : ''}${p.titre}</b>${p.texte}</div>`
-    : `<div class="principe-item verrou">🔒 ${p.transversal ? 'Carte transversale' : 'Principe'} à découvrir</div>`).join('');
+  $('principes').innerHTML = rendreEncyclopedie(s);
+  $('combos').innerHTML = rendreCombos(s);
 }
 
 export function rendreJournal(s) {
@@ -249,6 +300,7 @@ export function rendreFin(s) {
   const r = scoreFinal(s);
   const dom = r.domaines.map(d => `<tr><td>${d.nom}</td><td style="color:${d.valeur >= 0 ? '#16a34a' : '#b91c1c'}">${eur(d.valeur)}</td></tr>`).join('');
   const inv = r.invest.filter(i => i.prix > 0).map(i => `<li>${i.nom} : ${eur(i.prix)} → ${eur(i.gain)} économisés ${i.rentable ? '✅ rentabilisé' : i.amorti ? '🟡 amorti pour cet hiver' : '❌ pas encore'}</li>`).join('');
+  const classement = tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `<li><b>${x.nom}</b> : payé ${eur(x.prix)}, mesuré ${eur(x.mesure)}, net 5 ans ${eur(x.net5)} ${x.atteint !== null ? '✅ rentabilisé' : x.payback !== null ? `(retour ~${dureeTxt(x.payback)})` : ROI_ITEMS[x.id].indirect ? '(gain indirect)' : '❌'}</li>`).join('');
   const m = r.moy;
   const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? '#16a34a' : v >= 40 ? '#b45309' : '#b91c1c'}">${Math.round(v)} %</b></div>`;
   $('finContenu').innerHTML = `<h2>Fin de la partie : hiver, printemps, été 🌱☀️</h2><div class="grand">${r.titre}</div>
@@ -263,16 +315,17 @@ export function rendreFin(s) {
     </div>
     <h3>Moyennes sur la partie</h3><div class="stats">${g('😊 Confort', m.confort)}${g('❤️ Santé', m.sante)}${g('💪 Moral', m.moral)}${g('🧼 Hygiène', m.hygiene)}${g('🌻 Bien-être', m.bienetre)}</div>
     <h3>Économies par domaine</h3><table class="domaines">${dom}</table>
-    <h3>Investissements</h3>${inv ? `<ul>${inv}</ul>` : '<p class="aide">Aucun.</p>'}
+    <h3>Classement de rentabilité (net sur ${FINANCE.annees} ans par euro investi)</h3>${classement ? `<ol>${classement}</ol>` : '<p class="aide">Aucun équipement.</p>'}
+    <h3>Combos découverts</h3><p>${Object.keys(s.combos || {}).length ? Object.keys(s.combos).map(id => '🔗 ' + COMBOS[id].nom).join('<br>') : 'Aucun.'}</p>
     <h3>Meilleure découverte</h3><p>🏆 <b>${r.meilleure.nom}</b> : ${eur(r.meilleure.gain)} économisés.</p>
     <p class="aide">Les abonnements d'énergie (${eur(r.abonnements)}) sont exclus de la comparaison. Les équipements comptent pour prix ÷ durée de vie, les vêtements pour leur part usée, les reventes en déduction.</p>
-    <p class="aide">Titres : Dépensier &lt; 8 % · Malin &lt; 18 % · Optimiseur &lt; 28 % · Autonome &lt; 40 % · Maître de la sobriété. Autonome et Maître exigent en moyenne confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 30 ; Maître demande aussi 28 principes et 8 habitudes. Hygiène &lt; 45, bien-être &lt; 40 ou plus de 4 rechutes plafonnent à Malin.</p>
+    <p class="aide">Titres : Dépensier &lt; 8 % · Malin &lt; 20 % · Optimiseur &lt; 32 % · Autonome &lt; 45 % · Maître de la sobriété. Autonome et Maître exigent en moyenne confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40 ; Maître demande aussi 28 principes et 8 habitudes. Hygiène &lt; 45, bien-être &lt; 40 ou plus de 4 rechutes plafonnent à Malin.</p>
     <button class="primaire btn" id="btnRejouer" style="width:100%;padding:12px">Rejouer une nouvelle année</button>`;
   $('fin').classList.remove('cache');
 }
 
 export function rendreTout(s) {
-  rendreJauges(s); rendreMaison(s); rendreGraphe(s); rendreOnglets(s); rendreMeteo(s); rendreBoutique(s); rendreInvestissements(s); rendrePrincipes(s); rendreJournal(s); rendreFactures(s);
+  rendreJauges(s); rendreMaison(s); rendreGraphe(s); rendreGrapheElec(s); rendreOnglets(s); rendreMeteo(s); rendreBoutique(s); rendreInvestissements(s); rendrePrincipes(s); rendreJournal(s); rendreFactures(s);
   rendreDilemme(s);
   $('btnJour').disabled = $('btnSemaine').disabled = s.fini;
 }
@@ -281,11 +334,12 @@ export function rendreOnglets(s) {
   const o = etatUI.onglet;
   $('onglets').innerHTML = ONGLETS.map(([id, nom]) => `<button data-onglet="${id}" class="${id === o ? 'actif' : ''}">${nom}</button>`).join('');
   document.querySelectorAll('.panneau').forEach(p => p.classList.toggle('cache', p.dataset.panneau !== o));
-  if (o === 'maison') { rendreChauffage(s); rendreGestes(s); $('ete').innerHTML = rendreEte(s); }
+  if (o === 'maison') { rendreChauffage(s); rendreGestes(s); $('ete').innerHTML = rendreEte(s) + rendrePassif(s); }
   if (o === 'linge') rendreVetements(s);
   if (o === 'eau') $('pEau').innerHTML = rendreEau(s);
   if (o === 'cuisine') $('pCuisine').innerHTML = rendreCuisine(s);
   if (o === 'elec') $('pElec').innerHTML = rendreElec(s);
   if (o === 'jardin') $('pJardin').innerHTML = rendreJardin(s);
   if (o === 'budget') $('pBudget').innerHTML = rendreBudget(s);
+  if (o === 'transport') $('pTransport').innerHTML = rendreTransport(s);
 }

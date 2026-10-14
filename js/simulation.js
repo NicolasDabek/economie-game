@@ -3,10 +3,14 @@ import {
   PRIX, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, CHARGE_FOND_W, LESSIVE, JOURS, PIECES, ORDRE_PIECES,
   PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour,
   VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND,
-  JOURS_HABITUDE, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, CHAPITRES,
+  JOURS_HABITUDE, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, PLAISIRS_MORAL, CHAPITRES, STOCKAGE, ROI_ITEMS,
 } from './data.js';
+import { stockerSurplus, detecterCombos } from './combos.js';
 import { tExt, soleil, chapitreDuJour, FACTEUR_FENETRE } from './meteo.js';
 import { systemesJour, voisinJour, tempsRoutines, prixElec } from './systemes.js';
+import { transportJour, voisinTransport, tempsTransport } from './transport.js';
+import { suivreROI } from './roi.js';
+import { passifHeure, passifCumul, passifJour, debutJourPassif, hasCheminee, typePuits, chantierEnCours, nouvelEtatPassif } from './passif.js';
 
 const T_HORS_GEL = 8;
 const P_CORPS = 90;
@@ -18,11 +22,12 @@ export const estWeekend = (jour) => jour % 7 >= 5;
 export const NOMS_JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 export function msg(s, texte, type = 'info') { s.messages.unshift({ jour: s.jour, texte, type }); if (s.messages.length > 150) s.messages.length = 150; }
 export function debloquer(s, id) {
-  if (s.principes.includes(id)) return;
+  if (s.principes.includes(id) || !PRINCIPES[id]) return;
   s.principes.push(id);
+  s.volonte = Math.min(100, (s.volonte || 0) + 1);   // la satisfaction de comprendre
   msg(s, `💡 Principe découvert : « ${PRINCIPES[id].titre} ». ${PRINCIPES[id].texte}`, 'principe');
 }
-function payer(s, montant, poste) { s.argent -= montant; s.depenses[poste] += montant; }
+export function payer(s, montant, poste) { s.argent -= montant; s.depenses[poste] = (s.depenses[poste] || 0) + montant; }
 
 // ---------------------------------------------------------------- temps
 export function tempsBudget(s) { return estWeekend(s.jour) ? TEMPS_WEEKEND : TEMPS_JOUR; }
@@ -45,6 +50,8 @@ export function gestesActifs(s) {
     prixKilo: !!s.sys.prixKiloGeste,
     voletsJour: !!s.voletsJour,
     ventNuit: !!s.ventNuit,
+    ecoconduite: !!s.transport?.ecoconduite && !s.transport.voitureVendue && s.transport.mode === 'voiture',
+    gamelle: s.transport?.repas === 'emporte',
     jardiner: s.possede.potager && s.sys.potagerDepuis !== null && chapitreDuJour(s.jour).id !== 'hiver',
   };
 }
@@ -53,7 +60,10 @@ export function tempsGestes(s) {
   for (const [g, on] of Object.entries(gestesActifs(s))) if (on) t += GESTES[g].temps * (s.gestes[g].habitude ? 0.5 : 1);
   return t;
 }
-export function tempsLibre(s) { return tempsBudget(s) - tempsGestes(s) - tempsRoutines(s) - s.tempsUtilise; }
+export function tempsLibre(s) {
+  const t = tempsBudget(s) - tempsGestes(s) - tempsRoutines(s) - tempsTransport(s) - s.tempsUtilise;
+  return chantierEnCours(s) ? Math.min(t, 0) : t;   // jour de chantier : tout le temps libre y passe
+}
 export function prendreTemps(s, h) {
   if (tempsLibre(s) + 1e-9 < h) { msg(s, `⏳ Pas assez de temps libre aujourd'hui (il faut ${fmtH(h)}).`, 'alerte'); return false; }
   s.tempsUtilise += h;
@@ -138,13 +148,22 @@ export function acheter(s, id, occasion = false) {
   const prix = occasion && a.occasion ? a.occasion : a.prix;
   if (s.possede[id] || s.argent < prix) return false;
   if (id === 'housse' && !s.possede.bouillotte) return false;
+  if (a.cat === 'Ventilation passive' && id !== 'kitRadon') {
+    const famille = id.startsWith('cheminee') ? ['chemineeDIY', 'chemineePro'] : ['puitsDIY', 'puitsPro', 'puitsHydro'];
+    if (famille.some(k => s.possede[k]) || chantierEnCours(s)) return false;
+  }
   const tps = a.temps + (occasion ? 1 : 0);
   if (!prendreTemps(s, tps)) return false;
+  if (a.chantier) {
+    s.passif ||= nouvelEtatPassif(s.seed);
+    s.passif.chantiers.push({ id, reste: a.chantier, risque: id === 'puitsDIY' });
+    if (a.chantier > 0) msg(s, `🏗️ Chantier : ${a.chantier} jour${a.chantier > 1 ? 's' : ''} de temps libre entièrement pris.`, 'info');
+  }
   s.possede[id] = true;
   s.prixPayes = s.prixPayes || {}; s.prixPayes[id] = prix;
   payer(s, prix, 'equipement');
   msg(s, `🛒 ${a.nom}${occasion ? ' d\'occasion' : ''} : −${eur(prix)}${tps ? ` et ${fmtH(tps)}${occasion ? ' (annonce, rendez-vous)' : ' d\'installation'}` : ''}.`, 'achat');
-  if (occasion) debloquer(s, 'occasion');
+  if (occasion) { debloquer(s, 'occasion'); if (ROI_ITEMS[id]?.revente) debloquer(s, 'residuel'); }
   if (id === 'potager') s.sys.potagerDepuis = s.jour;
   if (id === 'composteur' || id === 'cuve') debloquer(s, 'cycles');
   if (id === 'jaquette') debloquer(s, 'prolonger');
@@ -247,6 +266,7 @@ export function pasHoraire(pieces, cfg, jm, h) {
     if (!cfg.rideauxFermes) x += irr * P.fenetre * 0.6 * (FACTEUR_FENETRE[jm.chap] ?? 1) * (voletsJour ? 1 - ETE.voletsJour : 1);
     if (occ === id) x += P_CORPS * (cfg.invites && id === 'salon' && estJour(h) ? 3 : 1);
     if (cfg.chaleur && cfg.chaleur[id]) x += cfg.chaleur[id][h];
+    if (cfg.passif) x += cfg.passif.W[id];
     if (id === 'cuisine' && h === 20 && cfg.recupCuisson && cfg.chaleur) { const r2 = cfg.chaleur.cuisine[19] * 0.6; x += r2; attrib.cuisson += r2; }
     q[id] = x;
     // humidité (indice en % à 18 °C)
@@ -254,9 +274,10 @@ export function pasHoraire(pieces, cfg, jm, h) {
     if (occ === id) src += estJour(h) ? 0.5 : 0.8;
     if (cfg.invites && id === 'salon' && estJour(h)) src += 1;
     if (id === 'cuisine' && (h === 12 || h === 19)) src += cfg.recupCuisson ? 5 : 4;
-    if (cfg.sechageInterieur && id === 'salon' && estJour(h)) src += 1.6;
+    if (cfg.sechageInterieur && id === 'salon' && estJour(h)) src += cfg.sechageInterieur === 'tirage' ? 0.8 : 1.6;
     if (Uaer > 0) k += cfg.aeration === 'breve' ? 0.45 : 0.12;
     r.hum += src - k * (r.hum - 40) + (cfg.portes === 'ouvertes' ? 0.08 * (hMoy - r.hum) : 0);
+    if (cfg.passif) r.hum += cfg.passif.k[id] * (cfg.passif.idxIn - r.hum);
   }
   // radiateurs (chaudière gaz)
   const rad = {};
@@ -325,28 +346,34 @@ export function jourSuivant(s) {
   const actifs = gestesActifs(s);
   const faits = {};
   for (const [g, on] of Object.entries(actifs)) faits[g] = on && (!rechute || s.gestes[g].habitude);
-  let coutVolonte = 0;
+  // apprentissage : les deux gestes les plus durs coûtent plein tarif, les suivants moins (on les enchaîne)
+  const enCours = [];
   for (const [g, fait] of Object.entries(faits)) {
     if (!fait) continue;
     const st = s.gestes[g];
     if (st.habitude) continue;
-    coutVolonte += GESTES[g].cout; st.pratique++;
-    if (st.pratique >= JOURS_HABITUDE) { st.habitude = true; msg(s, `✅ « ${GESTES[g].nom} » est devenu une habitude : plus d'effort, moitié moins de temps.`, 'habitude'); debloquer(s, 'habitude'); }
+    enCours.push(GESTES[g].cout); st.pratique++;
+    if (st.pratique >= JOURS_HABITUDE) { st.habitude = true; msg(s, `✅ « ${GESTES[g].nom} » est devenu une habitude : plus d'effort, moitié moins de temps.`, 'habitude'); debloquer(s, 'habitude'); s.volonte += 2; }
   }
+  const POIDS = [1, 1, 0.7, 0.5];
+  const coutVolonte = enCours.sort((a, b) => b - a).reduce((t, c, i) => t + c * (POIDS[i] ?? 0.4), 0);
+  if (enCours.length >= 4) debloquer(s, 'unAlaFois');
 
   // --- contexte des systèmes (eau chaude, cuisine, électricité, jardin, budget) ---
   const vide = () => new Array(24).fill(0);
   const ctx = {
     jm, chap, faits, elecH: vide(), chaleur: { salon: vide(), chambre: vide(), cuisine: vide() },
-    couts: { nourriture: 0, eau: 0, services: 0, plaisirs: 0 }, kwh: {},
+    couts: { nourriture: 0, eau: 0, services: 0, plaisirs: 0, transport: 0, imprevus: 0 }, kwh: {},
     d: { sante: 0, hygiene: 0, bienetre: 0, confort: 0 }, tCuisine: s.pieces.cuisine.t,
     msg: (t, ty) => msg(s, t, ty), debloquer: (id) => debloquer(s, id),
   };
   systemesJour(s, ctx);
+  transportJour(s, ctx);
 
   // --- lessive du jour ---
   const L = s.lessivePrevue;
   let sechageInterieur = false;
+  ctx.lessive = L;
   if (L) {
     const sale = linge(s);
     const rempli = remplissage(s);
@@ -357,6 +384,8 @@ export function jourSuivant(s) {
       msg(s, `🧺 Laverie : ${eur(PRIX.laverieLavage + PRIX.laverieSechage)} et 1 h 30.`, 'info');
     } else {
       const dehors = L.sechage === 'dehors' && s.possede.corde && !hiver;
+      if (dehors) debloquer(s, 'airLibre');
+      if (L.temp === 30 && ++s.l30 >= 5) debloquer(s, 'trenteDegres');
       const kwh = LESSIVE.kwh[L.temp] + (L.sechage === 'machine' ? LESSIVE.secheLingeKwh : 0);
       const heures = L.hc ? [22, 23, 0] : L.midi ? [12, 13, 14] : [19, 20, 21];
       let reste = kwh * 1000; for (const h of heures) { const x = Math.min(2200, reste); ctx.elecH[h] += x; reste -= x; }
@@ -392,6 +421,10 @@ export function jourSuivant(s) {
   const ventilo = s.possede.ventilateur && s.ventilateur;
   const clim = s.possede.clim && s.climActive ? s.climConsigne : null;
   let elecEur = 0, elecKwh = 0;
+  const surplusH = new Array(24).fill(0), jourElec = new Array(24);
+  s.battSoc ||= 0;
+  debutJourPassif(s);
+  const tirageLinge = sechageInterieur && hasCheminee(s) && s.passif.mode !== 'ferme';
   for (let k = 0; k < 24; k++) {
     const h = (7 + k) % 24;
     const jr = estJour(h);
@@ -404,10 +437,27 @@ export function jourSuivant(s) {
       portes, rideauxFermes, voletsFermes: faits.rideaux && !jr, rideauxTh: s.possede.rideauxTh,
       calfeutrage: s.possede.calfeutrage, boudin: s.possede.boudin, robinets: s.possede.robinets, purge: s.possede.purge,
       consignes, central, appoint: s.possede.appoint && s.appoint.actif ? s.appoint.consigne : null,
-      aeration, recupCuisson: faits.cuisson, sechageInterieur, invites, chaleur: ctx.chaleur,
+      aeration, recupCuisson: faits.cuisson, sechageInterieur: tirageLinge ? 'tirage' : sechageInterieur, invites, chaleur: ctx.chaleur,
+      passif: passifHeure(s, jm, h, chap, ORDRE_PIECES.reduce((a, p) => a + s.pieces[p].t, 0) / 3),
       voletsJour: faits.voletsJour, ventNuit: faits.ventNuit, clim,
     };
     const r = pasHoraire(s.pieces, cfg, jm, h);
+    const pr = cfg.passif;
+    if (pr) {
+      passifCumul(s, pr, h, Object.fromEntries(ORDRE_PIECES.map(p => [p, humiditeRelative(s.pieces[p])])));
+      // gains mesurés : gaz évité quand le chauffage tourne, clim évitée quand elle tourne
+      const radTot = r.rad.salon + r.rad.chambre + r.rad.cuisine;
+      const pxClim = prixElec(s, h, jm.tempo) * ETE.climElec / ETE.climFroid / 1000;
+      // une chaleur apportée hors chauffe mais sous 22 °C est stockée dans les murs et évite du chauffage plus tard
+      const tMoyP = ORDRE_PIECES.reduce((a, p) => a + s.pieces[p].t, 0) / 3;
+      const utile = radTot > 0 || (!ete && tMoyP < 22);
+      const gain = (P) => P > 0 && utile ? (radTot > 0 ? Math.min(P, radTot) : P) / 1000 / RENDEMENT_CHAUDIERE * prixGaz(s)
+        : P < 0 && radTot > 0 ? P / 1000 / RENDEMENT_CHAUDIERE * prixGaz(s)
+        : P < 0 && r.climElec > 0 ? -P * pxClim : 0;
+      const idC = s.possede.chemineePro ? 'chemineePro' : 'chemineeDIY', idP = typePuits(s);
+      if (hasCheminee(s)) s.attribution[idC] = (s.attribution[idC] || 0) + gain(pr.Pch);
+      if (idP) s.attribution[idP] = (s.attribution[idP] || 0) + gain(pr.Ppuits) - pr.fanW / 1000 * prixElec(s, h, jm.tempo);
+    }
     for (const p of ORDRE_PIECES) {
       jour.kwhRad[p] += r.rad[p] / 1000;
       const e = r.rad[p] / 1000 / RENDEMENT_CHAUDIERE * prixGaz(s);
@@ -418,15 +468,27 @@ export function jourSuivant(s) {
     for (const a of Object.keys(attrJour)) attrJour[a] += r.attrib[a] / 1000;
 
     // électricité de l'heure : systèmes + appoint + clim + ventilateur + bouillotte, moins le solaire autoconsommé
-    let demande = ctx.elecH[h] + r.appoint + r.climElec + (ventilo && (ete || jm.canicule) ? ETE.ventilateur : 0) + (faits.bouillotte && h === 22 ? 120 : 0);
-    let auto = 0;
-    if (s.possede.solaire) {
-      const prod = PANNEAU_WC * r.irr / 1000 * 1.35 * 0.9;
-      auto = Math.min(prod, demande);
-      s.solaire.prod += prod / 1000; s.solaire.auto += auto / 1000; jour.solaire += auto / 1000;
-      s.attribution.solaire += auto / 1000 * prixElec(s, h, jm.tempo);
-    }
+    let demande = (pr ? pr.fanW : 0) + ctx.elecH[h] + r.appoint + r.climElec + (ventilo && (ete || jm.canicule) ? ETE.ventilateur : 0) + (faits.bouillotte && h === 22 ? 120 : 0);
+    let auto = 0, prod = 0, surplus = 0, decharge = 0;
     const prix = prixElec(s, h, jm.tempo);
+    if (s.possede.solaire) {
+      prod = PANNEAU_WC * r.irr / 1000 * 1.35 * 0.9;
+      auto = Math.min(prod, demande);
+      surplus = prod - auto;
+      s.solaire.prod += prod / 1000; s.solaire.auto += auto / 1000; jour.solaire += auto / 1000;
+      s.attribution.solaire += auto / 1000 * prix;
+      // batterie : charge sur le surplus, décharge quand le panneau ne suffit plus
+      if (s.possede.batterie) {
+        const cap = STOCKAGE.batterieUtile * 1000;
+        if (surplus > 0) { const c = Math.min(surplus, cap - s.battSoc, 1000); s.battSoc += c * STOCKAGE.batterieRendement; surplus -= c; }
+        else if (demande > auto && s.battSoc > 0) { decharge = Math.min(demande - auto, s.battSoc, 800); s.battSoc -= decharge; auto += decharge;
+          s.attribution.batterie = (s.attribution.batterie || 0) + decharge / 1000 * prix; }
+      }
+      surplusH[h] = surplus;
+    }
+    jourElec[h] = { prod, demande, surplus, prix };
+    if (ventilo && (ete || jm.canicule)) s.attribution.ventilateur = (s.attribution.ventilateur || 0) - ETE.ventilateur / 1000 * prix;
+    if (r.climElec) s.attribution.clim = (s.attribution.clim || 0) - r.climElec / 1000 * prix;
     elecEur += (demande - auto) / 1000 * prix; elecKwh += (demande - auto) / 1000;
     jour.eur[occ] += r.appoint / 1000 * prix;
     jour.appointKwh += r.appoint / 1000; jour.climKwh += r.climElec / 1000;
@@ -468,6 +530,21 @@ export function jourSuivant(s) {
     jour.heures.push({ h, te: r.te, t: { salon: s.pieces.salon.t, chambre: s.pieces.chambre.t, cuisine: s.pieces.cuisine.t }, ressenti, hr, prix });
   }
 
+  // --- surplus solaire : bouilloire → eau stockée (Newton), routeur → ballon ---
+  const st = stockerSurplus(s, surplusH, jourElec, ctx, faits, chap);
+  elecEur -= st.eurEvites; elecKwh -= st.kwhEvites;
+  jour.elecH = jourElec; jour.stockage = st;
+  s.solaire.perdu = (s.solaire.perdu || 0) + st.perdu;
+  passifJour(s, ctx, chap);
+  detecterCombos(s, { faits, chap, st, ctx });
+  if (capitalInvesti(s) > 300) debloquer(s, 'opportunite');
+  if (s.possede.solaire && ete) debloquer(s, 'saisonnalite');
+  if (ventilo && ete) debloquer(s, 'airQuiBouge');
+  if (s.rideaux === 'fermes') debloquer(s, 'lumiereJour');
+  if (s.sys.pain === 'maison' && ++s.joursPain >= 7) debloquer(s, 'faireSoiMeme');
+  if (Object.values(s.roi || {}).some(r => r.entretien > 5)) debloquer(s, 'entretienCout');
+  if (Object.entries(s.roi || {}).some(([id, r]) => r.dernier >= (s.prixPayes?.[id] ?? ACHATS[id].prix))) debloquer(s, 'mesureReelle');
+
   // --- factures du jour ---
   payer(s, gazKwh * prixGaz(s), 'gaz');
   payer(s, elecEur, 'elec');
@@ -475,6 +552,8 @@ export function jourSuivant(s) {
   payer(s, ctx.couts.nourriture, 'nourriture');
   payer(s, ctx.couts.services, 'services');
   payer(s, ctx.couts.plaisirs, 'plaisirs');
+  payer(s, ctx.couts.transport, 'transport');
+  payer(s, ctx.couts.imprevus, 'imprevus');
   const aboJour = (TARIFS[s.sys.tarif].aboMois * 12 + PRIX.aboGazAn) / 365;
   payer(s, aboJour, 'abonnements');
   s.depenses.eauChaudeEur = (s.depenses.eauChaudeEur || 0) + (ctx.kwh.ballon || 0) * (elecKwh > 0 ? elecEur / elecKwh : PRIX.elecKwh);
@@ -497,9 +576,10 @@ export function jourSuivant(s) {
   s.base.clim = (s.base.clim || 0) + climBase * PRIX.elecKwh;
   s.base.eauChaude = (s.base.eauChaude || 0) + vz.eauChaude;
   s.base.eau += vz.eau;
-  s.base.nourriture = (s.base.nourriture || 0) + vz.nourriture;
+  s.base.nourriture = (s.base.nourriture || 0) + vz.nourriture * 1.06;   // courses 4 fois par semaine : achats d'impulsion
   s.base.services = (s.base.services || 0) + vz.services;
   s.base.plaisirs = (s.base.plaisirs || 0) + vz.plaisirs;
+  s.base.transport = (s.base.transport || 0) + voisinTransport(s);
   s.base.abonnements += aboJour;
   if (s.jour % 3 === 2) {
     const l = (LESSIVE.kwh[40] + LESSIVE.secheLingeKwh) * PRIX.elecKwh + LESSIVE.litres / 1000 * PRIX.eauM3 + PRIX.doseLessive;
@@ -570,7 +650,13 @@ export function jourSuivant(s) {
     msg(s, '🤧 Tu tombes malade : médecin et pharmacie (−25 € restant à charge) et moral en berne.', 'alerte');
   } else if (s.sante > 55) s.malade = false;
   // moral (volonté) : nourri par le bien-être, usé par les nouveaux gestes
-  s.volonte = Math.max(0, Math.min(100, s.volonte + 0.5 + (confortJour - 75) / 20 + (s.bienetre - 55) / 20 - coutVolonte));
+  s.volonte = Math.max(0, Math.min(100, s.volonte + 0 + (confortJour - 75) / 20 + (s.bienetre - 55) / 20 - coutVolonte + PLAISIRS_MORAL[s.sys.plaisirs]));
+  // paliers d'économies : la satisfaction de voir le compteur grimper
+  const ecoNow = coutBaseVariable(s) - coutVariable(s);
+  const palier = Math.floor(ecoNow / 250);
+  if (palier > (s.palier || 0)) { s.palier = palier; s.volonte = Math.min(100, s.volonte + 3); msg(s, `🎯 Palier atteint : ${palier * 250} € économisés par rapport au voisin. Fierté (+3 moral) !`, 'habitude'); debloquer(s, 'progres'); }
+  suivreROI(s);
+  if (sommeilScore > 85 && hiver && (s.possede.robinets ? s.pieces.chambre.consigneNuit : s.central.consigneNuit) <= 17) debloquer(s, 'sommeilFrais');
   if (globalThis.TRACE) globalThis.TRACE(s, { froid, chaud, confortJour, sommeilScore, dSante });
   const sm = s.sommes;
   sm.confort += confortJour; sm.sante += s.sante; sm.volonte += s.volonte; sm.hygiene += s.hygiene; sm.bienetre += s.bienetre;
@@ -696,13 +782,13 @@ export function resoudreDilemme(s, choix) {
   if (id === 'invites') {
     s.invites = { mode: choix, jusqua: s.jour + 2 };
     if (choix === 'chauffer') s.volonte += 5;
-    if (choix === 'preter') { s.volonte += 3; debloquer(s, 'lit'); }
+    if (choix === 'preter') { s.volonte += 3; debloquer(s, 'lit'); debloquer(s, 'partager'); }
     if (choix === 'pull') s.volonte -= 10;
   }
   if (id === 'promo') { if (choix === 'acheter') acheterVetement(s, 'doudoune', 'eco', 12.5); else refuser(s); }
   if (id === 'livraison') {
     if (choix === 'commander') { payer(s, 17, 'plaisirs'); s.bienetre = Math.min(100, s.bienetre + 3); }
-    else if (choix === 'restes') { s.bienetre = Math.min(100, s.bienetre + 1); debloquer(s, 'gaspillage'); }
+    else if (choix === 'restes') { s.bienetre = Math.min(100, s.bienetre + 1); debloquer(s, 'gaspillage'); debloquer(s, 'congeler'); }
     else refuser(s);
   }
   if (id === 'robot') { if (choix === 'acheter') { payer(s, 199, 'imprevus'); s.bienetre = Math.min(100, s.bienetre + 2); msg(s, '🤖 Robot cuiseur acheté (−199 €). Il prend la poussière…', 'alerte'); } else refuser(s); }
@@ -712,11 +798,11 @@ export function resoudreDilemme(s, choix) {
     if (choix === 'passer') debloquer(s, 'prixKilo');
   }
   if (id === 'barbecue') {
-    if (choix === 'maison') { payer(s, 5, 'plaisirs'); s.tempsUtilise += 1; s.bienetre = Math.min(100, s.bienetre + 6); }
+    if (choix === 'maison') { payer(s, 5, 'plaisirs'); s.tempsUtilise += 1; debloquer(s, 'partager'); debloquer(s, 'faireSoiMeme'); s.bienetre = Math.min(100, s.bienetre + 6); }
     if (choix === 'achat') { payer(s, 15, 'plaisirs'); s.bienetre = Math.min(100, s.bienetre + 6); }
     if (choix === 'decliner') s.bienetre = Math.max(0, s.bienetre - 4);
   }
-  if (id === 'hausse') { s.prixGazMult = 1.12; msg(s, '📈 Le gaz passe à ' + prixGaz(s).toFixed(4).replace('.', ',') + ' €/kWh.', 'alerte'); }
+  if (id === 'hausse') { s.prixGazMult = 1.12; debloquer(s, 'inflation'); msg(s, '📈 Le gaz passe à ' + prixGaz(s).toFixed(4).replace('.', ',') + ' €/kWh.', 'alerte'); }
   if (id === 'panne') {
     s.machine.enPanne = true;
     if (choix === 'technicien' || choix === 'diy') reparerMachine(s, choix);
@@ -742,12 +828,12 @@ export function amortissement(s) {
     + (s.depenses.vetements - Object.values(s.vetements).reduce((t, v) => t + (v.possede ? v.prixPaye : 0), 0));
   return { equip, vet };
 }
-const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus'];
+const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport'];
 export function coutVariable(s) {
   const d = s.depenses;
   return POSTES.reduce((t, k) => t + (d[k] || 0), 0) + d.equipement + d.vetements - (d.reventes || 0);
 }
-export function coutBaseVariable(s) { const b = s.base; return b.gaz + b.elec + b.eau + b.produits + (b.nourriture || 0) + (b.services || 0) + (b.plaisirs || 0); }
+export function coutBaseVariable(s) { const b = s.base; return b.gaz + b.elec + b.eau + b.produits + (b.nourriture || 0) + (b.services || 0) + (b.plaisirs || 0) + (b.transport || 0); }
 export function moyennes(s) {
   const n = Math.max(1, s.nbJours), m = s.sommes;
   return { confort: m.confort / n, sante: m.sante / n, moral: m.volonte / n, hygiene: m.hygiene / n, bienetre: m.bienetre / n };
@@ -774,6 +860,7 @@ export function scoreFinal(s) {
     { nom: 'Autre électricité (veilles, éclairage, cuisson, linge, solaire)', valeur: elecBase - elecPlayer },
     { nom: 'Abonnements et services', valeur: (b.services || 0) - d.services },
     { nom: 'Plaisirs', valeur: (b.plaisirs || 0) - d.plaisirs },
+    { nom: 'Transport (trajets, repas au travail, assurance)', valeur: (b.transport || 0) - (d.transport || 0) },
     { nom: 'Linge (produits, laverie)', valeur: b.produits - d.produits - d.laverie },
     { nom: 'Équipements (part amortie)', valeur: -am.equip },
     { nom: 'Vêtements (part usée)', valeur: -am.vet },
@@ -788,10 +875,10 @@ export function scoreFinal(s) {
   const candidats = domaines.filter(x => x.valeur > 0 && !x.nom.startsWith('Autres') && !x.nom.startsWith('Reventes')).map(x => ({ nom: x.nom, gain: x.valeur }));
   const meilleure = candidats.reduce((a, c) => (c.gain > a.gain ? c : a), { nom: '—', gain: 0 });
   const TITRES = ['Dépensier', 'Malin', 'Optimiseur', 'Autonome', 'Maître de la sobriété'];
-  let rang = pct < 8 ? 0 : pct < 18 ? 1 : pct < 28 ? 2 : pct < 40 ? 3 : 4;
+  let rang = pct < 8 ? 0 : pct < 20 ? 1 : pct < 32 ? 2 : pct < 45 ? 3 : 4;
   const notes = [];
-  const equilibre = moy.confort >= 70 && moy.sante >= 70 && moy.hygiene >= 60 && moy.bienetre >= 55 && moy.moral >= 30;
-  if (rang >= 3 && !equilibre) { rang = 2; notes.push('Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 30.'); }
+  const equilibre = moy.confort >= 70 && moy.sante >= 70 && moy.hygiene >= 60 && moy.bienetre >= 55 && moy.moral >= 40;
+  if (rang >= 3 && !equilibre) { rang = 2; notes.push('Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40.'); }
   if (rang === 4 && (s.principes.length < 28 || habitudes < 8)) { rang = 3; notes.push('Le titre suprême demande 28 principes et 8 habitudes.'); }
   if (rang >= 2 && (moy.hygiene < 45 || moy.bienetre < 40 || s.rechutes > 4)) { rang = 1; notes.push('Économies payées par ton hygiène, ton bien-être ou tes rechutes.'); }
   if (moy.sante < 50 || moy.confort < 55 || moy.hygiene < 30 || moy.bienetre < 25) { rang = 0; notes.push('Une sobriété qui abîme : santé, confort, hygiène ou bien-être effondrés.'); }

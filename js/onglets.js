@@ -1,19 +1,24 @@
 // Onglets par domaine (v0.3) : Maison, Eau chaude, Cuisine, Linge, Électricité, Jardin, Budget
-import { GESTES, JOURS_HABITUDE, TARIFS, TEMPO, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, PLAISIRS, GRENIER, MEDIATHEQUE, CHANGEMENT_TARIF, ETE } from './data.js';
+import { TRANSPORT, STOCKAGE, COMBOS, PRINCIPES, DOMAINES_PRINCIPES, GESTES, JOURS_HABITUDE, TARIFS, TEMPO, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, PLAISIRS, GRENIER, MEDIATHEQUE, CHANGEMENT_TARIF, ETE } from './data.js';
 import { chapitreDuJour } from './meteo.js';
 import { eur, fmtH, gestesActifs } from './simulation.js';
+import { modePossible, coutKm, tempsTransport } from './transport.js';
+import { contenantPossible, newton } from './combos.js';
+import { hasCheminee, typePuits, tSol, jourAn, chantierEnCours } from './passif.js';
+import { PASSIF } from './data.js';
 
 const num = (x, d = 1) => x.toFixed(d).replace('.', ',');
 export const ONGLETS = [
-  ['maison', '🏠 Maison', ['Instruments', 'Isolation', 'Chauffage', 'Confort', 'Été']],
+  ['maison', '🏠 Maison', ['Instruments', 'Isolation', 'Chauffage', 'Confort', 'Été', 'Ventilation passive']],
   ['eau', '🚿 Eau chaude', ['Eau chaude']],
   ['cuisine', '🍳 Cuisine', ['Cuisine', 'Cuisine solaire']],
   ['linge', '👕 Linge', []],
   ['elec', '⚡ Électricité', ['Électricité', 'Production']],
+  ['transport', '🚲 Transport', ['Transport']],
   ['jardin', '🌱 Jardin', ['Jardin']],
   ['budget', '💶 Budget', []],
 ];
-export const etatUI = { onglet: 'maison' };
+export const etatUI = { onglet: 'maison', roiTri: 'ratio', roiSens: -1, filtrePrincipes: 'tous', principeOuvert: null };
 
 // bouton de choix générique : modifie un chemin de l'état (ex. "sys.ballon.consigne")
 export const choixSet = (chemin, opts, val) => `<span class="choix">${opts.map(([v, l, off]) => `<button data-set="${chemin}" data-v="${v}" class="${String(v) === String(val) ? 'actif' : ''}" ${off ? 'disabled' : ''}>${l}</button>`).join('')}</span>`;
@@ -87,6 +92,7 @@ export function rendreElec(s) {
   h += `<h3>🔌 Veilles et éclairage</h3>`;
   h += ligne('Multiprise', s.possede.multiprise ? ouiNon('sys.multipriseGeste', y.multipriseGeste, 'Éteinte le soir', 'Toujours allumée') + (g.multiprise ? ' ' + tagGeste(s, 'multiprise') : '') : '<span class="aide">achète une multiprise à interrupteur</span>');
   h += ligne('Ampoules', s.possede.led ? '<span class="tag habitude">LED</span>' : '<span class="aide">anciennes ampoules (150 W allumés le soir)</span>');
+  h += rendreStockage(s);
   h += aide(s.possede.wattmetre ? '⚡ Le wattmètre révèle les veilles : box, TV, chargeurs… ~45 W en continu, soit ~400 kWh/an.' : 'Sans wattmètre, impossible de voir ce qui consomme en veille.');
   return h;
 }
@@ -115,5 +121,93 @@ export function rendreBudget(s) {
   h += `<h3>🎈 Petits plaisirs</h3>` + ligne('Budget', choixSet('sys.plaisirs', Object.keys(PLAISIRS).map(k => [Number(k), `${k} €/sem.`]), y.plaisirs));
   h += aide('Café en terrasse, cinéma, un livre… Zéro plaisir fait chuter le bien-être, puis le moral. Les premiers euros comptent le plus.');
   h += `<h3>📦 Grenier</h3>` + Object.entries(GRENIER).map(([k, g]) => `<div class="article"><div><b>${g.nom}</b><div class="d">${eur(g.prix)} d'occasion · ${fmtH(g.temps)}</div></div>${y.grenier[k] ? '<span class="tag">vendu</span>' : `<button class="btn" data-action="revendre" data-v="${k}">Revendre</button>`}</div>`).join('');
+  return h;
+}
+
+export function rendreTransport(s) {
+  const t = s.transport, M = TRANSPORT.modes;
+  const opt = (k) => Object.entries(M).filter(([m]) => k !== 'modeCourses' || m !== 'covoiturage').map(([m, x]) => [m, x.nom, !modePossible(s, m)]);
+  let h = `<h3>🏢 Travail (${TRANSPORT.kmTravail} km aller)</h3>`;
+  h += ligne('Télétravail', choixSet('transport.teletravail', [[0, '0 j'], [1, '1 j'], [2, '2 j'], [3, '3 j']], t.teletravail) + ` <span class="aide">${5 - t.teletravail} jours de bureau/semaine</span>`);
+  h += ligne('Mode', choixSet('transport.mode', opt('mode'), t.mode));
+  h += ligne('Midi', choixSet('transport.repas', [['achete', `Acheté (${eur(TRANSPORT.repasAchete)})`], ['emporte', 'Gamelle emportée']], t.repas) + (t.repas === 'emporte' ? ' ' + tagGeste(s, 'gamelle') : ''));
+  h += ligne('Boissons', s.possede.gourde ? `<span class="tag habitude">gourde + mug : ${eur(TRANSPORT.boissonsGourde)}/j</span>` : `<span class="aide">café et bouteille achetés : ${eur(TRANSPORT.boissons)}/j</span>`);
+  h += ligne('Abonnement TC', ouiNon('transport.abonnementTC', t.abonnementTC, `${eur(TRANSPORT.abonnementTC)}/mois, 50 % remboursés`, `Tickets (${eur(TRANSPORT.ticket)})`));
+  h += `<h3>🛒 Courses et loisirs</h3>`;
+  h += ligne('Courses', choixSet('transport.courses', [['quotidiennes', '4 fois/semaine'], ['regroupees', '1 grosse fois']], t.courses));
+  h += ligne('Pour les courses', choixSet('transport.modeCourses', opt('modeCourses'), t.modeCourses));
+  h += ligne('Loisirs (2/sem.)', choixSet('transport.modeLoisirs', opt('modeLoisirs'), t.modeLoisirs));
+  h += `<h3>🚗 Voiture</h3>`;
+  if (t.voitureVendue) h += aide('Voiture vendue : plus d\'assurance ni d\'entretien.');
+  else {
+    h += ligne('Conduite', ouiNon('transport.ecoconduite', t.ecoconduite, 'Écoconduite', 'Normale') + (t.ecoconduite && t.mode === 'voiture' ? ' ' + tagGeste(s, 'ecoconduite') : ''));
+    h += ligne('Pneus', `<span>${t.pressionMois ? `non vérifiés depuis ${t.pressionMois} mois (+${t.pressionMois * 2} % de carburant)` : 'pression OK'}</span> <button class="btn" data-action="pression">Vérifier (10 min)</button>`);
+    h += ligne('Coût', `<span>${num(coutKm(s, 'voiture'), 3)} €/km de carburant et d'usure · assurance ${eur(TRANSPORT.assuranceMois)}/mois</span>`);
+    h += ligne('Vendre', `<button class="btn" data-action="vendreVoiture">Vendre la voiture (~${eur(TRANSPORT.valeurVoiture)}, 3 h)</button>`);
+  }
+  h += ligne('Comparer', t.coutReelCalcule ? '<span class="tag habitude">coût réel calculé ✓ (voir le journal)</span>' : '<button class="btn" data-action="coutReel">Calculer le coût réel d\'un trajet (20 min)</button>');
+  if (s.possede.velo) {
+    h += `<h3>🚲 Vélo (${Math.round(t.km.velo)} km)</h3>` + Object.entries(TRANSPORT.pieces).map(([p, x]) => ligne(p === 'pneus' ? 'Pneus' : p === 'chaine' ? 'Chaîne' : 'Freins', `<span class="minibarre"><div style="width:${Math.min(100, t.usure[p])}%;background:${t.usure[p] > 80 ? '#b91c1c' : '#a16207'}"></div></span> <span class="aide">${Math.round(t.usure[p])} % · pièce ${eur(x.prix)}</span>`)).join('');
+    h += ligne('Entretien', `<button class="btn" data-action="reparerVelo" data-v="diy" ${s.possede.outilsVelo ? '' : 'disabled'}>Changer la pièce la plus usée soi-même (45 min)</button><button class="btn" data-action="reparerVelo" data-v="atelier">Révision atelier (${eur(TRANSPORT.veloEntretienAtelier)})</button>`);
+    if (t.veloEnPanne) h += aide('⚠️ Vélo immobilisé : répare-le, sinon tu prends les transports en commun.');
+  }
+  h += aide(`Temps de trajet aujourd'hui : ${fmtH(tempsTransport(s))}. Pluie, froid et canicule rendent le vélo pénible (tenue de pluie, partir tôt) ; le vélo et la marche améliorent la santé. ${s.possede.kitSecu ? '' : 'Sans casque ni éclairage, le risque d\'accident est 2,5 fois plus élevé.'}`);
+  return h;
+}
+
+export function rendreStockage(s) {
+  const y = s.sys.stockage ||= { actif: false, contenant: 'torchon' };
+  let h = `<h3>🔋 Stocker le surplus solaire</h3>`;
+  if (!s.possede.solaire) return h + aide('Avec un panneau solaire, le surplus de midi peut chauffer de l\'eau (bouilloire, bidon isolé) ou le ballon (routeur) au lieu d\'être perdu.');
+  h += ligne('Bouilloire à midi', ouiNon('sys.stockage.actif', y.actif, 'Chauffer de l\'eau au pic solaire', 'Non'));
+  if (y.actif) h += ligne('Contenant', `<span class="choix col">${Object.entries(STOCKAGE.contenants).map(([k, c]) => {
+    const t22 = newton(STOCKAGE.tChauffe, 19, c.tau, 9);
+    return `<button data-set="sys.stockage.contenant" data-v="${k}" class="${y.contenant === k ? 'actif' : ''}" ${contenantPossible(s, k) ? '' : 'disabled'}>${c.nom} · ${c.litres} L · ${Math.round(t22)} °C à 22 h</button>`; }).join('')}</span>`);
+  const d = s.dernierJour?.stockage;
+  if (d) h += aide(`Hier : surplus perdu ${num(d.perdu, 2)} kWh${y.actif ? ` · eau chauffée ${num(d.solaire, 2)} kWh au soleil et ${num(d.reseau, 2)} kWh au réseau, ${d.t22 ? Math.round(d.t22) + ' °C à 22 h' : ''}` : ''}${d.routed ? ` · routé vers le ballon ${num(d.routed, 2)} kWh` : ''}.`);
+  h += aide('Refroidissement de Newton : sans isolant, l\'eau à 90 °C est tiède en 3 h ; dans un thermos ou une caisse isolée, elle reste chaude jusqu\'au lendemain. Une bouilloire de 2 000 W dépasse le surplus d\'un panneau de 400 W : le reste vient du réseau. Le bidon chauffe lentement, seulement sur le surplus.');
+  return h;
+}
+
+export function rendreCombos(s) {
+  const c = s.combos || {};
+  const l = Object.entries(COMBOS).map(([id, x]) => c[id] ? `<div class="principe-item transversal"><b>🔗 ${x.nom}</b>${x.texte} <small>(${c[id].fois} jours)</small></div>` : `<div class="principe-item verrou">🔗 ??? <small>(combo à découvrir)</small></div>`).join('');
+  return `<p class="aide">${Object.keys(c).length}/${Object.keys(COMBOS).length} combos découverts.</p>` + l;
+}
+
+export function rendreEncyclopedie(s) {
+  const f = etatUI.filtrePrincipes;
+  const doms = ['tous', ...Object.keys(DOMAINES_PRINCIPES)];
+  let h = `<div class="choix filtres">${doms.map(d => `<button data-filtre="${d}" class="${f === d ? 'actif' : ''}">${d === 'tous' ? 'Tous' : DOMAINES_PRINCIPES[d]}</button>`).join('')}</div>`;
+  h += Object.entries(PRINCIPES).filter(([, p]) => f === 'tous' || p.dom === f).map(([id, p]) => {
+    if (!s.principes.includes(id)) return `<div class="principe-item verrou">🔒 <b>???</b> <small>${DOMAINES_PRINCIPES[p.dom]}</small><br><small>Indice : ${p.indice}</small></div>`;
+    const ouvert = etatUI.principeOuvert === id;
+    return `<div class="principe-item ${p.transversal ? 'transversal' : ''}"><button class="lien" data-principe="${id}"><b>${p.transversal ? '🔁 ' : ''}${p.titre}</b> <small>${DOMAINES_PRINCIPES[p.dom]} ${ouvert ? '▲' : '▼'}</small></button><div>${p.texte}</div>
+      ${ouvert ? `<dl class="fiche"><dt>Quoi</dt><dd>${p.quoi}</dd><dt>Pourquoi ça marche</dt><dd>${p.pourquoi}</dd><dt>Dans le jeu</dt><dd>${p.comment}</dd><dt>Piège / limite</dt><dd>${p.piege}</dd><dt>Se transpose à</dt><dd>${p.transfert}</dd></dl>` : ''}</div>`;
+  }).join('');
+  return h;
+}
+
+// Ventilation passive : cheminée solaire et puits canadien
+export function rendrePassif(s) {
+  const P = s.passif, ch = hasCheminee(s), pt = typePuits(s);
+  let h = `<h3>🌬️ Ventilation passive</h3>`;
+  const enCours = (P?.chantiers || []).filter(c => c.reste > 0);
+  if (enCours.length) h += aide(`🏗️ Chantier en cours : ${enCours.map(c => `${PASSIF.noms[c.id]} (${c.reste} j restant${c.reste > 1 ? 's' : ''})`).join(', ')}. Tout ton temps libre y passe.`);
+  if (!ch && !pt) return h + aide('Cheminée solaire (tirage gratuit) et puits canadien (air à la température du sol, ~12 °C) : voir la boutique ci-dessous. Ensemble, ils ventilent sans ventilateur.');
+  const chap = chapitreDuJour(Math.min(s.jour, 125));
+  if (ch) {
+    h += ligne('Cheminée', choixSet('passif.mode', [['ferme', 'Fermée'], ['trombe', 'Mode Trombe (hiver)'], ['purgeNuit', 'Purge la nuit'], ['purge', 'Purge jour et nuit']], P.mode));
+    if (P.mode === 'trombe' && !s.possede.chemineePro) h += ligne('Clapet bas la nuit', choixSet('passif.clapetNuit', [['ferme', 'Fermé'], ['ouvert', 'Laissé ouvert']], P.clapetNuit));
+  }
+  if (pt) {
+    h += ligne('Puits', choixSet('passif.puitsMode', [['off', 'Coupé'], ['auto', 'Auto (< 14 °C ou > 20 °C)'], ['on', 'Toujours']], P.puitsMode));
+    h += ligne('Débit', choixSet('passif.debit', [['normal', 'Normal'], ['hygro', 'Réduit les jours lourds (hygromètre)', !s.possede.hygrometre], ['reduit', 'Toujours réduit']], P.debit));
+    h += ligne('Sortie dans le cellier', ouiNon('passif.cave', P.cave, 'Branchée', 'Non'));
+    h += ligne('Entretien', `<button class="btn" data-action="regard">Vider le regard (30 min)</button> <button class="btn" data-action="filtre">Changer le filtre (15 €)</button>` + (P.penteRatee ? ` <button class="btn" data-action="pente">Reprendre la pente (${eur(PASSIF.reprisePente)}, ${PASSIF.reprisePenteFourchette.join('-')} € estimé)</button>` : ''));
+    h += aide(`Sol à 2 m aujourd'hui : ${num(tSol(jourAn(chap)))} °C. Regard : ${num(P.regard, 1)} L de condensats${P.penteRatee ? ` · ⚠️ ${num(P.stagnant, 1)} L stagnent dans le tube` : ''}. ${P.zoneRadon ? (s.possede.kitRadon || pt === 'puitsHydro' ? '☢️ Zone radon : protégé.' : '☢️ Zone radon : kit étanchéité indispensable !') : 'Commune hors zone radon.'}`);
+  }
+  const j = P.j;
+  if (j && s.jour > 0) h += aide(`Hier : chaleur cheminée ${num(j.Pch, 1)} kWh, puits ${num(j.Ppuits, 1)} kWh, débit max ${Math.round(j.Q)} m³/h, condensats ${num(j.cond, 2)} L, humidité max ${Math.round(j.hrMax)} %${j.contre > 0 ? `, contre-tirage −${num(j.contre, 1)} kWh` : ''}.`);
   return h;
 }
