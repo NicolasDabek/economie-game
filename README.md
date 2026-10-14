@@ -171,6 +171,14 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 - « Prochain événement » ne s'arrête plus sur une alerte déjà vue récemment.
 - Bien-être négligé ramené vers 33 (zéro plaisir : −1,95/jour au lieu de −1,6).
 
+## v0.9.1 : arbitre des recommandations (js/arbitre.js)
+
+- Chaque conseil est joué à blanc 30 jours contre « ne rien faire » : argent annualisé + jauges sous les seuils de l'écran de fin, valorisées 1,5 €/point/jour.
+- Conflits : un seul conseil par levier (réglage, abonnement, vêtement, achat), le mieux évalué.
+- Protection : aucune économie qui fait entrer ou enfonce le moral (<40), le bien-être (<50), l'hygiène (<50) ou la santé (<60) dans un mauvais palier ; le conseiller ne pointe plus une « fuite » sur un poste qui nourrit une jauge basse.
+- Hystérésis : pas de retour en arrière sur un levier changé (par toi ou un conseil) depuis moins de 21 jours, sauf jauge critique (<25) que l'action remonte. Bouton « Ignorer » : conseil masqué 30 jours.
+- Test `node test/reco-test.mjs` : débutant qui suit le 1er conseil chaque jour pendant 2 ans, sans oscillation A→B→A en 14 jours, jauges saines.
+
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.
 

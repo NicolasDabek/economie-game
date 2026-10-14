@@ -9,6 +9,11 @@ import { deposer } from './finance.js';
 import { valeurs } from './finance.js';
 import { tableauROI, estimationAchat } from './roi.js';
 import { palierMoral, palierBE } from './paliers.js';
+import { arbitrer, PROTEGE } from './arbitre.js';
+// postes qui nourrissent une jauge : on ne les coupe pas quand cette jauge est basse
+export const SOURCES = { plaisirs: ['volonte', 'bienetre'], services: ['volonte', 'bienetre'], abonnements: ['volonte', 'bienetre'], alim: ['bienetre'], chauffage: ['sante', 'confort'], eauChaude: ['hygiene'], linge: ['hygiene'] };
+const valJ = (s, g) => g === 'volonte' ? s.volonte : g === 'confort' ? s.confort : s[g];
+export const sourceDeJaugeBasse = (s, poste) => (SOURCES[poste] || []).some(g => valJ(s, g) < (PROTEGE[g] ?? 60) + 5);
 
 // dépenses cumulées par poste, toi et le voisin
 export function postes(s) {
@@ -180,7 +185,7 @@ export function recommandations(s, r = scoreFinal(s)) {
   }
   for (const p of postes(s)) {
     const fuite = (p.moi - p.voisin) / jours * 365;
-    if (p.id !== 'imprevus' && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: GESTE_POSTE[p.id]?.titre || `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: `${p.nom} : ${eur(fuite)}/an de plus que le voisin`, aller: p.aller, fuite: true, action: { type: 'poste', id: p.id } });
+    if (p.id !== 'imprevus' && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: GESTE_POSTE[p.id]?.titre || `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: `${p.nom} : ${eur(fuite)}/an de plus que le voisin`, aller: p.aller, fuite: true, poste: p.id, action: { type: 'poste', id: p.id } });
   }
   // gestes : un seul à la fois (la volonté s'use quand on en apprend plusieurs)
   if (!enApprentissage(s)) for (const g of GESTES_RECO) if (!g.fait(s) && (g.dispo?.(s) ?? true) && (!g.hiver || saisonFroide(s))) { L.push({ titre: g.titre, an: g.an, roi: null, jauge: 'nouveau geste : un peu de volonté pendant 10 jours', aller: g.aller, action: { type: 'geste', id: g.id } }); break; }
@@ -206,9 +211,11 @@ export function recommandations(s, r = scoreFinal(s)) {
   if (s.fin && s.argent > 3000) { const m = s.argent - 1500; L.push({ titre: `Placer ${eur(m)} sur le Livret A`, an: m * BANQUE.livretA.taux, roi: BANQUE.livretA.taux * 100, jauge: 'disponible à tout moment', aller: 'banque', action: { type: 'placer', montant: m } }); }
   const pm = palierMoral(s.volonte), pb = palierBE(s.bienetre);
   if (s.volonte < 40 || s.bienetre < 50) L.push({ titre: `Remonter ${s.volonte < 40 ? 'le moral' : 'le bien-être'} (${s.volonte < 40 ? pm.nom : pb.nom})`, an: 0, roi: null, jauge: s.volonte < 40 ? pm.conseil : pb.conseil, aller: 'budget', urgent: true, action: { type: 'jauge', id: s.volonte < 40 ? 'moral' : 'bienetre' } });
-  for (const x of L) if (x.action && x.fuite && !faisable(s, x.action)) delete x.action;   // la fuite reste signalée, sans bouton « Faire » inopérant
-  const ok = L.filter(x => !x.action || x.fuite || faisable(s, x.action));
-  return ok.sort((a, b) => (b.urgent ? 1e9 : b.an) - (a.urgent ? 1e9 : a.an)).slice(0, 3);
+  // v0.9.1 : une fuite sans geste applicable n'est plus proposée (elle reste visible dans « Dépenses du mois par poste »)
+  const ok = L.filter(x => !x.fuite || (faisable(s, x.action) && !sourceDeJaugeBasse(s, x.poste)));
+  // préfiltre bon marché (les 8 meilleurs a priori), puis arbitrage par simulation à blanc
+  const pre = ok.sort((a, b) => (b.urgent ? 1e9 : b.an) - (a.urgent ? 1e9 : a.an)).slice(0, 8);
+  return arbitrer(s, pre, appliquerConseil).slice(0, 3);
 }
 
 export function alertes(s) {
@@ -282,7 +289,7 @@ export function rendreTableau(s, etat = {}) {
   const reco = recommandations(s, r);
   const df = s.eco?.defi, dfFait = df ? s.depenses[df.poste] - df.debut : 0, dfP = df ? Math.min(100, dfFait / df.cible * 100) : 0;
   const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — ${eur(dfFait)} / ${eur(df.cible)}</span><div class="progres ${dfP > 100 * (s.jour - df.jour + 1) / 365 ? 'alerte' : ''}" role="progressbar" aria-valuenow="${Math.round(dfP)}" aria-valuemin="0" aria-valuemax="100" aria-label="Budget du défi consommé"><div style="width:${dfP}%"></div></div></div>` : '';
-  const recos = `<div class="tb-carte"><h3>Que faire maintenant ?</h3>${defiH}<ol class="tb-reco">${reco.map((x, i) => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : x.an > 0 ? `~${eur(x.an)}/an` : ''}${x.roi ? ` · rendement ${Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><span class="tb-acts">${x.action && x.action.type !== 'poste' || (x.action?.type === 'poste' && x.action.id !== 'linge') ? `<button class="btn primaire" data-appliquer="${i}" aria-label="Faire : ${x.titre}">Faire</button>` : ''}<button class="btn" data-aller="${x.aller}" aria-label="Y aller : ${x.titre}">Y aller</button></span></li>`).join('') || '<li class="vide">Rien d\'urgent : avance dans le temps.</li>'}</ol></div>`;
+  const recos = `<div class="tb-carte"><h3>Que faire maintenant ?</h3>${defiH}<ol class="tb-reco">${reco.map((x, i) => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : x.an > 0 ? `~${eur(x.an)}/an` : ''}${x.roi ? ` · rendement ${Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><span class="tb-acts">${x.action && x.action.type !== 'poste' || (x.action?.type === 'poste' && x.action.id !== 'linge') ? `<button class="btn primaire" data-appliquer="${i}" aria-label="Faire : ${x.titre}">Faire</button>` : ''}<button class="btn" data-aller="${x.aller}" aria-label="Y aller : ${x.titre}">Y aller</button><button class="btn discret" data-ignorer="${i}" aria-label="Ignorer pendant 30 jours : ${x.titre}" title="Ne plus proposer pendant 30 jours">Ignorer</button></span></li>`).join('') || '<li class="vide">Rien d\'urgent : avance dans le temps.</li>'}</ol></div>`;
 
   // 5. alertes
   const al = alertes(s);

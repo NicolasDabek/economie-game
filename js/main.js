@@ -1,4 +1,5 @@
 // Point d'entrée : relie l'état, la simulation et l'interface
+import { ignorer } from './arbitre.js';
 import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js';
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
@@ -142,6 +143,10 @@ document.addEventListener('click', (e) => {
     }
   } else if (d.onglet) ouvrir(d.onglet);
   else if (d.section) ouvrirSection(s, d.section);
+  else if (d.ignorer !== undefined) {
+    const r = recommandations(s)[Number(d.ignorer)];
+    if (r) { ignorer(s, r); toast(`Conseil masqué 30 jours : ${r.titre}`); rafraichir(s.messages.length); }
+  }
   else if (d.appliquer !== undefined) {
     const r = recommandations(s)[Number(d.appliquer)], t = r && appliquerConseil(s, r.action);
     toast(t ? `✅ ${t}` : 'Rien à appliquer automatiquement : ouvre le réglage avec « Y aller ».', { type: t ? 'ok' : 'info' });

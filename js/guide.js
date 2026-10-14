@@ -7,7 +7,7 @@ import { valeurs } from './finance.js';
 import { icone } from './icones.js';
 import { etatUI } from './onglets.js';
 import { palierMoral, palierBE } from './paliers.js';
-import { rendreTableau, rendreCourbes } from './tableau.js';
+import { rendreTableau, rendreCourbes, sourceDeJaugeBasse } from './tableau.js';
 import { etatJauges } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -60,6 +60,8 @@ export function rendreNavigation(s) {
 }
 
 // ---------------------------------------------------------------- conseiller : un conseil à la fois, selon l'état
+// v0.9.1 : domaine du bilan → poste source d'une jauge (on ne pointe pas une « fuite » de plaisirs en pleine déprime)
+const POSTE_DOMAINE = [['Chauffage', 'chauffage'], ['Eau chaude', 'eauChaude'], ['Alimentation', 'alim'], ['Abonnements', 'services'], ['Plaisirs', 'plaisirs'], ['Linge', 'linge']];
 const SECTION_DOMAINE = [['Chauffage', 'maison'], ['Rafraîch', 'maison'], ['Eau chaude', 'eau'], ['Eau', 'eau'], ['Alimentation', 'cuisine'], ['Autre électricité', 'elec'], ['Abonnements', 'budget'], ['Plaisirs', 'budget'], ['Transport', 'transport'], ['Linge', 'linge'], ['Imprévus', 'budget'], ['Banque', 'banque']];
 function conseils(s, r) {
   const L = [];
@@ -74,7 +76,7 @@ function conseils(s, r) {
   if (s.argent < 0) L.push({ alerte: true, txt: `Tu es à découvert (${eur(s.argent)}). Les agios coûtent cher : retire un peu de ton Livret A ou active le virement automatique.`, aller: 'banque', bouton: 'Ouvrir la banque' });
   if (!s.possede.thermometre) L.push({ txt: 'Tu ne sais pas quelle pièce te coûte le plus. Des thermomètres (12 €) révèlent la température et le coût de chaque pièce.', aller: 'b-maison', bouton: 'Voir la boutique' });
   // plus grosse fuite : le poste où tu dépenses le plus de plus que le voisin
-  const fuites = r.domaines.filter(d => !d.nom.startsWith('Épargne') && !d.nom.startsWith('Autres') && !d.nom.startsWith('Équipements') && !d.nom.startsWith('Vêtements') && d.valeur < -15).sort((a, b) => a.valeur - b.valeur);
+  const fuites = r.domaines.filter(d => !d.nom.startsWith('Épargne') && !d.nom.startsWith('Autres') && !d.nom.startsWith('Équipements') && !d.nom.startsWith('Vêtements') && d.valeur < -15 && !sourceDeJaugeBasse(s, POSTE_DOMAINE.find(([pre]) => d.nom.startsWith(pre))?.[1])).sort((a, b) => a.valeur - b.valeur);
   if (fuites.length && s.jour >= 7) { const f = fuites[0]; L.push({ txt: `Plus grosse fuite : ${f.nom.split(' (')[0].toLowerCase()}, ${eur(-f.valeur)} de plus que le voisin depuis le début.`, aller: SECTION_DOMAINE.find(([p]) => f.nom.startsWith(p))?.[1] || 'resume', bouton: 'Agir' }); }
   // meilleur achat rentable à ta portée
   let best = null;
