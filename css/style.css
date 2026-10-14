@@ -66,3 +66,23 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .modal-contenu .grand{font-size:30px;font-weight:800;color:var(--accent);text-align:center;margin:8px 0}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 .stats div{background:#f1f5f9;border-radius:8px;padding:8px}.stats b{display:block;font-size:18px}
+.menu{display:flex;gap:6px}
+.btn-ciel{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:5px 10px;cursor:pointer}
+.btn-ciel:hover{background:rgba(255,255,255,.35)}
+#annonces{width:100%;background:rgba(254,243,199,.95);color:#78350f;border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.cache{display:none !important}
+.piece.humide::after{content:'💧';position:absolute;bottom:6px;right:8px}
+.vet{grid-template-columns:28px 1fr auto}
+.vet .acts{display:flex;flex-direction:column;gap:4px;align-items:stretch}
+.vet .acts .btn{font-size:12px;padding:4px 8px}
+.tag.porte{background:#dbeafe;color:#1e40af}
+.mini{flex-wrap:wrap}
+#boutique h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--doux);margin:10px 0 2px}
+.principe-item.transversal{background:#f5f3ff;border-left:3px solid #7c3aed}
+#investissements table,.domaines{width:100%;border-collapse:collapse;font-size:13px}
+#investissements td,#investissements th,.domaines td{padding:3px 4px;border-bottom:1px solid #f1f5f9;text-align:right}
+#investissements td:first-child,#investissements th:first-child,.domaines td:first-child{text-align:left}
+.choixDilemme{display:block;width:100%;text-align:left;margin:8px 0;padding:10px}
+.actif-btn{background:#dcfce7;border-color:#16a34a}
+.modal-contenu h3{margin:14px 0 6px;font-size:15px}
+#annonces span{display:block}
