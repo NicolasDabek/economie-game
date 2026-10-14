@@ -138,11 +138,28 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 - **Mise en page** : barre du haut (date, saison, année, argent, jauges colorées avec flèche de tendance et infobulle), maison au centre, panneau latéral contextuel, commandes du temps en bas.
 - **Maison interactive** : pièces cliquables (souris ou clavier) avec température et humidité ; un clic ouvre le réglage du chauffage.
 - **6 sections** (Maison, Vie quotidienne, Achats, Argent, Savoir, Bilan) avec sous-onglets ; le contenu verrouillé reste caché et un badge « nouveau » signale ce qui se débloque.
-- **Accompagnement** : tutoriel en 12 étapes (passable, rejouable via « ? »), 3 objectifs avec barres de progression, un conseiller qui donne un conseil à la fois, glossaire de 24 termes avec recherche, encyclopédie repliable.
+- **Accompagnement** : tutoriel en 13 étapes (passable, rejouable via « ? »), 3 objectifs avec barres de progression, un conseiller qui donne un conseil à la fois, glossaire de 24 termes avec recherche, encyclopédie repliable.
 - **Retour immédiat** : notifications après chaque action (effet en €/jour et sur les jauges), aperçu avant les achats importants et lors des réglages du thermostat (≈ 7 % de chauffage par °C, ADEME).
 - **Système visuel** : variables CSS, échelle d'espacement, icônes SVG maison (`js/icones.js`, aucun CDN), thème clair ou sombre, micro-animations désactivées si « réduire les animations ».
 - **Accessibilité** : navigation au clavier, focus visible, libellés aria, contraste ; touche « j » = jour suivant, Échap ferme les fenêtres.
 - **Mobile** : mise en page en une colonne, sections collantes, commandes du temps toujours accessibles.
+
+## v0.8.1 : tableau de bord, paliers, corrections
+- **Tableau de bord** (vue par défaut, bascule avec « La maison ») : situation (compte, patrimoine placements compris, épargne de précaution, budget mensuel entrées/sorties), les jauges avec palier, tendance et causes, dépenses du mois par poste (toi, voisin, mois dernier) avec la plus grosse fuite en rouge, 3 actions recommandées classées par €/an avec rendement et effet sur les jauges (bouton « Y aller »), alertes (jauge basse, événement proche, Tempo rouge, risque de panne, PEA 5 ans, PEL 2 ans, facture), avancement et titre, ce qui rapporte, prévisions des 3 prochains jours avec un conseil par jour.
+- **Paliers de moral** : ≥ 60 épanoui (gestes −20 % de volonté, augmentation +0,5 %/an), 40-60 stable, 25-40 fragile (gestes +15 %, achats d'impulsion), 10-25 déprime (gestes sautés, aucune nouvelle habitude, santé qui baisse), < 10 crise (médecin, psychologue, 7 jours d'arrêt dont 3 de carence).
+- **Paliers de bien-être** : ≥ 70 en forme (sommeil réparateur : santé +0,15/j, moral +2, temps libre plus ressourçant), 50-70 correct, 35-50 fatigué (santé −0,1/j, moral −2), 20-35 à bout (santé −0,3/j, moral −5, maladie dès santé < 50, augmentation perdue), < 20 burn-out (14 jours d'arrêt).
+  Le palier s'affiche sous la jauge (icône, effet, comment remonter) et le conseiller prévient dès qu'on passe sous 40 (moral) ou 50 (bien-être).
+- **Se réabonner** : prix catalogue du moment, pas de nouvel essai gratuit ni de remise de fidélité, frais et engagement réalistes (salle de sport : 49 € d'inscription et 12 mois ; assurance mobile : 12 mois ; forfait : carte SIM 10 €, la remise négociée est perdue à la résiliation). Effet immédiat, frais au carnet de comptes.
+- **Habitudes qui reflètent l'état courant** : « habitude en cours x/10 », « habitude acquise ✓ », ou, si le geste est abandonné, « habitude en pause · perdue dans N j » puis plus rien. Un apprentissage abandonné recule d'un jour par jour ; une habitude acquise résiste 30 jours, puis il faut 3 jours pour la retrouver. Vérifié pour les 19 gestes, y compris quand la routine « saisons » les change.
+- Les 8 jauges tiennent sur une ligne à 1280 px et passent à la ligne sur mobile ; l'icône du ciel suit le lever et le coucher du soleil (🌅 à 7 h en hiver).
+
+| Stratégie (graines 2026 / 7 / 1789) | Économies vs voisin | Moral | Bien-être |
+|---|---|---|---|
+| malin | 25,1k / 26,6k / 31,5k € | 58-59 | 69 |
+| maître | 46,3k / 48,0k / 54,4k € | 62-63 | 78-79 |
+| moral négligé (plaisirs au minimum, isolé) | 21,4k / 24,7k / 29,8k € | 28-31 | 46 |
+| bien-être négligé (zéro plaisir, chambre à 15 °C) | 14,8k / 19,4k / 24,1k € | 18-20 | 36-37 |
+| austère extrême | −8,9k / −6,4k / −0,7k € | 1 | 1 |
 
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.
@@ -159,13 +176,16 @@ node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations 
 node test/finance-test.mjs   # banque, marchés, projection, 4 stratégies d'arbitrage sur 5 ans, révision du Livret A, PEA 5 ans, temps de calcul 5 et 10 ans
 CHROME=/usr/bin/google-chrome node test/navigateur.cjs   # navigateur sans écran : campagne de 3 ans en avance rapide, bilans, migrations (playwright-core)
 CHROME=/usr/bin/google-chrome node test/captures.cjs after   # captures d'écran avant/après (bureau 1280×800, mobile 390×844) dans /workspace/ux-shots/
+node test/regression-test.mjs # v0.8.1 : réabonnement, étiquettes d'habitude, paliers
+CHROME=/usr/bin/google-chrome node test/captures-fix.cjs   # captures fix_*.png (tableau de bord, jauges, réabonnement, habitudes)
 node test/passif-test.mjs    # cheminée solaire et puits canadien : rentabilité, pièges, combos
 node outils/estimations.mjs  # régénère js/estimations.js (estimations avant achat)
 ```
 `test/sim-test.mjs` simule 5 ans (1 826 jours) avec six stratégies, sur trois graines (2026, 7 et 1789). Il vérifie que :
 - le naïf, ne rien toucher et le glacial perdent ; le maître économise strictement plus que l'austère extrême (qui reste ≤ 70 % du maître) et le glacial moins que le malin ;
 - le maître a une santé moyenne ≥ 85 et le titre « Maître de la sobriété » ;
-- les moraux moyens tombent dans leurs cibles : ne rien toucher 55-65, naïf 65-75, malin 60-70, maître 55-65, austère < 25, glacial < 30 ;
+- les moraux moyens tombent dans leurs cibles : ne rien toucher 55-65, naïf 65-75, malin 55-65, maître 55-65, austère < 25, glacial < 30 ;
+- négliger le moral ou le bien-être (jauge vers 30) rapporte moins que le malin ;
 - au moins 3 combos sont trouvés et que les principes sont au moins 75 ;
 - les sauvegardes v3, v4, v5 et v6 sont migrées (la banque démarre au jour de la sauvegarde, sans rattrapage), et qu'une sauvegarde plus ancienne est effacée proprement.
 
@@ -231,6 +251,8 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - `js/onglets.js` : onglets par domaine
 - `js/guide.js` : sections, tutoriel, objectifs, conseiller, glossaire, aperçus (v0.8)
 - `js/icones.js` : icônes SVG intégrées (v0.8)
+- `js/tableau.js` : tableau de bord (v0.8.1)
+- `js/paliers.js` : paliers de moral et de bien-être (v0.8.1)
 - `js/ui.js` et `js/main.js` : interface
 - `docs/conception.md` : document de conception
 
@@ -243,6 +265,7 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - ✅ v0.7 : moral sur la durée (adaptation hédonique, blues de l'hiver, monotonie, stress financier, vacances, maîtrise du budget), santé qui coûte (consultations, arrêts avec jours de carence, dentiste, moisissures, augmentations manquées), « peignoir polaire »
 - ✅ v0.6 : campagne de 3, 5 ou 10 ans, quatre saisons par an, avance rapide et routines, salaire, inflation et prix qui évoluent, Livret A révisé par formule, pannes et remplacement des appareils, bilan annuel, 104 principes
 - ✅ v0.8 : refonte de l'interface (sections, maison interactive, tutoriel, objectifs, conseiller, glossaire, aperçus, thème sombre, accessibilité, mobile)
+- ✅ v0.8.1 : tableau de bord, paliers de moral et de bien-être, réabonnement, habitudes qui s'oublient, corrections d'affichage
 1. Rendre l'automne plus spécifique.
 2. Effet rebond, et plus de fausses économies.
 3. Scénarios (étudiant, famille, retraité), voisinage et partage, défis (« Hiver à 200 € »).

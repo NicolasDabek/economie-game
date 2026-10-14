@@ -238,6 +238,10 @@ export const ACHATS = {
 export const TEMPS_JOUR = 4;        // heures disponibles par jour de semaine (repas, ménage et loisirs compris)
 export const TEMPS_WEEKEND = 7;     // heures disponibles le week-end
 export const JOURS_HABITUDE = 10;
+// Oubli (v0.8.1) : un geste abandonné s'efface. En apprentissage, −1 jour de progrès par jour sans pratique ;
+// une habitude acquise résiste ~30 jours (vacances, saison) puis redevient « en cours » : on la retrouve plus vite
+// qu'on ne l'a apprise (Lally et al. 2009 : rater un jour ne casse pas l'automatisme, l'abandon prolongé si).
+export const HABITUDE_OUBLI = { graceJours: 30, retourPratique: 7 };
 export const GESTES = {
   rideaux:   { nom: 'Fermer rideaux et volets le soir', cout: 3, temps: 0.05 },
   portes:    { nom: 'Fermer les portes',                cout: 3, temps: 0 },
@@ -359,6 +363,20 @@ export const ABONNEMENTS = {
   assurance: { nom: 'Assurance mobile oubliée', mois: 9.99, plaisir: 0, cache: true },
   appli:     { nom: 'Appli de méditation (essai gratuit devenu payant)', mois: 7.99, plaisir: 0, cache: true },
   forfait:   { nom: 'Forfait mobile 100 Go', mois: 24.99, plaisir: 0, cache: false, renegocie: 9.99 },
+};
+// Se réabonner (v0.8.1) : tarif catalogue du moment (pas de promo de bienvenue ni d'essai gratuit pour un ancien client),
+// frais d'adhésion et engagement quand ils existent. Effet immédiat, premier mois facturé au prorata comme les autres.
+// Salles low-cost : frais d'inscription 30-60 € et engagement 12 mois (Basic-Fit, Fitness Park, 2026) ;
+// forfait mobile : carte SIM 10 € chez la plupart des opérateurs, la remise de fidélisation est perdue ;
+// assurance mobile : engagement 12 mois (contrats affinitaires, résiliables ensuite à tout moment, loi Hamon).
+export const REABONNEMENT = {
+  streaming: { frais: 0, engagementMois: 0, note: 'sans engagement, pas de nouvel essai gratuit' },
+  musique:   { frais: 0, engagementMois: 0, note: 'sans engagement, l\'offre d\'essai ne s\'applique plus' },
+  sport:     { frais: 49, engagementMois: 12, note: 'frais d\'inscription 49 €, engagement 12 mois' },
+  cloud:     { frais: 0, engagementMois: 0, note: 'sans engagement' },
+  assurance: { frais: 0, engagementMois: 12, note: 'engagement 12 mois' },
+  appli:     { frais: 0, engagementMois: 0, note: 'essai gratuit déjà utilisé : payant dès aujourd\'hui' },
+  forfait:   { frais: 10, engagementMois: 0, note: 'carte SIM 10 €, prix catalogue (la remise négociée est perdue)' },
 };
 export const MEDIATHEQUE = 20;   // €/an : abonnement à la médiathèque municipale (souvent gratuit)
 export const PLAISIRS = { 0: -1.6, 10: 0.4, 20: 1.0, 35: 1.4 };
@@ -612,7 +630,7 @@ export const MARCHES = {
 // - blues de l'hiver : 5 à 10 % des adultes en France connaissent une dépression saisonnière, bien plus un simple coup de mou (Inserm, HAS) ;
 // - le stress financier (découvert, pas d'épargne de précaution) pèse sur le moral (Banque de France, baromètre de l'éducation financière 2024).
 export const MORAL = {
-  base: 33.2, kBienetre: 0.5, kSante: 0.25, kConfort: 1.0, inertie: 15,   // calibré pour 5 ans : ne rien toucher ~62, naïf ~67, malin ~61, maître ~63
+  base: 31.2, kBienetre: 0.5, kSante: 0.25, kConfort: 1.0, inertie: 15,   // calibré pour 5 ans : ne rien toucher ~62, naïf ~67, malin ~61, maître ~63
   plaisir: 11, privation: 6, adaptMax: 0.7, adaptJours: 60, nouveaute: 0.4,
   social: 10, blues: 6,
   monotonie: { austere: 1, batch: 0.8, livraison: 0.2, classique: 0.3, maison: 0.15 }, monotonieMax: 8,

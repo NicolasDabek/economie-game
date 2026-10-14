@@ -3,7 +3,7 @@ import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
 import { etatUI } from './onglets.js';
-import { prefs, sauverPrefs, ouvrir, ouvrirSection, apercuAchat, effetAchat, apercuConsigne, demarrerTutoriel, arreterTutoriel, etapeSuivante, coachActif, majCoach, objectifsAtteints, filtrerGlossaire } from './guide.js';
+import { prefs, sauverPrefs, ouvrir, ouvrirSection, apercuAchat, effetAchat, apercuConsigne, demarrerTutoriel, arreterTutoriel, etapeSuivante, coachActif, majCoach, objectifsAtteints, filtrerGlossaire, choisirVue } from './guide.js';
 import { icone } from './icones.js';
 import { ACHATS } from './data.js';
 import { eur } from './simulation.js';
@@ -14,7 +14,7 @@ import { changerProfil, deposer, retirer, ouvrirAV, projection } from './finance
 import { actions, prendreTemps, payer } from './simulation.js';
 import { viderRegard, changerFiltre, reprendrePente } from './passif.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from './transport.js';
-import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from './systemes.js';
+import { changerTarif, faireReleves, resilier, reabonner, renegocier, revendre, degivrer, prendreMediatheque } from './systemes.js';
 
 function regler(chemin, brut) {
   const v = brut === 'true' ? true : brut === 'false' ? false : (brut !== '' && !isNaN(Number(brut)) ? Number(brut) : brut);
@@ -50,7 +50,7 @@ async function avancerVite(nbJours, jusquEvenement) {
     if (jusquEvenement && (chapitreDuJour(s.jour).saison !== saison0 || nouveaux.some(m => ['annonce', 'principe', 'decouverte'].includes(m.type)))) break;
     if (d % 7 === 6) { rendreTout(s); await new Promise(r => setTimeout(r, 0)); }
   }
-  rendreHorloge(7);
+  rendreHorloge(7, s?.jour || 0);
   rafraichir(n0);
   autoSauvegarde();
   occupe = false;
@@ -61,11 +61,11 @@ async function avancer(nbJours) {
   occupe = true;
   for (let d = 0; d < nbJours && !s.fini && !s.dilemme; d++) {
     const pas = nbJours > 1 ? 4 : 2;
-    for (let k = 0; k < 24; k += pas) { rendreHorloge((7 + k) % 24); await new Promise(r => setTimeout(r, nbJours > 1 ? 15 : 35)); }
+    for (let k = 0; k < 24; k += pas) { rendreHorloge((7 + k) % 24, s.jour); await new Promise(r => setTimeout(r, nbJours > 1 ? 15 : 35)); }
     const n = s.messages.length, v0 = s.coutVoisinCumul || 0;
     jourSuivant(s);
     if (nbJours === 1 && s.dernierJour) { const vj = (s.coutVoisinCumul || 0) - v0, mj = s.dernierJour.cout || 0; toast(`Journée terminée : ${eur(mj)} dépensés${vj > 0 ? ` (voisin : ${eur(vj)})` : ''}.`, { effet: vj > 0 ? (mj <= vj ? `Tu as économisé ${eur(vj - mj)} aujourd'hui.` : `Tu as dépensé ${eur(mj - vj)} de plus que lui.`) : '', duree: 4000 }); }
-    rendreHorloge(7);
+    rendreHorloge(7, s?.jour || 0);
     rafraichir(n);
     autoSauvegarde();
   }
@@ -105,6 +105,7 @@ document.addEventListener('click', (e) => {
     }
   } else if (d.onglet) ouvrir(d.onglet);
   else if (d.section) ouvrirSection(s, d.section);
+  else if (d.vue) { choisirVue(d.vue); rendreTout(s); }
   else if (d.aller) { ouvrir(d.aller); document.querySelector('.lateral')?.scrollIntoView({ block: 'start' }); }
   else if (d.conseilSuivant) etatUI.conseil = (etatUI.conseil || 0) + 1;
   else if (d.confirmerAchat) { const occ = d.occasion === '1'; if (acheter(s, d.confirmerAchat, occ)) toast(`✅ ${ACHATS[d.confirmerAchat].nom} acheté`, { type: 'ok', effet: effetAchat(s, d.confirmerAchat, occ) }); $('confirmation').classList.add('cache'); autoSauvegarde(); }
@@ -135,7 +136,7 @@ document.addEventListener('click', (e) => {
   else if (d.set) regler(d.set, d.v);
   else if (d.action) {
     const c = actions(s);
-    ({ tarif: () => changerTarif(s, d.v, c), releves: () => faireReleves(s, c), resilier: () => resilier(s, d.v, c), renegocier: () => renegocier(s, c),
+    ({ tarif: () => changerTarif(s, d.v, c), releves: () => faireReleves(s, c), resilier: () => resilier(s, d.v, c), reabonner: () => reabonner(s, d.v, c), renegocier: () => renegocier(s, c),
       revendre: () => revendre(s, d.v, c), degivrer: () => degivrer(s, c), mediatheque: () => prendreMediatheque(s, c),
       reparerVelo: () => reparerVelo(s, d.v, c), pression: () => verifierPression(s, c), vendreVoiture: () => { if (confirm('Vendre la voiture ? Tu ne pourras plus l\'utiliser.')) vendreVoiture(s, c); }, coutReel: () => calculerCoutReel(s, c),
       regard: () => viderRegard(s, prendreTemps), filtre: () => changerFiltre(s, prendreTemps, payer), pente: () => { if (confirm('Faire reprendre la pente par un pro ?')) reprendrePente(s, payer); } })[d.action]?.();
@@ -196,6 +197,6 @@ document.addEventListener('click', (e) => {
   if (!cible) toast('Un seul thermostat pour toute la maison : des robinets thermostatiques (Achats) permettent de régler chaque pièce.');
 });
 addEventListener('resize', () => majCoach(s));
-rendreHorloge(7);
+rendreHorloge(7, s?.jour || 0);
 rendreTout(s);
 window.__jeu = () => s; // débogage

@@ -1,7 +1,7 @@
 // Rendu de l'interface (DOM uniquement, aucune règle de jeu ici)
 import { PIECES, ORDRE_PIECES, VETEMENTS, ACHATS, GESTES, JOURS_HABITUDE, PRINCIPES, PRIX, LESSIVE, SEUIL_ENCOMBREMENT, EVENEMENTS, ARGENT_DEPART } from './data.js';
 import { prevision, chapitreDuJour } from './meteo.js';
-import { ONGLETS, etatUI, rendreEte, rendrePassif, rendreEau, rendreCuisine, rendreElec, rendreJardin, rendreBudget, rendreTransport, rendreEncyclopedie, rendreCombos } from './onglets.js';
+import { ONGLETS, etatUI, rendreEte, rendrePassif, rendreEau, rendreCuisine, rendreElec, rendreJardin, rendreBudget, rendreTransport, rendreEncyclopedie, rendreCombos, tagGeste } from './onglets.js';
 import { tableauROI, estimationAchat } from './roi.js';
 import { rendreBanque, rendreInvest, tauxTxt } from './ui-finance.js';
 import { projection } from './finance.js';
@@ -10,6 +10,7 @@ import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
 import { COMBOS, CAMPAGNE } from './data.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
 import { ROUTINES, routineDispo } from './simulation.js';
+import { palierMoral, palierBE } from './paliers.js';
 import { rendreNavigation, rendreGuide } from './guide.js';
 import {
   isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, NOMS_JOURS, humiditeRelative,
@@ -53,13 +54,18 @@ export function rendreJauges(s) {
     'Le temps qu\'il te reste aujourd\'hui après le travail et les gestes. Les chantiers et les nouveaux gestes en consomment.',
     'Ce que tu as dépensé en équipements encore en service.',
   ];
+  const PM = palierMoral(s.volonte), PB = palierBE(s.bienetre);
+  TIPS[3] += ` Palier ${PM.ico} ${PM.nom} : ${PM.effet} Pour remonter : ${PM.conseil}`;
+  TIPS[5] += ` Palier ${PB.ico} ${PB.nom} : ${PB.effet} Pour remonter : ${PB.conseil}`;
+  const PAL = { 3: PM, 5: PB };
+  const nivPal = (p) => ['epanoui', 'neutre', 'forme', 'correct'].includes(p.id) ? 'ok' : ['fragile', 'fatigue'].includes(p.id) ? 'warn' : 'mal';
   const prec = etatJauges.prec, mem = {};
   $('jauges').innerHTML = j.map(([l, v, max, txt], i) => {
     const pct = Math.max(0, Math.min(100, v / max * 100));
-    const niv = i === 7 ? 'ok' : pct >= 60 ? 'ok' : pct >= 40 ? 'warn' : 'mal';
+    const niv = PAL[i] ? nivPal(PAL[i]) : i === 7 ? 'ok' : pct >= 60 ? 'ok' : pct >= 40 ? 'warn' : 'mal';
     mem[l] = v; const avant = prec?.[l];
     const fl = avant === undefined || Math.abs(v - avant) < (i === 0 || i === 7 ? 1 : 0.5) ? '' : v > avant ? '<span class="fl" aria-label="en hausse">▲</span>' : '<span class="fl" aria-label="en baisse">▼</span>';
-    return `<div class="jauge niv-${niv}" role="listitem" tabindex="0" data-tip="${TIPS[i]}" aria-label="${l.replace(/^\S+ /, '')} : ${txt}. ${TIPS[i]}"><div class="lib"><span>${l}</span><b>${txt}${fl}</b></div><div class="barre"><div style="width:${pct}%"></div></div></div>`;
+    return `<div class="jauge niv-${niv}" role="listitem" tabindex="0" data-tip="${TIPS[i]}" aria-label="${l.replace(/^\S+ /, '')} : ${txt}. ${TIPS[i]}"><div class="lib"><span>${l}</span><b>${txt}${fl}</b></div><div class="barre"><div style="width:${pct}%"></div></div>${PAL[i] ? `<span class="palier" data-palier="${PAL[i].id}">${PAL[i].ico} ${PAL[i].nom}</span>` : ''}</div>`;
   }).join('');
   if (etatJauges.jour !== s.jour) { etatJauges.prec = etatJauges.cur; etatJauges.cur = mem; etatJauges.jour = s.jour; }
   const tot = s.joursTotal || 365, nAns = Math.round(tot / 365);
@@ -72,10 +78,18 @@ export function rendreJauges(s) {
   $('annonces').classList.toggle('cache', !av.length);
 }
 
-export function rendreHorloge(h) {
-  const nuit = h >= 18 || h < 8;
-  $('ciel').classList.toggle('nuit', nuit);
-  $('astre').textContent = nuit ? '🌙' : '☀️';
+// Lever et coucher du soleil à Lyon (heure légale), selon le jour de l'année : ~8 h 10 / 17 h 00 fin décembre,
+// ~5 h 50 / 21 h 35 fin juin (éphémérides IMCCE). Aube et crépuscule : ~1 h avant le lever / après le coucher.
+export function soleil(jourJeu = 0) {
+  const doy = (334 + jourJeu) % 365, a = 2 * Math.PI * (doy - 172) / 365;
+  return { lever: 7.0 - 1.15 * Math.cos(a), coucher: 19.25 + 2.3 * Math.cos(a) };
+}
+export function rendreHorloge(h, jourJeu = 0) {
+  const { lever, coucher } = soleil(jourJeu);
+  const jour = h >= lever && h < coucher, aube = !jour && (h >= lever - 1.5 && h < lever || h >= coucher && h < coucher + 1);
+  $('ciel').classList.toggle('nuit', !jour && !aube);
+  $('astre').textContent = jour ? '☀️' : aube ? '🌅' : '🌙';
+  $('astre').title = jour ? 'Jour' : aube ? (h < 12 ? 'Aube' : 'Crépuscule') : 'Nuit';
   $('heure').textContent = `${h} h`;
 }
 
@@ -191,21 +205,14 @@ export function rendreChauffage(s) {
   $('thermostats').innerHTML = html;
 }
 
-function tagGeste(s, g) {
-  const st = s.gestes[g];
-  if (st.habitude) return '<span class="tag habitude">habitude ✓</span>';
-  const t = GESTES[g].temps ? ` · ${fmtH(GESTES[g].temps)}/j` : '';
-  if (st.pratique > 0) return `<span class="tag appr">apprentissage ${st.pratique}/${JOURS_HABITUDE} · −${GESTES[g].cout} moral/j${t}</span>`;
-  return `<span class="tag">nouveau geste · −${GESTES[g].cout} moral/j${t}</span>`;
-}
 const choix = (nom, opts, val) => `<span class="choix">${opts.map(([v, l]) => `<button data-choix="${nom}" data-v="${v}" class="${v === val ? 'actif' : ''}">${l}</button>`).join('')}</span>`;
 
 export function rendreGestes(s) {
   const l = [
     `<div class="ligne"><label>Portes</label>${choix('portes', [['ouvertes', 'Ouvertes'], ['fermees', 'Fermées']], s.portes)} ${tagGeste(s, 'portes')}</div>`,
     `<div class="ligne"><label>Rideaux</label>${choix('rideaux', [['ouverts', 'Ouverts'], ['nuit', 'Rideaux + volets la nuit'], ['fermes', 'Toujours fermés']], s.rideaux)} ${tagGeste(s, 'rideaux')}</div>`,
-    `<div class="ligne"><label>Aération</label>${choix('aeration', [['entrouverte', 'Fenêtre entrouverte'], ['breve', '5 min matin et soir'], ['jamais', 'Jamais']], s.aeration)} ${s.aeration === 'breve' ? tagGeste(s, 'aerer') : ''}</div>`,
-    `<div class="ligne"><label>Cuisson</label>${choix('cuisson', [['non', 'Normal'], ['oui', 'Four ouvert après usage, couvercles']], s.recupCuisson ? 'oui' : 'non')} ${s.recupCuisson ? tagGeste(s, 'cuisson') : ''}</div>`,
+    `<div class="ligne"><label>Aération</label>${choix('aeration', [['entrouverte', 'Fenêtre entrouverte'], ['breve', '5 min matin et soir'], ['jamais', 'Jamais']], s.aeration)} ${tagGeste(s, 'aerer')}</div>`,
+    `<div class="ligne"><label>Cuisson</label>${choix('cuisson', [['non', 'Normal'], ['oui', 'Four ouvert après usage, couvercles']], s.recupCuisson ? 'oui' : 'non')} ${tagGeste(s, 'cuisson')}</div>`,
   ];
   if (s.possede.bouillotte) l.push(`<div class="ligne"><label>Bouillotte</label>${choix('bouillotte', [['non', 'Non'], ['oui', 'Chaque soir']], s.utiliserBouillotte ? 'oui' : 'non')} ${tagGeste(s, 'bouillotte')}${s.possede.housse ? ' <span class="tag">avec housse</span>' : ''}</div>`);
   l.push(`<div class="ligne"><label>Couches</label>${tagGeste(s, 'couches')}<span class="aide">(2 vêtements chauds ou plus)</span></div>`);

@@ -27,7 +27,13 @@
 <div id="annonces" class="annonces cache" role="status"></div>
 
 <main class="app">
-  <section class="centre" aria-label="La maison">
+  <section class="centre" aria-label="Vue principale">
+    <div class="vues" role="tablist" aria-label="Vue principale">
+      <button role="tab" data-vue="tableau" id="ongletTableau" aria-selected="true">Tableau de bord</button>
+      <button role="tab" data-vue="maison" id="ongletMaison" aria-selected="false">La maison</button>
+    </div>
+    <div id="vueTableau" class="vue" role="tabpanel" aria-labelledby="ongletTableau"><div id="tableau"></div></div>
+    <div id="vueMaison" class="vue cache" role="tabpanel" aria-labelledby="ongletMaison">
     <div class="carte scene-carte">
       <div class="carte-tete"><h2>La maison</h2><span class="aide">Clique sur une pièce pour régler son chauffage</span></div>
       <div id="scene"><div id="maison"></div></div>
@@ -38,6 +44,7 @@
       <div class="carte" id="carteObjectifs"><div class="carte-tete"><h2>Objectifs</h2></div><div id="objectifs"></div></div>
     </div>
     <div class="carte"><div class="carte-tete"><h2>Météo et prévisions</h2></div><div id="meteo" class="meteo"></div></div>
+    </div>
   </section>
 
   <aside class="lateral" aria-label="Actions">

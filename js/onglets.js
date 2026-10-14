@@ -1,5 +1,5 @@
 // Onglets par domaine (v0.3) : Maison, Eau chaude, Cuisine, Linge, Électricité, Jardin, Budget
-import { TRANSPORT, STOCKAGE, COMBOS, PRINCIPES, DOMAINES_PRINCIPES, GESTES, JOURS_HABITUDE, TARIFS, TEMPO, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, PLAISIRS, GRENIER, MEDIATHEQUE, CHANGEMENT_TARIF, ETE } from './data.js';
+import { TRANSPORT, STOCKAGE, COMBOS, PRINCIPES, DOMAINES_PRINCIPES, GESTES, JOURS_HABITUDE, HABITUDE_OUBLI, TARIFS, TEMPO, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, GRENIER, MEDIATHEQUE, CHANGEMENT_TARIF, ETE } from './data.js';
 import { chapitreDuJour } from './meteo.js';
 import { eur, fmtH, gestesActifs } from './simulation.js';
 import { modePossible, coutKm, tempsTransport } from './transport.js';
@@ -24,12 +24,20 @@ export const etatUI = { onglet: 'maison', roiTri: 'ratio', roiSens: -1, filtrePr
 
 // bouton de choix générique : modifie un chemin de l'état (ex. "sys.ballon.consigne")
 export const choixSet = (chemin, opts, val) => `<span class="choix">${opts.map(([v, l, off]) => `<button data-set="${chemin}" data-v="${v}" class="${String(v) === String(val) ? 'actif' : ''}" ${off ? 'disabled' : ''}>${l}</button>`).join('')}</span>`;
+// Étiquette d'un geste : reflète l'état COURANT (v0.8.1). Geste actif : en cours x/10 ou acquise ;
+// geste abandonné : habitude « en pause » (perdue dans N j) ou progrès qui s'efface, sinon rien.
 export function tagGeste(s, g) {
-  const st = s.gestes[g];
-  if (st.habitude) return '<span class="tag habitude">habitude ✓</span>';
+  const st = s.gestes[g]; if (!st) return '';
+  const actif = !!gestesActifs(s)[g];
+  if (!actif) {
+    if (st.habitude) return `<span class="tag pause" data-tag-geste="${g}">habitude en pause · perdue dans ${Math.max(1, HABITUDE_OUBLI.graceJours - (st.sansPratique || 0))} j</span>`;
+    if (st.pratique > 0) return `<span class="tag pause" data-tag-geste="${g}">en pause ${st.pratique}/${JOURS_HABITUDE} · s'efface</span>`;
+    return '';
+  }
+  if (st.habitude) return `<span class="tag habitude" data-tag-geste="${g}">habitude acquise ✓</span>`;
   const t = GESTES[g].temps ? ` · ${fmtH(GESTES[g].temps)}/j` : '';
-  if (st.pratique > 0) return `<span class="tag appr">apprentissage ${st.pratique}/${JOURS_HABITUDE} · −${GESTES[g].cout} moral/j${t}</span>`;
-  return `<span class="tag">nouveau geste · −${GESTES[g].cout} moral/j${t}</span>`;
+  if (st.pratique > 0) return `<span class="tag appr" data-tag-geste="${g}">habitude en cours ${st.pratique}/${JOURS_HABITUDE} · −${GESTES[g].cout} moral/j${t}</span>`;
+  return `<span class="tag" data-tag-geste="${g}">nouveau geste · −${GESTES[g].cout} moral/j${t}</span>`;
 }
 const ouiNon = (chemin, val, libOui = 'Oui', libNon = 'Non', off = false) => choixSet(chemin, [[false, libNon], [true, libOui, off]], !!val);
 const ligne = (lab, contenu) => `<div class="ligne"><label>${lab}</label>${contenu}</div>`;
@@ -40,8 +48,8 @@ export function rendreEte(s) {
   if (chap === 'hiver') return aide('☀️ Commandes d\'été (volets le jour, nuits ouvertes, ventilateur, clim) disponibles à partir du printemps.');
   const g = gestesActifs(s);
   let h = `<h3>☀️ Contre la chaleur</h3>`;
-  h += ligne('Volets le jour', ouiNon('voletsJour', s.voletsJour, 'Fermés 10 h-19 h', 'Ouverts') + (g.voletsJour ? ' ' + tagGeste(s, 'voletsJour') : ''));
-  h += ligne('La nuit', ouiNon('ventNuit', s.ventNuit, 'Grand ouvert (courant d\'air)', 'Comme le jour') + (g.ventNuit ? ' ' + tagGeste(s, 'ventNuit') : '') + (s.possede.moustiquaire ? ' <span class="tag">moustiquaire</span>' : ''));
+  h += ligne('Volets le jour', ouiNon('voletsJour', s.voletsJour, 'Fermés 10 h-19 h', 'Ouverts') + (' ' + tagGeste(s, 'voletsJour')));
+  h += ligne('La nuit', ouiNon('ventNuit', s.ventNuit, 'Grand ouvert (courant d\'air)', 'Comme le jour') + (' ' + tagGeste(s, 'ventNuit')) + (s.possede.moustiquaire ? ' <span class="tag">moustiquaire</span>' : ''));
   if (s.possede.ventilateur) h += ligne('Ventilateur', ouiNon('ventilateur', s.ventilateur, `Allumé (${ETE.ventilateur} W)`, 'Éteint'));
   if (s.possede.clim) h += ligne('Clim mobile', ouiNon('climActive', s.climActive, `Active (${ETE.climElec} W)`, 'Éteinte') + (s.climActive ? choixSet('climConsigne', [[23, '23 °C'], [26, '26 °C'], [28, '28 °C']], s.climConsigne) : ''));
   h += aide('En été tout s\'inverse : le soleil et la cuisson réchauffent la maison. Un ventilateur rafraîchit le ressenti de ~3 °C pour 45 W ; une clim mobile consomme 20 fois plus.');
@@ -58,8 +66,8 @@ export function rendreEau(s) {
   h += ligne('Type', choixSet('sys.douche.seau', [[false, 'Douche'], [true, 'Au seau (12 L)', !s.possede.seau]], d.seau));
   if (!d.seau) {
     h += ligne('Durée', choixSet('sys.douche.minutes', [[15, '15 min'], [10, '10 min'], [7, '7 min'], [5, '5 min'], [3, '3 min']], d.minutes));
-    h += ligne('Savonnage', ouiNon('sys.douche.couperEau', d.couperEau, 'Couper l\'eau', 'Eau qui coule') + (d.couperEau ? ' ' + tagGeste(s, 'couperEau') : ''));
-    h += ligne('Eau froide du début', ouiNon('sys.douche.recupEau', d.recupEau, 'Récupérer dans le seau', 'Perdue', !s.possede.seau) + (d.recupEau && s.possede.seau ? ' ' + tagGeste(s, 'recupEau') : ''));
+    h += ligne('Savonnage', ouiNon('sys.douche.couperEau', d.couperEau, 'Couper l\'eau', 'Eau qui coule') + (' ' + tagGeste(s, 'couperEau')));
+    h += ligne('Eau froide du début', ouiNon('sys.douche.recupEau', d.recupEau, 'Récupérer dans le seau', 'Perdue', !s.possede.seau) + (' ' + tagGeste(s, 'recupEau')));
   }
   h += ligne('Fréquence', choixSet('sys.douche.frequence', [['quotidienne', 'Chaque jour'], ['unJourSurDeux', 'Un jour sur deux']], d.frequence));
   h += aide(`Pommeau : ${s.possede.pommeau ? DOUCHE.debitEco : DOUCHE.debitVieux} l/min. La douche au seau économise beaucoup… mais l'hygiène et le bien-être en pâtissent. Une douche trop courte ou trop rare fait baisser l'hygiène.`);
@@ -73,14 +81,14 @@ export function rendreCuisine(s) {
   h += ligne('Vaisselle', choixSet('sys.vaisselle', Object.entries(VAISSELLE).map(([k, v]) => [k, v.nom]), y.vaisselle));
   if (y.vaisselle.startsWith('lv')) h += ligne('Lave-vaisselle', ouiNon('sys.vaisselleHC', y.vaisselleHC, 'Départ différé en HC', 'Après le repas'));
   h += ligne('Pain', choixSet('sys.pain', [['baguette', `Baguette (${eur(CUISINE.painBaguette)})`], ['maison', `Pain maison (${eur(CUISINE.painMaison)} + 15 min)`]], y.pain));
-  h += ligne('Courses', ouiNon('sys.liste', y.liste, 'Liste et menu des restes', 'Au feeling') + (g.liste ? ' ' + tagGeste(s, 'liste') : ''));
-  h += ligne('Prix', ouiNon('sys.prixKiloGeste', y.prixKiloGeste, 'Comparer au kilo', 'Prix affiché') + (g.prixKilo ? ' ' + tagGeste(s, 'prixKilo') : ''));
+  h += ligne('Courses', ouiNon('sys.liste', y.liste, 'Liste et menu des restes', 'Au feeling') + (' ' + tagGeste(s, 'liste')));
+  h += ligne('Prix', ouiNon('sys.prixKiloGeste', y.prixKiloGeste, 'Comparer au kilo', 'Prix affiché') + (' ' + tagGeste(s, 'prixKilo')));
   h += ligne('Vrac', ouiNon('sys.vrac', y.vrac, 'Acheter en vrac', 'Paquets'));
-  h += ligne('Casseroles', ouiNon('sys.couvercle', y.couvercle, 'Avec couvercle', 'Sans') + (g.couvercle ? ' ' + tagGeste(s, 'couvercle') : ''));
-  h += ligne('Bouilloire', ouiNon('sys.bouilloire', y.bouilloire, 'Quantité exacte', 'Pleine') + (g.bouilloire ? ' ' + tagGeste(s, 'bouilloire') : ''));
+  h += ligne('Casseroles', ouiNon('sys.couvercle', y.couvercle, 'Avec couvercle', 'Sans') + (' ' + tagGeste(s, 'couvercle')));
+  h += ligne('Bouilloire', ouiNon('sys.bouilloire', y.bouilloire, 'Quantité exacte', 'Pleine') + (' ' + tagGeste(s, 'bouilloire')));
   if (s.possede.fresnel || s.possede.fourSolaire) h += ligne('Cuisine solaire', ouiNon('sys.cuisineSolaire', y.cuisineSolaire, 'Quand il fait beau', 'Non') + (s.possede.fresnel && !s.possede.lunettes ? ' <span class="tag" style="color:#b91c1c">⚠️ lentille sans lunettes</span>' : ''));
   h += `<h3>🧊 Frigo</h3>` + ligne('Réglage', choixSet('sys.frigo.reglage', [[2, 'Très froid (1-2 °C)'], [4, '4 °C (conseillé)']], y.frigo.reglage));
-  h += ligne('Plats chauds', ouiNon('sys.frigoGeste', y.frigoGeste, 'Laisser refroidir avant', 'Directement au frigo') + (g.frigo ? ' ' + tagGeste(s, 'frigo') : ''));
+  h += ligne('Plats chauds', ouiNon('sys.frigoGeste', y.frigoGeste, 'Laisser refroidir avant', 'Directement au frigo') + (' ' + tagGeste(s, 'frigo')));
   h += ligne('Givre', `<span>${Math.round(y.frigo.givre * 100)} %</span> <button class="btn" data-action="degivrer" ${y.frigo.givre < 0.1 ? 'disabled' : ''}>Dégivrer (1 h)</button>`);
   h += aide('Un quart d\'heure de cuisine en plus par jour peut économiser plus que n\'importe quel équipement : les courses sont le premier poste. Mais « pâtes et riz » à tous les repas ruine le bien-être et la santé.');
   return h;
@@ -92,7 +100,7 @@ export function rendreElec(s) {
   let h = `<h3>📑 Option tarifaire</h3>` + Object.entries(TARIFS).map(([k, t]) => `<div class="article"><div><b>${t.nom}</b>${y.tarif === k ? ' <span class="tag habitude">actuelle</span>' : ''}${y.tarifFutur === k ? ` <span class="tag appr">au jour ${y.tarifEffet + 1}</span>` : ''}<div class="d">${desc[k]} · abonnement ${eur(t.aboMois)}/mois</div></div>${y.tarif === k || y.tarifFutur === k ? '' : `<button class="btn" data-action="tarif" data-v="${k}">Changer</button>`}</div>`).join('');
   h += aide(`Changer d'option : ${fmtH(CHANGEMENT_TARIF.temps)} de démarches, effectif au bout de ${CHANGEMENT_TARIF.delai} jours. Tempo : la couleur du lendemain est annoncée la veille (jusqu'à 22 jours rouges, en semaine, en hiver). Décale ballon, lessive et lave-vaisselle.`);
   h += `<h3>🔌 Veilles et éclairage</h3>`;
-  h += ligne('Multiprise', s.possede.multiprise ? ouiNon('sys.multipriseGeste', y.multipriseGeste, 'Éteinte le soir', 'Toujours allumée') + (g.multiprise ? ' ' + tagGeste(s, 'multiprise') : '') : '<span class="aide">achète une multiprise à interrupteur</span>');
+  h += ligne('Multiprise', s.possede.multiprise ? ouiNon('sys.multipriseGeste', y.multipriseGeste, 'Éteinte le soir', 'Toujours allumée') + (' ' + tagGeste(s, 'multiprise')) : '<span class="aide">achète une multiprise à interrupteur</span>');
   h += ligne('Ampoules', s.possede.led ? '<span class="tag habitude">LED</span>' : '<span class="aide">anciennes ampoules (150 W allumés le soir)</span>');
   h += rendreStockage(s);
   h += aide(s.possede.wattmetre ? '⚡ Le wattmètre révèle les veilles : box, TV, chargeurs… ~45 W en continu, soit ~400 kWh/an.' : 'Sans wattmètre, impossible de voir ce qui consomme en veille.');
@@ -116,8 +124,12 @@ export function rendreBudget(s) {
   h += `<h3>🔁 Abonnements</h3>` + Object.entries(ABONNEMENTS).filter(([, a]) => !a.cache || y.relevesFaits).map(([k, a]) => {
     const st = y.abonnements[k];
     const prix = k === 'forfait' && st.renegocie ? a.renegocie : a.mois;
-    const acts = !st.actif ? '<span class="tag">résilié</span>' : `${k === 'forfait' && !st.renegocie ? '<button class="btn" data-action="renegocier">Renégocier (30 min)</button>' : ''}<button class="btn" data-action="resilier" data-v="${k}">Résilier (20 min)</button>`;
-    return `<div class="article"><div><b>${a.nom}</b><div class="d">${eur(prix)}/mois${a.plaisir ? ` · plaisir +${num(a.plaisir)} bien-être/j` : ''}</div></div><div>${acts}</div></div>`;
+    const r = REABONNEMENT[k], engage = (st.engageJusqua ?? -1) > s.jour;
+    const acts = !st.actif
+      ? `<span class="tag">résilié</span> <button class="btn" data-action="reabonner" data-v="${k}" aria-label="Se réabonner à ${a.nom} : ${eur(a.mois)}/mois, ${r.note}"${s.argent < r.frais ? ' disabled' : ''}>Se réabonner (20 min${r.frais ? ` · ${eur(r.frais)}` : ''})</button>`
+      : `${engage ? `<span class="tag appr">engagé encore ${Math.ceil((st.engageJusqua - s.jour) / 30.42)} mois</span> ` : ''}${k === 'forfait' && !st.renegocie ? '<button class="btn" data-action="renegocier">Renégocier (30 min)</button>' : ''}${engage ? '' : `<button class="btn" data-action="resilier" data-v="${k}">Résilier (20 min)</button>`}`;
+    const detail = !st.actif ? ` · réabonnement : ${eur(a.mois)}/mois, ${r.note}` : '';
+    return `<div class="article"><div><b>${a.nom}</b><div class="d">${eur(st.actif ? prix : a.mois)}/mois${a.plaisir ? ` · plaisir +${num(a.plaisir)} bien-être/j` : ''}${detail}</div></div><div>${acts}</div></div>`;
   }).join('') + (y.relevesFaits ? '' : aide('Certains prélèvements oubliés n\'apparaissent qu\'en épluchant les relevés.'));
   h += ligne('Médiathèque', y.mediatheque ? '<span class="tag habitude">carte active</span>' : `<button class="btn" data-action="mediatheque">Carte annuelle (${eur(MEDIATHEQUE)})</button>`);
   h += `<h3>🎈 Petits plaisirs</h3>` + ligne('Budget', choixSet('sys.plaisirs', Object.keys(PLAISIRS).map(k => [Number(k), `${k} €/sem.`]), y.plaisirs));
@@ -132,7 +144,7 @@ export function rendreTransport(s) {
   let h = `<h3>🏢 Travail (${TRANSPORT.kmTravail} km aller)</h3>`;
   h += ligne('Télétravail', choixSet('transport.teletravail', [[0, '0 j'], [1, '1 j'], [2, '2 j'], [3, '3 j']], t.teletravail) + ` <span class="aide">${5 - t.teletravail} jours de bureau/semaine</span>`);
   h += ligne('Mode', choixSet('transport.mode', opt('mode'), t.mode));
-  h += ligne('Midi', choixSet('transport.repas', [['achete', `Acheté (${eur(TRANSPORT.repasAchete)})`], ['emporte', 'Gamelle emportée']], t.repas) + (t.repas === 'emporte' ? ' ' + tagGeste(s, 'gamelle') : ''));
+  h += ligne('Midi', choixSet('transport.repas', [['achete', `Acheté (${eur(TRANSPORT.repasAchete)})`], ['emporte', 'Gamelle emportée']], t.repas) + (' ' + tagGeste(s, 'gamelle')));
   h += ligne('Boissons', s.possede.gourde ? `<span class="tag habitude">gourde + mug : ${eur(TRANSPORT.boissonsGourde)}/j</span>` : `<span class="aide">café et bouteille achetés : ${eur(TRANSPORT.boissons)}/j</span>`);
   h += ligne('Abonnement TC', ouiNon('transport.abonnementTC', t.abonnementTC, `${eur(TRANSPORT.abonnementTC)}/mois, 50 % remboursés`, `Tickets (${eur(TRANSPORT.ticket)})`));
   h += `<h3>🛒 Courses et loisirs</h3>`;
@@ -142,7 +154,7 @@ export function rendreTransport(s) {
   h += `<h3>🚗 Voiture</h3>`;
   if (t.voitureVendue) h += aide('Voiture vendue : plus d\'assurance ni d\'entretien.');
   else {
-    h += ligne('Conduite', ouiNon('transport.ecoconduite', t.ecoconduite, 'Écoconduite', 'Normale') + (t.ecoconduite && t.mode === 'voiture' ? ' ' + tagGeste(s, 'ecoconduite') : ''));
+    h += ligne('Conduite', ouiNon('transport.ecoconduite', t.ecoconduite, 'Écoconduite', 'Normale') + (' ' + tagGeste(s, 'ecoconduite')));
     h += ligne('Pneus', `<span>${t.pressionMois ? `non vérifiés depuis ${t.pressionMois} mois (+${t.pressionMois * 2} % de carburant)` : 'pression OK'}</span> <button class="btn" data-action="pression">Vérifier (10 min)</button>`);
     h += ligne('Coût', `<span>${num(coutKm(s, 'voiture'), 3)} €/km de carburant et d'usure · assurance ${eur(TRANSPORT.assuranceMois)}/mois</span>`);
     h += ligne('Vendre', `<button class="btn" data-action="vendreVoiture">Vendre la voiture (~${eur(TRANSPORT.valeurVoiture)}, 3 h)</button>`);

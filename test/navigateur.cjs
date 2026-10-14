@@ -16,6 +16,10 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   const ach = async (sel) => { for (const tab of ['b-maison', 'b-eau', 'b-cuisine', 'b-elec', 'b-transport', 'b-jardin']) { await go(tab); if (await p.isVisible(sel)) { await p.click(sel); if (await p.isVisible('#confOui')) await p.click('#confOui'); return; } } throw new Error('introuvable ' + sel); };
   await p.click('[data-duree="3"]'); await p.click('#btnJouer');
   console.log('campagne', await p.evaluate(() => window.__jeu().joursTotal));
+  // v0.8.1 : tableau de bord par défaut, « Y aller » ouvre le bon réglage
+  console.log('tableau de bord', await p.isVisible('#vueTableau'), (await p.textContent('#tableau')).includes('Que faire maintenant'), (await p.textContent('#tableau')).includes('Dépenses du mois'));
+  await p.click('.tb-reco [data-aller]'); console.log('Y aller →', await p.evaluate(() => document.querySelector('#onglets [aria-selected="true"]')?.dataset.onglet));
+  await p.click('[data-vue="maison"]'); console.log('vue maison', await p.isVisible('#scene')); await p.click('[data-vue="tableau"]');
   await ach('[data-acheter="thermometre"]'); await ach('[data-acheter="hygrometre"]'); await ach('[data-acheter="purge"]');
   await go('linge');
   await p.click('[data-acheter-vet="sweat"][data-q="durable"]'); await p.click('[data-acheter-vet="souscouche"][data-q="eco"]');

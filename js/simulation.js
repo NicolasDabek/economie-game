@@ -3,7 +3,7 @@ import {
   PRIX, INDICES, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, CHARGE_FOND_W, LESSIVE, JOURS, PIECES, ORDRE_PIECES,
   PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour,
   VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND,
-  JOURS_HABITUDE, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, PLAISIRS_MORAL, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART,
+  JOURS_HABITUDE, HABITUDE_OUBLI, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, PLAISIRS_MORAL, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART,
 } from './data.js';
 import { stockerSurplus, detecterCombos } from './combos.js';
 import { tExt, soleil, chapitreDuJour, FACTEUR_FENETRE } from './meteo.js';
@@ -13,7 +13,10 @@ import { suivreROI } from './roi.js';
 import { financeJour, gainFinancier, valeurLiquidation, valeurs } from './finance.js';
 import { appliquerIndices, debutJourCampagne, mensualiser, choixCampagne, titreCampagne, resoudreCampagne, resteAVivre } from './annee.js';
 import { anneeDuJour, dateDuJour } from './meteo.js';
-import { nouvelEtatMoral, moralJour, santeJour, coutRechute } from './moral.js';
+import { nouvelEtatMoral, moralJour, santeJour, coutRechute, paliersJour } from './moral.js';
+import { palierMoral, palierBE, EFFETS_PALIERS as EP } from './paliers.js';
+import { makeRng } from './rng.js';
+import { instantaneMois } from './tableau.js';
 import { passifHeure, passifCumul, passifJour, debutJourPassif, hasCheminee, typePuits, chantierEnCours, nouvelEtatPassif } from './passif.js';
 
 const T_HORS_GEL = 8;
@@ -338,6 +341,7 @@ function scoreConfort(ressenti, mini, maxi) {
 export function jourSuivant(s) {
   if (s.fini || s.dilemme) return;
   appliquerIndices(s);
+  instantaneMois(s);   // tableau de bord : dépenses du mois (sans effet sur le jeu)
   routines(s);
   const jm = s.meteo[s.jour];
   const chap = chapitreDuJour(s.jour);
@@ -353,18 +357,23 @@ export function jourSuivant(s) {
   }
   const actifs = gestesActifs(s);
   const faits = {};
-  for (const [g, on] of Object.entries(actifs)) faits[g] = on && (!rechute || s.gestes[g].habitude);
+  const pm = palierMoral(s.volonte).id, deprime = pm === 'deprime' || pm === 'crise';
+  const rP = makeRng(s.seed * 211 + s.jour * 37 + 5);
+  // déprime (v0.8.1) : les gestes pas encore automatiques sautent souvent
+  for (const [g, on] of Object.entries(actifs)) faits[g] = on && (!rechute || s.gestes[g].habitude) && (!deprime || s.gestes[g].habitude || rP() >= EP.sauteGeste);
   // apprentissage : les deux gestes les plus durs coûtent plein tarif, les suivants moins (on les enchaîne)
   const enCours = [];
   for (const [g, fait] of Object.entries(faits)) {
     if (!fait) continue;
     const st = s.gestes[g];
     if (st.habitude) continue;
+    if (deprime) continue;   // en déprime, on fait le geste machinalement mais on ne construit rien de neuf
     enCours.push(GESTES[g].cout); st.pratique++;
     if (st.pratique >= JOURS_HABITUDE) { st.habitude = true; msg(s, `✅ « ${GESTES[g].nom} » est devenu une habitude : plus d'effort, moitié moins de temps.`, 'habitude'); debloquer(s, 'habitude'); s.volonte += 2; }
   }
+  oublierGestes(s, actifs);
   const POIDS = [1, 1, 0.7, 0.5];
-  const coutVolonte = enCours.sort((a, b) => b - a).reduce((t, c, i) => t + c * (POIDS[i] ?? 0.4), 0);
+  const coutVolonte = enCours.sort((a, b) => b - a).reduce((t, c, i) => t + c * (POIDS[i] ?? 0.4), 0) * (EP.coutVolonte[pm] ?? 1);
   if (enCours.length >= 4) debloquer(s, 'unAlaFois');
 
   // --- contexte des systèmes (eau chaude, cuisine, électricité, jardin, budget) ---
@@ -639,7 +648,8 @@ export function jourSuivant(s) {
   // bien-être : plaisirs, repos, alimentation, social, lumière, sommeil
   const libre = Math.max(0, tempsLibre(s));
   const sommeilScore = nS ? sommeil / nS : 70;
-  let dBE = ctx.d.bienetre + Math.min(1.5, libre * 0.3) - 2.5;
+  const pbe = palierBE(s.bienetre).id;
+  let dBE = ctx.d.bienetre + Math.min(1.5, libre * 0.3) * (EP.libreBE[pbe] ?? 1) - 2.5;
   if (sommeilScore < 60) dBE -= 1.5; else if (sommeilScore > 85) dBE += 0.5;
   if (s.rideaux === 'fermes') dBE -= 1;                 // vivre dans le noir
   if (s.hygiene < 30) dBE -= 1.5;                       // gêne sociale
@@ -653,12 +663,13 @@ export function jourSuivant(s) {
   if (s.moisissure >= 3) dSante -= 1;
   if (s.hygiene < 35) dSante -= 0.8;
   if (s.bienetre < 25) dSante -= 0.4;
-  dSante += ctx.d.sante;
+  dSante += ctx.d.sante + (EP.santeBE[pbe] || 0) - (deprime ? EP.santeDeprime : 0);   // paliers (v0.8.1)
   s.sante = Math.max(0, Math.min(100, s.sante + dSante));
   // santé (v0.7) : consultations, arrêts maladie avec carence, dents, moisissures
   if (!s.mor) s.mor = nouvelEtatMoral();
   const outilsM = { payer, msg: (x, ty) => msg(s, x, ty), salaireJour: (s.eco ? s.eco.salaire * s.mor.facteurSalaire : 2200) / 30 };
   santeJour(s, outilsM);
+  paliersJour(s, outilsM);
   // moral (v0.7) : tend vers une ligne de base (bien-être, santé, lumière, social, nouveauté, vacances, stress), usé par les nouveaux gestes
   const cbv = coutBaseVariable(s);
   moralJour(s, { ...outilsM, confortJour, coutVolonte, doy: chapitreDuJour(s.jour).doy, pctEco: cbv > 100 ? (cbv - coutVariable(s)) / cbv : 0 });
@@ -936,6 +947,23 @@ export function scoreFinal(s) {
   return { cout, base, economies, pct, moy, confortMoy: moy.confort, sante: s.sante, habitudes, principes: s.principes.length, titre: TITRES[rang], rang, note: notes.join(' '),
     domaines, invest, meilleure, tresorerie, fin,
     patrimoine: s.fin ? s.argent + valeurLiquidation(s) : s.argent, patrimoineVoisin: s.fin ? ARGENT_DEPART + (s.eco?.revenus || 0) - (s.coutVoisinCumul || 0) - (s.base.banque || 0) - (s.fin.voisin.transferts || 0) + s.fin.voisin.livret.solde + s.fin.voisin.livret.courus : null, annees: (s.nbJours / 365), amort: am, capital: capitalInvesti(s), abonnements: d.abonnements };
+}
+
+// ---------------------------------------------------------------- oubli des gestes abandonnés (v0.8.1)
+export function oublierGestes(s, actifs = gestesActifs(s)) {
+  for (const [g, on] of Object.entries(actifs)) {
+    const st = s.gestes[g]; if (!st) continue;
+    if (on) { st.sansPratique = 0; continue; }
+    if (g === 'jardiner' && s.possede.potager) continue;   // le potager dort l'hiver : ce n'est pas un abandon
+    if (!st.habitude && !st.pratique) { st.sansPratique = 0; continue; }
+    st.sansPratique = (st.sansPratique || 0) + 1;
+    if (st.habitude) {
+      if (st.sansPratique >= HABITUDE_OUBLI.graceJours) {
+        st.habitude = false; st.pratique = HABITUDE_OUBLI.retourPratique; st.sansPratique = 0;
+        msg(s, `🕸️ « ${GESTES[g].nom} » : ${HABITUDE_OUBLI.graceJours} jours sans le faire, ce n'est plus une habitude. En le reprenant, ${JOURS_HABITUDE - HABITUDE_OUBLI.retourPratique} jours suffiront.`, 'info');
+      }
+    } else st.pratique = Math.max(0, st.pratique - 1);
+  }
 }
 
 // ---------------------------------------------------------------- routines automatiques (v0.6)

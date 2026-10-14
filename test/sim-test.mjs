@@ -119,6 +119,9 @@ ajoute('malin', () => {
   const s = maligne(); return s;
 });
 ajoute('maître', () => maitre());
+// v0.8.1 : économiser en laissant une jauge vers 30 doit coûter plus cher que le malin
+ajoute('moral négligé', () => maligne());
+ajoute('bien-être négligé', () => maligne());
 
 // enrichit malin et maître avec les nouveaux systèmes via un hook
 const HOOKS = {
@@ -176,6 +179,17 @@ const HOOKS = {
     if (j >= 56 && linge(s).length && remplissage(s) >= 0.75) planifierLessive(s, { temp: 30, sechage: chapitreDuJour(j).saison === 'hiver' ? 'air' : 'dehors', hc: true });
   },
 };
+// moral négligé : le malin, mais plaisirs au minimum (10 €/sem.), plus de streaming ni de musique, tout en télétravail (isolé)
+HOOKS['moral négligé'] = (s) => {
+  HOOKS.malin(s); const c = actions(s);
+  s.sys.plaisirs = 10; s.transport.teletravail = 5; if (s.jour > 3) s.sys.regime = 'batch';
+  if (s.jour === 5) { resilier(s, 'streaming', c); resilier(s, 'musique', c); }
+};
+// bien-être négligé : le malin, mais zéro plaisir et chambre à 15 °C la nuit (sommeil et loisirs sacrifiés)
+HOOKS['bien-être négligé'] = (s) => {
+  HOOKS.malin(s);
+  s.central.consigneNuit = Math.min(s.central.consigneNuit, 15); s.sys.plaisirs = 0;
+};
 const _jouer = jouer;
 
 function lancer(graine) {
@@ -226,10 +240,15 @@ for (let i = 0; i < graines.length; i++) {
   const mo = (n) => R(n)[i].moy.moral;
   ch(mo('ne rien toucher') >= 55 && mo('ne rien toucher') <= 65, `moral ne rien toucher ${mo('ne rien toucher').toFixed(0)} dans [55, 65]`);
   ch(mo('naïf') >= 65 && mo('naïf') <= 75, `moral naïf ${mo('naïf').toFixed(0)} dans [65, 75]`);
-  ch(mo('malin') >= 60 && mo('malin') <= 70, `moral malin ${mo('malin').toFixed(0)} dans [60, 70]`);
+  ch(mo('malin') >= 55 && mo('malin') <= 65, `moral malin ${mo('malin').toFixed(0)} dans [55, 65]`);
   ch(mo('maître') >= 55 && mo('maître') <= 65, `moral maître ${mo('maître').toFixed(0)} dans [55, 65]`);
   ch(mo('austère extrême') < 25 && mo('glacial') < 30, 'moral austère < 25 et glacial < 30');
   ch(R('ne rien toucher')[i].rang <= 1, 'défaut perd');
+  // v0.8.1 : négliger le moral ou le bien-être pour économiser finit par coûter plus cher que le malin
+  ch(R('moral négligé')[i].moy.moral <= 38, `moral négligé ${mo('moral négligé').toFixed(0)} ≤ 38`);
+  ch(R('bien-être négligé')[i].moy.bienetre <= 38, `bien-être négligé ${R('bien-être négligé')[i].moy.bienetre.toFixed(0)} ≤ 38`);
+  ch(R('moral négligé')[i].economies < R('malin')[i].economies, `moral négligé ${R('moral négligé')[i].economies.toFixed(0)} € < malin`);
+  ch(R('bien-être négligé')[i].economies < R('malin')[i].economies, `bien-être négligé ${R('bien-être négligé')[i].economies.toFixed(0)} € < malin`);
 }
 // sauvegarde aller-retour + ancienne sauvegarde
 const mem = { d: {}, setItem(k, v) { this.d[k] = v; }, getItem(k) { return this.d[k] ?? null; }, removeItem(k) { delete this.d[k]; } };

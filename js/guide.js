@@ -6,6 +6,9 @@ import { scoreFinal, tempsLibre, eur, ROUTINES, routineDispo } from './simulatio
 import { valeurs } from './finance.js';
 import { icone } from './icones.js';
 import { etatUI } from './onglets.js';
+import { palierMoral, palierBE } from './paliers.js';
+import { rendreTableau } from './tableau.js';
+import { etatJauges } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
 const num = (x, d = 0) => x.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -62,6 +65,10 @@ function conseils(s, r) {
   const L = [];
   const raisonsNeg = (s.mor?.raisons || []).filter(([, x]) => x < 0).map(([k]) => k);
   if (s.sante < 45) L.push({ alerte: true, txt: `Ta santé est à ${Math.round(s.sante)} %. Sous 40, tu tombes malade : médecin et jours de carence non payés. Remonte la chambre d'1 °C la nuit, porte une couche de plus ou mange mieux.`, aller: 'maison', bouton: 'Régler le chauffage' });
+  // paliers (v0.8.1) : prévenir dès qu'une jauge passe sous un seuil qui coûte
+  const PM = palierMoral(s.volonte), PB = palierBE(s.bienetre);
+  if (s.volonte < 40) L.push({ alerte: true, txt: `${PM.ico} Moral ${PM.nom.toLowerCase()} (${Math.round(s.volonte)} %) : ${PM.effet.charAt(0).toLowerCase() + PM.effet.slice(1)} ${PM.conseil}`, aller: 'budget', bouton: 'Voir les plaisirs' });
+  if (s.bienetre < 50) L.push({ alerte: true, txt: `${PB.ico} Bien-être ${PB.nom.toLowerCase()} (${Math.round(s.bienetre)} %) : ${PB.effet.charAt(0).toLowerCase() + PB.effet.slice(1)} ${PB.conseil}`, aller: 'budget', bouton: 'Voir les plaisirs' });
   if (s.volonte < 35) L.push({ alerte: true, txt: `Moral à ${Math.round(s.volonte)} %. ${raisonsNeg.includes('stress') ? 'Le stress (argent, panne, maladie) pèse. ' : ''}${raisonsNeg.includes('monotonie') ? 'Varie tes repas. ' : ''}${raisonsNeg.includes('plaisirs') ? 'Un petit plaisir neuf fait du bien. ' : ''}Évite d'apprendre plusieurs gestes à la fois.`, aller: 'budget', bouton: 'Voir les plaisirs' });
   if (s.hygiene < 45) L.push({ alerte: true, txt: `Hygiène à ${Math.round(s.hygiene)} % : lance une lessive et reprends des douches normales. Basse trop longtemps, elle te coûte ton augmentation.`, aller: 'linge', bouton: 'Ouvrir le linge' });
   if (s.argent < 0) L.push({ alerte: true, txt: `Tu es à découvert (${eur(s.argent)}). Les agios coûtent cher : retire un peu de ton Livret A ou active le virement automatique.`, aller: 'banque', bouton: 'Ouvrir la banque' });
@@ -168,9 +175,19 @@ function rendreResume(s, r) {
     ${s.eco?.dernierBilan ? `<h3>Dernier bilan annuel</h3><p>Année ${s.eco.dernierBilan.an + 1} : ${eur(s.eco.dernierBilan.economies)} économisés. Objectifs fixés : ${s.eco.dernierBilan.objectifs.slice(0, 2).join(' ')}</p>` : ''}`;
 }
 
+// ---------------------------------------------------------------- vue principale : tableau de bord ou maison (v0.8.1)
+export function choisirVue(v) {
+  prefs.vue = v === 'maison' ? 'maison' : 'tableau'; sauverPrefs();
+  for (const b of document.querySelectorAll('[data-vue]')) b.setAttribute('aria-selected', String(b.dataset.vue === prefs.vue));
+  $('vueTableau')?.classList.toggle('cache', prefs.vue !== 'tableau');
+  $('vueMaison')?.classList.toggle('cache', prefs.vue !== 'maison');
+}
+
 // ---------------------------------------------------------------- rendu global du guidage
 export function rendreGuide(s) {
   const r = scoreFinal(s);
+  choisirVue(prefs.vue || 'tableau');
+  if (prefs.vue !== 'maison' && $('tableau')) $('tableau').innerHTML = rendreTableau(s, { prec: etatJauges.prec || etatJauges.cur });
   // conseiller
   const L = conseils(s, r), i = (etatUI.conseil || 0) % L.length, c = L[i];
   $('titreConseiller').innerHTML = `${icone('conseil', 18)} Conseiller`;
@@ -212,7 +229,8 @@ export function apercuConsigne(s, piece, avant, apres) {
 const ETAPES = [
   { sel: '.tb-date', titre: 'Bienvenue !', texte: 'Ici, la date, la saison et l\'année de ta campagne. La partie commence le 1er décembre, en plein hiver.' },
   { sel: '#jauges', titre: 'Tes jauges', texte: 'Argent, confort, santé, moral, hygiène, bien-être, temps libre. Survole ou touche une jauge pour savoir ce qu\'elle mesure. Les flèches montrent la tendance.' },
-  { sel: '#scene', titre: 'Ta maison', texte: 'Chaque pièce affiche sa température et ce qu\'elle a coûté hier. Clique sur une pièce pour régler son chauffage.' },
+  { sel: '#vueTableau', avant: () => choisirVue('tableau'), titre: 'Ton tableau de bord', texte: 'Tout en un coup d\'œil : ta situation, ce qu\'il faut faire en priorité (bouton « Y aller »), les alertes, tes dépenses du mois face au voisin et les 3 prochains jours.' },
+  { sel: '#scene', avant: () => choisirVue('maison'), titre: 'Ta maison', texte: 'Chaque pièce affiche sa température et ce qu\'elle a coûté hier. Clique sur une pièce pour régler son chauffage.' },
   { sel: '#carteConseiller', titre: 'Le conseiller', texte: 'Un conseil à la fois, adapté à ta situation : la plus grosse fuite, le meilleur achat, une jauge qui baisse.' },
   { sel: '#carteObjectifs', titre: 'Tes objectifs', texte: 'Trois objectifs à la fois, avec ta progression. Clique sur un objectif pour aller au bon endroit.' },
   { sel: '#sections', titre: 'Six sections', texte: 'Maison, Vie quotidienne, Achats, Argent, Savoir, Bilan. Une pastille verte signale une nouveauté débloquée.' },

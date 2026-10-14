@@ -2,7 +2,7 @@
 // Chaque journée remplit un contexte : électricité heure par heure (W), chaleur dégagée dans les pièces,
 // coûts par domaine et effets sur santé, hygiène, bien-être et moral.
 import {
-  ELEC, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, PLAISIRS, MEDIATHEQUE, GRENIER, PRIX, ACHATS,
+  ELEC, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, MEDIATHEQUE, GRENIER, PRIX, ACHATS,
   TARIFS, CHANGEMENT_TARIF, estHC, LESSIVE,
 } from './data.js';
 import { soleil } from './meteo.js';
@@ -286,9 +286,21 @@ export function faireReleves(s, ctx) {
 export function resilier(s, id, ctx) {
   const st = s.sys.abonnements[id];
   if (!st?.actif || (ABONNEMENTS[id].cache && !s.sys.relevesFaits)) return false;
+  if ((st.engageJusqua ?? -1) > s.jour) return false;   // encore engagé
   if (!ctx.prendreTemps(s, 0.3)) return false;
-  st.actif = false;
+  st.actif = false; st.renegocie = false; st.resilieLe = s.jour;   // une remise de fidélisation ne survit pas à la résiliation
   ctx.msg(`✂️ Abonnement résilié : ${ABONNEMENTS[id].nom}.`, 'info');
+  return true;
+}
+export function reabonner(s, id, ctx) {
+  const st = s.sys.abonnements[id], r = REABONNEMENT[id];
+  if (!st || st.actif || !r) return false;
+  if (s.argent < r.frais) return false;
+  if (!ctx.prendreTemps(s, 0.3)) return false;
+  st.actif = true; st.renegocie = false; st.reabonnements = (st.reabonnements || 0) + 1;
+  st.engageJusqua = r.engagementMois ? s.jour + Math.round(r.engagementMois * 30.42) : null;
+  if (r.frais) { s.argent -= r.frais; s.depenses.services += r.frais; }
+  ctx.msg(`🔁 Réabonné : ${ABONNEMENTS[id].nom}, ${ABONNEMENTS[id].mois.toFixed(2).replace('.', ',')} €/mois${r.frais ? ` + ${r.frais} € de frais` : ''}${r.engagementMois ? `, engagé ${r.engagementMois} mois` : ''}.`, 'info');
   return true;
 }
 export function renegocier(s, ctx) {
