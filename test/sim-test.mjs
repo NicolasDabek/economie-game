@@ -37,7 +37,7 @@ function defaut() { // ne touche à rien : thermostat 20/18, fenêtre entrouvert
 function glacial() {
   const s = nouvellePartie(GRAINE);
   s.central = { consigneJour: 8, consigneNuit: 8 };
-  return jouer(s, (s) => { if (s.jour % 4 === 3) planifierLessive(s, { temp: 30, sechage: 'air' }); }, { panne: 'laverie' });
+  return jouer(s, (s) => { if (s.jour % 4 === 3) planifierLessive(s, { temp: 30, sechage: 'air' }); }, { panne: 'laverie', vacances: 'rester' });
 }
 // Malin : équipements bon marché, consignes basses, quelques couches, sans optimiser à fond
 function maligne() {
@@ -49,7 +49,7 @@ function maligne() {
     if (s.jour === 10) s.rideaux = 'nuit';
     if (s.jour % 7 === 6) planifierLessive(s, { temp: 30, sechage: 'air' });
     if (s.jour < 5) s.central = { consigneJour: 19, consigneNuit: 15 };
-  }, { invites: 'preter', promo: 'attendre', panne: 'laverie' });
+  }, { invites: 'preter', promo: 'attendre', panne: 'laverie', vacances: 'econome' });
 }
 // Maître : tout l'arsenal, introduit progressivement pour ménager la volonté
 export function maitre() {
@@ -70,7 +70,7 @@ export function maitre() {
     for (const id of ['souscouche', 'chaussettes']) if (s.vetements[id].salete >= 75) laverMain(s, id);
     if (s.machine.enPanne) reparerMachine(s, 'diy');
     if (linge(s).length && (remplissage(s) >= 0.75 || Object.values(s.vetements).some(v => v.possede && v.porte && v.salete >= 88))) planifierLessive(s, { temp: 30, sechage: 'air' });
-  }, { invites: 'preter', promo: 'attendre', panne: 'diy' });
+  }, { invites: 'preter', promo: 'attendre', panne: 'diy', vacances: 'econome' });
 }
 // --- saisons (v0.6 : chaque année) : alléger les vêtements, stratégies d'été, retour du froid, vêtements usés rachetés
 const deb = (s, sa, idx = 0) => { const c = chapitreDuJour(s.jour); return c.saison === sa && c.index === idx; };
@@ -113,7 +113,7 @@ ajoute('austère extrême', () => {
     if (s.jour === 1) { faireReleves(s, c); for (const id of ['cloud', 'assurance', 'appli']) resilier(s, id, c); renegocier(s, c); }
     saisons(s, true);
     if (s.jour % 14 === 13) planifierLessive(s, { temp: 30, sechage: 'air' });
-  }, { invites: 'refuser', promo: 'attendre', panne: 'laverie', livraison: 'refuser', robot: 'refuser', promoPerissable: 'refuser', canicule: 'subir', barbecue: 'refuser' });
+  }, { invites: 'refuser', promo: 'attendre', panne: 'laverie', livraison: 'refuser', robot: 'refuser', promoPerissable: 'refuser', canicule: 'subir', barbecue: 'refuser', vacances: 'rester' });
 });
 ajoute('malin', () => {
   const s = maligne(); return s;
@@ -167,6 +167,12 @@ const HOOKS = {
     if (j > 300) for (const id of ['purge', 'potager', 'herbes', 'calfeutrage', 'boudin', 'bouillotte', 'housse', 'gourde', 'kitSecu', 'tenuePluie', 'composteur', 'corde', 'led', 'boites']) if (!s.possede[id]) acheter(s, id);
     if (deb(s, 'automne', 45) && s.possede.bouillotte) s.utiliserBouillotte = true;
     saisons(s, true, 'durable'); rafraichirVet(s);
+    // v0.7 : la santé d'abord. Mars reste froid (on garde les couches), avril-mai demi-saison, juin des nuits fraîches.
+    const mo = new Date(Date.UTC(2026, 11, 1) + j * 864e5).getUTCMonth();
+    const porter = (ids) => { for (const id of ids) if (s.vetements[id]?.possede) s.vetements[id].porte = true; };
+    if (mo === 2) { porter(['souscouche', 'sweat', 'polaire', 'chaussettes']); s.utiliserBouillotte = !!s.possede.bouillotte; s.rideaux = 'nuit'; }
+    if (mo === 3 || mo === 4) { porter(['sweat', 'chaussettes']); if (mo === 3) porter(['souscouche']); }
+    if (mo === 5 || mo === 8) porter(['sweat']);
     if (j >= 56 && linge(s).length && remplissage(s) >= 0.75) planifierLessive(s, { temp: 30, sechage: chapitreDuJour(j).saison === 'hiver' ? 'air' : 'dehors', hc: true });
   },
 };
@@ -192,6 +198,7 @@ for (const g of graines) {
   for (const [nom, s, r] of lancer(g)) {
     const m = r.moy;
     console.log(`${pad(nom, 16)} coût ${r.cout.toFixed(0)} € | voisin ${r.base.toFixed(0)} € | éco ${r.economies.toFixed(0)} € (${r.pct.toFixed(1)} %) | confort ${m.confort.toFixed(0)} santé ${m.sante.toFixed(0)} moral ${m.moral.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} | rechutes ${s.rechutes} hab ${r.habitudes} princ ${r.principes} | ${r.titre}${r.note ? ' (' + r.note + ')' : ''}`);
+    console.log(`   coûts v0.7 : santé ${Math.round(s.depenses.sante || 0)} € · moisissures ${Math.round(s.depenses.logement || 0)} € · revenus perdus ${Math.round(s.depenses.revenus || 0)} € · imprévus ${Math.round(s.depenses.imprevus || 0)} € · ${s.mor.episodes} épisodes, ${s.mor.joursArret} j d'arrêt, salaire ×${s.mor.facteurSalaire.toFixed(3)}`);
     (tous[nom] ||= []).push(r);
     if (g === 2026 && nom === 'maître') {
       console.log('   domaines maître :', r.domaines.map(d => `${d.nom} ${d.valeur.toFixed(0)}`).join(' · '));
@@ -211,7 +218,17 @@ for (let i = 0; i < graines.length; i++) {
   ch(R('glacial')[i].rang <= 1, 'glacial perd');
   ch(R('naïf')[i].rang === 0, 'naïf perd');
   ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
-  ch(R('austère extrême')[i].economies > R('maître')[i].economies * 0.85 && R('austère extrême')[i].rang < R('maître')[i].rang, 'l\'austère économise autant mais perd');
+  // v0.7 : l'austérité coûte aussi de l'argent (santé, arrêts, dents, moisissures, augmentations perdues)
+  ch(R('maître')[i].economies > R('austère extrême')[i].economies && R('austère extrême')[i].economies <= 0.7 * R('maître')[i].economies && R('austère extrême')[i].rang < R('maître')[i].rang, 'le maître économise plus que l\'austère (≤ 70 %) et le bat au titre');
+  ch(R('glacial')[i].economies < R('malin')[i].economies, 'le glacial perd de l\'argent face au malin');
+  ch(R('maître')[i].moy.sante >= 85, 'santé moyenne du maître ≥ 85');
+  // moral sur 5 ans : cibles de conception
+  const mo = (n) => R(n)[i].moy.moral;
+  ch(mo('ne rien toucher') >= 55 && mo('ne rien toucher') <= 65, `moral ne rien toucher ${mo('ne rien toucher').toFixed(0)} dans [55, 65]`);
+  ch(mo('naïf') >= 65 && mo('naïf') <= 75, `moral naïf ${mo('naïf').toFixed(0)} dans [65, 75]`);
+  ch(mo('malin') >= 60 && mo('malin') <= 70, `moral malin ${mo('malin').toFixed(0)} dans [60, 70]`);
+  ch(mo('maître') >= 55 && mo('maître') <= 65, `moral maître ${mo('maître').toFixed(0)} dans [55, 65]`);
+  ch(mo('austère extrême') < 25 && mo('glacial') < 30, 'moral austère < 25 et glacial < 30');
   ch(R('ne rien toucher')[i].rang <= 1, 'défaut perd');
 }
 // sauvegarde aller-retour + ancienne sauvegarde
@@ -223,19 +240,25 @@ if (charger(mem) !== 'ancienne' || mem.getItem('economie-game-sauvegarde') !== n
 // migration v0.3 -> v0.4 : la partie continue
 { const v3 = defaut(); const o = JSON.parse(JSON.stringify(v3)); delete o.meteo; delete o.transport; delete o.roi; o.version = 3; delete o.depenses.transport; delete o.base.transport;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  if (!(m && m.version === 6 && m.transport && m.fin && m.eco && !m.fini)) { ok = false; console.log('✗ migration v3'); } }
+  if (!(m && m.version === 7 && m.transport && m.fin && m.eco && !m.fini)) { ok = false; console.log('✗ migration v3'); } }
 // migration v0.4 -> v0.5 : la banque démarre au jour de la sauvegarde, sans rattrapage
 { const v4 = defaut(); const o = JSON.parse(JSON.stringify(v4)); delete o.meteo; delete o.fin; delete o.coutVoisinCumul; delete o.depenses.banque; delete o.base.banque; o.version = 4; o.fini = false; o.jour = 40;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  const okM = m && m.version === 6 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
+  const okM = m && m.version === 7 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
   if (okM) { jourSuivant(m); }
-  if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v6'); }
+  if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v7'); }
 // migration v0.5 -> v0.6 : une partie de 18 semaines terminée devient le début d'une campagne de 5 ans
 { const v5 = defaut(); const o = JSON.parse(JSON.stringify(v5)); delete o.meteo; delete o.eco; delete o.auto; delete o.annees; delete o.joursTotal; o.version = 5; o.jour = 126; o.fini = true; o.evenementsVus = ['invites', 'chap-printemps'];
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  let okM = m && m.version === 6 && !m.fini && m.jour === 254 && m.annees === 5 && m.evenementsVus.includes('invites@0');
+  let okM = m && m.version === 7 && !m.fini && m.jour === 254 && m.annees === 5 && m.evenementsVus.includes('invites@0');
   if (okM) { for (let i = 0; i < 400 && !m.fini; i++) { if (m.dilemme) resoudreDilemme(m, choixDilemme(m).filter(x => x.possible !== false).at(-1).id); else jourSuivant(m); } okM = m.jour > 600 && Number.isFinite(scoreFinal(m).economies); }
-  if (!okM) { ok = false; console.log('✗ migration v5'); } else console.log('✓ migration v5 -> v6 (la partie continue, jour', m.jour, ')'); }
+  if (!okM) { ok = false; console.log('✗ migration v5'); } else console.log('✓ migration v5 -> v7 (la partie continue, jour', m.jour, ')'); }
+// migration v0.6 -> v0.7 : le moral sur la durée démarre au jour de la sauvegarde
+{ GRAINE = 2026; const v6 = defaut(); const o = JSON.parse(JSON.stringify(v6)); delete o.meteo; delete o.mor; o.version = 6; o.fini = false; o.jour = 400;
+  mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
+  let okM = m && m.version === 7 && m.mor && m.migre === 6;
+  if (okM) { for (let i = 0; i < 60; i++) { if (m.dilemme) resoudreDilemme(m, choixDilemme(m).filter(x => x.possible !== false).at(-1).id); else jourSuivant(m); } okM = Number.isFinite(m.volonte) && Number.isFinite(scoreFinal(m).economies); }
+  if (!okM) { ok = false; console.log('✗ migration v6'); } else console.log('✓ migration v6 -> v7'); }
 console.log('principes :', Object.keys(PRINCIPES).length);
 if (Object.keys(PRINCIPES).length < 75) ok = false;
 console.log(ok ? '\nOK' : '\nÉCHEC'); process.exit(ok ? 0 : 1);

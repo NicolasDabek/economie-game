@@ -1,5 +1,6 @@
 // État initial de la partie + sauvegarde
 import { nouvelEtatPassif } from './passif.js';
+import { nouvelEtatMoral } from './moral.js';
 import { ARGENT_DEPART, ORDRE_PIECES, VETEMENTS, GESTES, ACHATS, CAMPAGNE, joursCampagne } from './data.js';
 import { nouvelleEconomie, debutJourCampagne, appliquerIndices } from './annee.js';
 import { genererMeteo } from './meteo.js';
@@ -17,7 +18,7 @@ export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut) {
   const gestes = {};
   for (const id of Object.keys(GESTES)) gestes[id] = { pratique: 0, habitude: false };
   const s = {
-    version: 6, seed, jour: 0, fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
+    version: 7, seed, jour: 0, mor: nouvelEtatMoral(), fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
     eco: nouvelleEconomie(seed, annees), auto: { lessive: false, entretien: false, saisons: false, renouveler: false },
     meteo: genererMeteo(seed, annees),
     argent: ARGENT_DEPART,
@@ -77,7 +78,8 @@ export function charger(stockage = globalThis.localStorage) {
   if (s.version === 3) migrerV3(s);
   if (s.version === 4) migrerV4(s);
   if (s.version === 5) migrerV5(s);
-  if (s.version !== 6) { stockage.removeItem?.(CLE); return 'ancienne'; }
+  if (s.version === 6) migrerV6(s);
+  if (s.version !== 7) { stockage.removeItem?.(CLE); return 'ancienne'; }
   s.meteo = genererMeteo(s.seed, s.annees);
   appliquerIndices(s);
   return s;
@@ -85,7 +87,7 @@ export function charger(stockage = globalThis.localStorage) {
 export function aUneSauvegarde(stockage = globalThis.localStorage) {
   const t = stockage.getItem(CLE);
   if (!t) return false;
-  try { const v = JSON.parse(t).version; return v >= 3 && v <= 6; } catch { return false; }
+  try { const v = JSON.parse(t).version; return v >= 3 && v <= 7; } catch { return false; }
 }
 
 // v0.3 -> v0.4 : on garde la partie, on ajoute le transport (compté à partir d'aujourd'hui pour toi et le voisin)
@@ -119,4 +121,10 @@ export function migrerV5(s) {
   if (s.fin) { s.fin.cal = s.jour - 1; s.fin.voisin.transferts = -(s.fin.voisin.retire || 0); }
   for (const k of Object.keys(s.possede)) if (s.possede[k]) s.eco.achats[k] = 0;
   s.version = 6; s.migre ??= 5;
+}
+
+// v0.6 -> v0.7 : moral sur la durée et coûts de santé, à partir d'aujourd'hui (pas de rattrapage du passé)
+export function migrerV6(s) {
+  s.mor = nouvelEtatMoral();
+  s.version = 7; s.migre ??= 6;
 }

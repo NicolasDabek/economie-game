@@ -53,7 +53,7 @@ Les abonnements sont payés par le joueur comme par le voisin. Ils figurent sur 
 | Chaussettes épaisses | 4 € | 15 € (laine) | +0,8 °C |
 | Sweat | 13 € | 40 € | +1,5 °C |
 | Pantalon polaire | 12 € | 30 € | +1,2 °C |
-| Peignoir pilou | 22 € | 45 € | +2,5 °C |
+| Peignoir polaire | 22 € | 45 € | +2,5 °C |
 | Doudoune d'intérieur | 25 € | 70 € (duvet) | +3,0 °C |
 | Plaid portable | 12 € | 35 € (laine) | +2,5 °C, seulement assis au salon |
 
@@ -369,3 +369,40 @@ Le pourcentage d'économies compare toujours ta dépense à celle du voisin, sur
 - au plus 10 jours de découvert non autorisé par an.
 
 Le plafond de rechutes passe à 4 × √(années).
+
+## v0.7 : le moral sur la durée, et l'austérité qui coûte
+
+### Moral
+Chaque jour, le moral se rapproche de sa ligne de base de 1/15 de l'écart, soit une inertie d'environ deux semaines. Chaque nouveau geste et chaque corvée le font aussi baisser un peu. La ligne de base additionne les termes suivants (paramètres `MORAL` dans `js/data.js`) :
+
+| Terme | Effet | Repère |
+|---|---|---|
+| Confort, bien-être, santé | 1,0 × (confort − 75) + 0,5 × (bien-être − 55) + 0,25 × (santé − 75) | |
+| Plaisirs | jusqu'à +11. **Adaptation hédonique** : un niveau de plaisirs gardé tel quel perd jusqu'à 70 % de son effet en quelques mois. Changer de niveau en recharge 60 %. Zéro plaisir : −6 | Brickman 1978 ; Lyubomirsky 2011 |
+| Vie sociale | ±5 : sorties, bureau. Une hygiène négligée isole | |
+| Lumière | jusqu'à −6 au solstice d'hiver (8 h 10 de jour à Paris), davantage avec les rideaux fermés | Dépression saisonnière (Inserm, HAS) |
+| Monotonie | jusqu'à −8 si l'on mange la même chose plus de 3 semaines (pâtes 100 %, batch 80 %, cuisine du jour 15 %) | |
+| Vacances | choix chaque 1er juillet : rester (+5), semaine économe (350 €, +11), séjour de deux semaines (1 100 €, +14). L'effet s'estompe sur 2 mois. Le voisin part en séjour | Budget des vacances d'été ~1 900 € par foyer (Ipsos-Europ Assistance 2025) |
+| Stress | découvert (−10), épargne de précaution sous un mois de reste à vivre (jusqu'à −5), placements à −15 % de leur sommet (−4), panne récente (−5), maladie (−6) | Banque de France, baromètre de l'éducation financière |
+| Maîtrise du budget | jusqu'à +11 quand on dépense 40 % de moins que le voisin, −5,5 quand on dépense beaucoup plus | |
+
+Les lessives coûtent maintenant 1,5 point de moral, au lieu de 5 : sur une ligne de base, un coût répété pèse environ 15 fois sur l'équilibre.
+
+Un moral bas a des conséquences :
+- **Sous 25** : achats compulsifs de 15 à 60 €.
+- **À zéro** : rechute qui coûte 40 à 120 €.
+- **Moyenne annuelle sous 40, ou hygiène sous 45** : pas d'augmentation individuelle au 1er janvier, soit −1,5 % de salaire par rapport au voisin, cumulé d'une année sur l'autre.
+- **Moral sous 20 et hygiène sous 30** : la prime est aussi supprimée (−3 %).
+
+### Ce que coûte une santé négligée (`SANTE_COUTS`)
+- **Maladie (santé sous 40)**, au plus un épisode tous les 25 à 45 jours :
+  - Consultation de généraliste à 30 € : la Sécu rembourse 70 % moins la participation forfaitaire de 2 €, la mutuelle paie le ticket modérateur. Reste à charge : 2 € plus 3 franchises de 1 € par boîte plus 12 € de pharmacie non remboursée, soit 17 €.
+  - Arrêt de 3 à 7 jours selon l'état de santé. Les 3 jours de carence ne sont pas payés. Ensuite, les indemnités journalières valent 50 % du brut, soit environ 60 % du net. Le complément employeur ne démarre qu'après 7 jours (Code du travail L1226-1, D1226-3 ; ameli.fr).
+- **Carences** : au-delà de 45 jours au régime pâtes et riz, −0,3 de santé par jour.
+- **Dents** : 300 jours cumulés avec une hygiène sous 50 mènent à une dévitalisation et une couronne. Reste à charge de 250 € (hors panier 100 % Santé, avec mutuelle).
+- **Moisissures** : 90 jours cumulés au-dessus du seuil entraînent un traitement fongicide, des joints et de la peinture : 450 €.
+
+Ces montants ont leurs lignes dans le score :
+- Santé (reste à charge).
+- Logement (moisissures).
+- Revenus perdus (carence, arrêts, augmentations manquées).

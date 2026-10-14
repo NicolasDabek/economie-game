@@ -77,14 +77,18 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   console.log('sys rechargé', await p.evaluate(() => typeof window.__jeu().sys.ballon.consigne));
   // sauvegarde v0.3 : migrée
   await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('economie-game-sauvegarde')); delete o.transport; o.version = 3; localStorage.setItem('economie-game-sauvegarde', JSON.stringify(o)); });
-  await p.reload(); await p.click('#btnReprendre'); console.log('migration v3 → v6', await p.evaluate(() => window.__jeu().version), typeof (await p.evaluate(() => window.__jeu().transport.mode)));
+  await p.reload(); await p.click('#btnReprendre'); console.log('migration v3 → v7', await p.evaluate(() => window.__jeu().version), typeof (await p.evaluate(() => window.__jeu().transport.mode)));
   await p.click('#btnSauver'); await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('economie-game-sauvegarde')); delete o.fin; o.version = 4; localStorage.setItem('economie-game-sauvegarde', JSON.stringify(o)); });
-  await p.reload(); await p.click('#btnReprendre'); console.log('migration v4 → v6', await p.evaluate(() => window.__jeu().version), await p.evaluate(() => window.__jeu().fin.livrets.livretA.solde));
+  await p.reload(); await p.click('#btnReprendre'); console.log('migration v4 → v7', await p.evaluate(() => window.__jeu().version), await p.evaluate(() => window.__jeu().fin.livrets.livretA.solde));
   await p.click('[data-onglet="banque"]'); await p.click('[data-onglet="invest"]'); await p.click('#btnJour'); await p.waitForTimeout(1500);
   const v5 = fs.readFileSync(path.join(__dirname, 'sauvegarde-v5.json'), 'utf8');
   await p.evaluate((x) => localStorage.setItem('economie-game-sauvegarde', x), v5);
-  await p.reload(); await p.click('#btnReprendre'); console.log('migration v5 → v6', await p.evaluate(() => { const s = window.__jeu(); return JSON.stringify({ v: s.version, jour: s.jour, total: s.joursTotal, salaire: s.eco?.salaire }); }));
+  await p.reload(); await p.click('#btnReprendre'); console.log('migration v5 → v7', await p.evaluate(() => { const s = window.__jeu(); return JSON.stringify({ v: s.version, jour: s.jour, total: s.joursTotal, salaire: s.eco?.salaire }); }));
   await p.click('#btnMois'); await p.waitForTimeout(3000); console.log('après un mois', await p.textContent('#date'));
+  const v6 = fs.readFileSync(path.join(__dirname, 'sauvegarde-v6.json'), 'utf8');
+  await p.evaluate((x) => localStorage.setItem('economie-game-sauvegarde', x), v6);
+  await p.reload(); await p.click('#btnReprendre'); console.log('migration v6 → v7', await p.evaluate(() => { const s = window.__jeu(); return JSON.stringify({ v: s.version, jour: s.jour, mor: !!s.mor }); }));
+  await p.click('#btnMois'); await p.waitForTimeout(3000); console.log('moral affiché', (await p.textContent('#jauges')).includes('tendance'));
   await p.evaluate(() => localStorage.setItem('economie-game-sauvegarde', JSON.stringify({ version: 2, jour: 9 })));
   await p.reload(); await p.waitForTimeout(300);
   console.log('ancienne sauvegarde : reprendre visible', await p.isVisible('#btnReprendre'), 'effacée', await p.evaluate(() => localStorage.getItem('economie-game-sauvegarde') === null));

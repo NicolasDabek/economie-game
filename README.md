@@ -50,7 +50,7 @@ Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude él
 - **Chauffage** : un seul thermostat au départ, puis des robinets thermostatiques pour une consigne par pièce. Purge des radiateurs, appoint électrique qui suit la personne, arrêt (hors-gel).
 - **Isolation** : rideaux et volets la nuit, rideaux thermiques, joints de fenêtres, boudins de porte, portes fermées.
 - **Gestes** : aérer 5 minutes plutôt que laisser la fenêtre entrouverte, récupérer la chaleur de la cuisson, bouillotte avec ou sans housse, s'habiller chaudement.
-- **Garde-robe** : t-shirt, sous-couche lavable (protège les couches du dessus), chaussettes épaisses, sweat, pantalon polaire, peignoir pilou, doudoune d'intérieur, plaid. Chaque article existe en premier prix ou en durable, avec son coût par usage. On peut l'aérer au lieu de le laver, laver les sous-couches à la main ou repriser un vêtement usé.
+- **Garde-robe** : t-shirt, sous-couche lavable (protège les couches du dessus), chaussettes épaisses, sweat, pantalon polaire, peignoir polaire, doudoune d'intérieur, plaid. Chaque article existe en premier prix ou en durable, avec son coût par usage. On peut l'aérer au lieu de le laver, laver les sous-couches à la main ou repriser un vêtement usé.
 - **Linge** : machine à 30, 40 ou 60 °C, taux de remplissage, étendoir (gratuit mais humidifie la maison) ou sèche-linge, lessive à midi pour profiter du solaire. Le lave-linge s'use. En cas de panne : technicien, réparation soi-même ou laverie.
 - **Panneau solaire plug-and-play** : production horaire et autoconsommation sans batterie. Le jeu montre qu'il n'est pas rentabilisé en un hiver et estime son retour sur investissement.
 - **Temps** : 3 h libres en semaine, 6 h le week-end. Gestes, lessives, installations et réparations en consomment. Le temps qui reste redonne de la volonté.
@@ -102,16 +102,18 @@ Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude él
 - **Ce qui mûrit** : rendement du potager (+12 %/an pendant 3 ans), compost, habitudes.
 - **Sauvegardes** : une sauvegarde v0.5 continue en campagne de 5 ans, au même jour du calendrier.
 
-### Résultats simulés sur 5 ans (graines 2026 / 7 / 1789)
+### Résultats simulés sur 5 ans, v0.7 (graines 2026 / 7 / 1789)
 
-| Stratégie | Économies vs voisin | Titre |
-|---|---|---|
-| Ne rien toucher | −1 345 / −692 / +1 905 € | Dépensier |
-| Naïf (tout à fond) | ≈ −35 000 € (−50 %) | Dépensier |
-| Glacial | +1 559 / +2 540 / +5 313 € (santé effondrée) | Dépensier |
-| Austère extrême | +43 332 / +44 250 / +49 872 € (santé 0, hygiène 7) | Dépensier |
-| Malin | +21 654 / +23 044 / +27 958 € (31 à 38 %) | Optimiseur / Autonome / Autonome |
-| Maître | +43 211 / +44 553 / +50 845 € (61 à 68 %) | Maître de la sobriété |
+| Stratégie | Économies vs voisin | Moral moyen | Santé moyenne | Titre |
+|---|---|---|---|---|
+| Ne rien toucher | −1 120 / −442 / +2 186 € | 64 / 62 / 62 | 98 / 97 / 98 | Dépensier |
+| Naïf (tout à fond) | −35 626 / −35 452 / −34 935 € | 68 / 68 / 67 | 100 | Dépensier |
+| Glacial | −17 622 / −16 181 / −11 096 € | 15 / 14 / 15 | 18 | Dépensier |
+| Austère extrême | +8 385 / +10 460 / +16 401 € | 1 | 0 | Dépensier |
+| Malin | +25 139 / +26 752 / +31 990 € | 60 / 62 / 62 | 88 / 89 / 89 | Autonome |
+| Maître | +46 111 / +47 660 / +53 894 € | 63 / 64 / 64 | 89 / 91 / 91 | Maître de la sobriété |
+
+Sur la graine 2026, l'austère extrême cumule 52 épisodes de maladie et 360 jours d'arrêt. Cela lui coûte 30 058 € de revenus perdus, 2 134 € de soins et 8 705 € d'imprévus. Il finit à 18 % des économies du maître.
 
 Le voisin dépense environ 67 000 à 74 000 € en 5 ans, hors loyer.
 
@@ -142,17 +144,18 @@ Astuce : `?graine=1234` dans l'URL change la météo.
 
 ## Tests
 ```bash
-node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations de sauvegarde v3/v4/v5 → v6
+node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations de sauvegarde v3/v4/v5/v6 → v7, cibles de moral et de santé
 node test/finance-test.mjs   # banque, marchés, projection, 4 stratégies d'arbitrage sur 5 ans, révision du Livret A, PEA 5 ans, temps de calcul 5 et 10 ans
 CHROME=/usr/bin/google-chrome node test/navigateur.cjs   # navigateur sans écran : campagne de 3 ans en avance rapide, bilans, migrations (playwright-core)
 node test/passif-test.mjs    # cheminée solaire et puits canadien : rentabilité, pièges, combos
 node outils/estimations.mjs  # régénère js/estimations.js (estimations avant achat)
 ```
 `test/sim-test.mjs` simule 5 ans (1 826 jours) avec six stratégies, sur trois graines (2026, 7 et 1789). Il vérifie que :
-- le naïf, ne rien toucher et le glacial perdent, et que l'austère extrême perd malgré ses économies ;
-- le maître a un moral moyen d'au moins 45 et le titre « Maître de la sobriété » ;
+- le naïf, ne rien toucher et le glacial perdent ; le maître économise strictement plus que l'austère extrême (qui reste ≤ 70 % du maître) et le glacial moins que le malin ;
+- le maître a une santé moyenne ≥ 85 et le titre « Maître de la sobriété » ;
+- les moraux moyens tombent dans leurs cibles : ne rien toucher 55-65, naïf 65-75, malin 60-70, maître 55-65, austère < 25, glacial < 30 ;
 - au moins 3 combos sont trouvés et que les principes sont au moins 75 ;
-- les sauvegardes v3 et v4 sont migrées (la banque démarre au jour de la sauvegarde, sans rattrapage), et qu'une sauvegarde plus ancienne est effacée proprement.
+- les sauvegardes v3, v4, v5 et v6 sont migrées (la banque démarre au jour de la sauvegarde, sans rattrapage), et qu'une sauvegarde plus ancienne est effacée proprement.
 
 `test/finance-test.mjs` vérifie :
 - le calendrier et les quinzaines (dépôt le 1er = 2 quinzaines en décembre, le 2 = 1 quinzaine ; retrait le 14 = quinzaine perdue) ;
@@ -223,8 +226,9 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - ✅ v0.3 : eau chaude, tarifs Base, HC et Tempo, chapitres hiver → printemps → été, cuisine et cuisine solaire, veilles, jardin, abonnements et tentations, jauges hygiène et bien-être, onglets par domaine
 - ✅ v0.4 : moral rééquilibré (seuil 40), transport, rentabilité mesurée, stockage solaire et combos, ventilation passive (cheminée solaire et puits canadien), encyclopédie de 88 principes
 - ✅ v0.5 : ventilation passive aux prix réels, banque (livrets, LEP, PEL, assurance vie, découvert), investissement (PEA, CTO, obligations, SCPI, marché stochastique, projection 10/20/30 ans), arbitrage équipement / placement, 99 principes
+- ✅ v0.7 : moral sur la durée (adaptation hédonique, blues de l'hiver, monotonie, stress financier, vacances, maîtrise du budget), santé qui coûte (consultations, arrêts avec jours de carence, dentiste, moisissures, augmentations manquées), « peignoir polaire »
 - ✅ v0.6 : campagne de 3, 5 ou 10 ans, quatre saisons par an, avance rapide et routines, salaire, inflation et prix qui évoluent, Livret A révisé par formule, pannes et remplacement des appareils, bilan annuel, 104 principes
-1. Rééquilibrer le moral sur le long terme (il reste haut même sans effort) et rendre l'automne plus spécifique.
+1. Rendre l'automne plus spécifique.
 2. Effet rebond, et plus de fausses économies.
 3. Scénarios (étudiant, famille, retraité), voisinage et partage, défis (« Hiver à 200 € »).
 4. Sons, illustrations, version mobile.

@@ -1,7 +1,8 @@
 // Campagne pluriannuelle (v0.6) : salaire, inflation et prix qui évoluent, révisions du Livret A, mensualisation de l'énergie,
 // événements de l'année (régularisation, assurance, rentrée, impôts, renégociation), vieillissement des équipements et appareils,
 // bilan annuel avec objectifs. Les fonctions qui touchent au jeu reçoivent un contexte (msg, debloquer) pour éviter les imports circulaires.
-import { PRIX, BANQUE, INDICES, ECONOMIE, PROFILS, APPAREILS, ACHATS, CAMPAGNE, joursCampagne } from './data.js';
+import { PRIX, BANQUE, INDICES, ECONOMIE, PROFILS, APPAREILS, ACHATS, CAMPAGNE, joursCampagne, VACANCES } from './data.js';
+import { revisionSalaire } from './moral.js';
 import { makeRng } from './rng.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
 
@@ -75,6 +76,7 @@ export function debutJourCampagne(s, ctx) {
     for (const k of ['gaz', 'alim', 'eau', 'carburant', 'services']) e.idx[k] *= 1 + t[k];
     e.idx.general *= 1 + t.inflation; e.inflationAn = t.inflation; e.estr = t.estr;
     e.salaire *= 1 + t.salaire; e.loyer *= 1 + t.loyer;
+    if (s.mor) revisionSalaire(s, ctx);
     ctx.msg(`🎆 ${x.getUTCFullYear()} : inflation ${pct(t.inflation)} · gaz ${pct(t.gaz)} · alimentation ${pct(t.alim)} · carburant ${pct(t.carburant)} · ton salaire ${pct(t.salaire)} (${eur0(e.salaire)} net) · loyer ${pct(t.loyer)} (IRL). Reste à vivre : ${eur0(resteAVivre(s))}/mois.`, 'alerte');
     ctx.debloquer('inflation');
     if (t.salaire < t.inflation) ctx.debloquer('inflationReelle');
@@ -92,6 +94,9 @@ export function debutJourCampagne(s, ctx) {
   if (j === 1) {
     const rav = resteAVivre(s);
     s.argent += rav; e.revenus += rav;
+    // salaire du joueur en retrait de celui du voisin s'il a manqué des augmentations (v0.7)
+    const manque = s.mor ? e.salaire * (1 - s.mor.facteurSalaire) : 0;
+    if (manque > 0.5) ctx.payer?.(s, manque, 'revenus');
     s.argent -= e.mensualite; e.energiePaye += e.mensualite;
   }
   // 15 juin : régularisation de l'énergie (relevé annuel)
@@ -107,6 +112,8 @@ export function debutJourCampagne(s, ctx) {
   if (m === 8 && j === 1) dilemme ||= 'rentree';
   if (m === 8 && j === 15) { e.impots = { an: x.getUTCFullYear() - 1, revenus: e.salaire * 12, placements: s.fin?.impots || 0 }; dilemme ||= 'impots'; }
   if (m === 10 && j === 1) dilemme ||= 'renego';
+  // 1er juillet : vacances d'été (le voisin part en séjour classique)
+  if (m === 6 && j === 1) { s.base.plaisirs = (s.base.plaisirs || 0) + VACANCES.sejour.cout; dilemme ||= 'vacances'; }
   // bilan annuel le 1er décembre
   if (m === 11 && j === 1 && s.jour > 0) dilemme = 'bilan';
   // vieillissement des équipements achetés
@@ -120,7 +127,7 @@ export function debutJourCampagne(s, ctx) {
   }
   // pannes des appareils de la maison (communs au voisin)
   for (const [id, a] of Object.entries(e.appareils)) {
-    if (s.jour === a.panne && !dilemme) dilemme = 'appareil-' + id;
+    if (s.jour === a.panne && !dilemme) { dilemme = 'appareil-' + id; if (s.mor) s.mor.panne = s.jour; }
     // le voisin remplace toujours à neuf, à sa propre échéance
     if (s.jour === a.panneVoisin) { s.base.remplacements = (s.base.remplacements || 0) + APPAREILS[id].prix; a.panneVoisin += Math.round(APPAREILS[id].vie * 365); }
   }
@@ -160,6 +167,7 @@ export function choixCampagne(s, id, outils) {
     ];
     case 'impots': return [{ id: 'ok', texte: 'Compris', effet: 'Le prélèvement à la source est déjà déduit de ton salaire.' }];
     case 'canicule': return [{ id: 'ok', texte: 'Compris', effet: 'Volets, nuits ouvertes, ventilateur, cuisson dehors… ou clim.' }];
+    case 'vacances': return Object.entries(VACANCES).map(([k, v]) => ({ id: k, texte: `${v.nom} (${eur0(v.cout)})`, effet: `Moral +${v.effet}, qui s'estompe sur deux mois.`, possible: s.argent + (s.fin ? 0 : 0) >= v.cout || v.cout === 0 }));
     case 'bilan': return [{ id: 'ok', texte: 'Fixer ces objectifs et continuer', effet: 'Ta maison, tes habitudes et ton argent te suivent.' }];
     default: return [];
   }
@@ -173,6 +181,7 @@ export function titreCampagne(s, id) {
     case 'renego': return { titre: 'Saison des renégociations', texte: 'Les nouvelles offres box et mobile tombent : les anciens clients paient souvent 20 à 40 % de plus que les nouveaux.' };
     case 'rentree': return { titre: 'La rentrée', texte: 'Chaussures usées, sac à remplacer, cotisation du club de sport : septembre coûte cher.' };
     case 'impots': { const i = e.impots; return { titre: `Avis d'impôt sur les revenus ${i.an}`, texte: `Salaire net annuel ~${eur0(i.revenus)} : l'impôt est prélevé à la source chaque mois. Impôts et prélèvements sociaux payés sur tes placements depuis le début : ${eur0(i.placements)}.` }; }
+    case 'vacances': return { titre: 'Les vacances d\'été', texte: 'Juillet arrive. Le voisin part deux semaines en location. Le repos et la nouveauté rechargent le moral pour la rentrée ; le stress d\'un budget à découvert, lui, le mine.' };
     case 'canicule': return { titre: 'Vigilance canicule', texte: 'Météo-France annonce une vague de chaleur dans deux jours : jusqu\'à 36 °C l\'après-midi, nuits à 22 °C.' };
     case 'bilan': { const a = e.dernierBilan?.an ?? 0; return { titre: `Bilan de l'année ${a + 1} (déc. ${2026 + a} – nov. ${2027 + a})`, texte: '' }; }
     default: return { titre: id, texte: '' };
@@ -198,6 +207,7 @@ export function resoudreCampagne(s, id, choix, outils) {
     if (choix === 'occasion') { outils.payer(s, 70, 'plaisirs'); s.tempsUtilise += 2; s.bienetre = Math.min(100, s.bienetre + 5); outils.debloquer('occasion'); }
     if (choix === 'rien') { s.bienetre = Math.max(0, s.bienetre - 5); s.volonte -= 3; }
   }
+  if (id === 'vacances') { const v = VACANCES[choix]; if (v.cout) outils.payer(s, v.cout, 'plaisirs'); if (s.mor) s.mor.vacances = { jour: s.jour, effet: v.effet }; if (choix === 'rester') s.mor && (s.mor.adapt *= 0.8); outils.msg(`🏖️ ${v.nom}${v.cout ? ` (−${eur0(v.cout)})` : ''}.`, 'info'); return; }
   if (id === 'bilan') { e.objectifs = e.dernierBilan?.objectifs || []; }
 }
 export const coutVoisinRentree = 180;

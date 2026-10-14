@@ -13,6 +13,7 @@ import { suivreROI } from './roi.js';
 import { financeJour, gainFinancier, valeurLiquidation, valeurs } from './finance.js';
 import { appliquerIndices, debutJourCampagne, mensualiser, choixCampagne, titreCampagne, resoudreCampagne, resteAVivre } from './annee.js';
 import { anneeDuJour, dateDuJour } from './meteo.js';
+import { nouvelEtatMoral, moralJour, santeJour, coutRechute } from './moral.js';
 import { passifHeure, passifCumul, passifJour, debutJourPassif, hasCheminee, typePuits, chantierEnCours, nouvelEtatPassif } from './passif.js';
 
 const T_HORS_GEL = 8;
@@ -347,8 +348,8 @@ export function jourSuivant(s) {
   let rechute = false;
   if (s.volonte <= 0) {
     rechute = true; s.rechutes++;
-    payer(s, 25, 'imprevus'); s.volonte = 30; s.bienetre = Math.min(100, s.bienetre + 4);
-    msg(s, '😩 Plus de moral : rechute ! Livraison de repas (−25 €), fenêtre entrouverte et aucun nouveau geste aujourd\'hui.', 'alerte');
+    const binge = coutRechute(s); payer(s, binge, 'imprevus'); s.volonte = 30; s.bienetre = Math.min(100, s.bienetre + 4);
+    msg(s, `😩 Plus de moral : rechute ! Livraisons, achats pour se consoler (−${binge} €), fenêtre entrouverte et aucun nouveau geste aujourd'hui.`, 'alerte');
   }
   const actifs = gestesActifs(s);
   const faits = {};
@@ -654,12 +655,13 @@ export function jourSuivant(s) {
   if (s.bienetre < 25) dSante -= 0.4;
   dSante += ctx.d.sante;
   s.sante = Math.max(0, Math.min(100, s.sante + dSante));
-  if (s.sante < 35 && !s.malade) {
-    s.malade = true; payer(s, 25, 'imprevus'); s.volonte -= 15;
-    msg(s, '🤧 Tu tombes malade : médecin et pharmacie (−25 € restant à charge) et moral en berne.', 'alerte');
-  } else if (s.sante > 55) s.malade = false;
-  // moral (volonté) : nourri par le bien-être, usé par les nouveaux gestes
-  s.volonte = Math.max(0, Math.min(100, s.volonte + 0 + (confortJour - 75) / 20 + (s.bienetre - 55) / 20 - coutVolonte + PLAISIRS_MORAL[s.sys.plaisirs]));
+  // santé (v0.7) : consultations, arrêts maladie avec carence, dents, moisissures
+  if (!s.mor) s.mor = nouvelEtatMoral();
+  const outilsM = { payer, msg: (x, ty) => msg(s, x, ty), salaireJour: (s.eco ? s.eco.salaire * s.mor.facteurSalaire : 2200) / 30 };
+  santeJour(s, outilsM);
+  // moral (v0.7) : tend vers une ligne de base (bien-être, santé, lumière, social, nouveauté, vacances, stress), usé par les nouveaux gestes
+  const cbv = coutBaseVariable(s);
+  moralJour(s, { ...outilsM, confortJour, coutVolonte, doy: chapitreDuJour(s.jour).doy, pctEco: cbv > 100 ? (cbv - coutVariable(s)) / cbv : 0 });
   // paliers d'économies : la satisfaction de voir le compteur grimper
   const ecoNow = coutBaseVariable(s) - coutVariable(s);
   const palier = Math.floor(ecoNow / 250);
@@ -723,7 +725,7 @@ export function evenementsAVenir(s) {
   return EVENEMENTS.filter(e => { const j = jourEvt(s, e); return j >= s.jour && s.jour >= j - e.annonce && !vu(s, e.id) && !(e.unique && anneeDuJour(s.jour) > 0); }).map(e => ({ ...e, jour: jourEvt(s, e) }));
 }
 function verifierEvenements(s) {
-  const ctxC = { msg: (t, ty) => msg(s, t, ty), debloquer: (id) => debloquer(s, id), racheter: (id) => acheter(s, id) };
+  const ctxC = { msg: (t, ty) => msg(s, t, ty), debloquer: (id) => debloquer(s, id), racheter: (id) => acheter(s, id), payer };
   const dc = debutJourCampagne(s, ctxC);
   if (dc === 'bilan') faireBilan(s);
   if (dc) { s.dilemme = dc; return; }
@@ -754,7 +756,7 @@ export function titreDilemme(s) {
   return EVENEMENTS.find(x => x.id === s.dilemme) || { titre: '', texte: '' };
 }
 const refus = (s) => (s.sys.refusTentations >= 2 ? 'La règle des 48 h est devenue un réflexe : aucun effort.' : 'Un peu frustrant (−2 bien-être).');
-const EST_CAMPAGNE = (id) => !!id && (id.startsWith('appareil-') || ['regul', 'assurance', 'renego', 'rentree', 'impots', 'canicule', 'bilan'].includes(id));
+const EST_CAMPAGNE = (id) => !!id && (id.startsWith('appareil-') || ['regul', 'assurance', 'renego', 'rentree', 'impots', 'canicule', 'bilan', 'vacances'].includes(id));
 const OUTILS = { tempsLibre: (s) => tempsLibre(s) };
 export function choixDilemme(s) {
   if (s.dilemme?.startsWith('chap-')) return [{ id: 'ok', texte: 'Continuer', effet: 'Ta maison, tes équipements, tes habitudes et ton argent te suivent.' }];
@@ -868,7 +870,7 @@ export function amortissement(s) {
     + (s.depenses.vetements - Object.values(s.vetements).reduce((t, v) => t + (v.possede ? v.prixPaye : 0), 0));
   return { equip, vet };
 }
-const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport', 'banque', 'remplacements'];
+const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport', 'banque', 'remplacements', 'sante', 'logement', 'revenus'];
 export function coutVariable(s) {
   const d = s.depenses;
   return POSTES.reduce((t, k) => t + (d[k] || 0), 0) + d.equipement + d.vetements - (d.reventes || 0);
@@ -909,6 +911,9 @@ export function scoreFinal(s) {
     { nom: 'Reventes', valeur: d.reventes || 0 },
     { nom: 'Banque (agios, commissions)', valeur: (b.banque || 0) - (d.banque || 0) },
     { nom: 'Remplacement des appareils (choix neuf, reconditionné ou réparation)', valeur: (b.remplacements || 0) - (d.remplacements || 0) },
+    { nom: 'Santé (médecin, pharmacie, dentiste : reste à charge)', valeur: -(d.sante || 0) },
+    { nom: 'Logement (dégâts de moisissure)', valeur: -(d.logement || 0) },
+    { nom: 'Revenus perdus (jours de carence, arrêts, augmentations manquées)', valeur: -(d.revenus || 0) },
     { nom: 'Épargne et placements (net, vs voisin au Livret A)', valeur: fin.net },
   ];
   const reste = economies - domaines.reduce((a, x) => a + x.valeur, 0);

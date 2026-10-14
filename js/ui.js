@@ -40,6 +40,8 @@ export function rendreJauges(s) {
     ['🏗️ Capital investi', cap, 400, eur(cap)],
   ];
   $('jauges').innerHTML = j.map(([l, v, max, txt]) => `<div class="jauge"><div class="lib"><span>${l}</span><b>${txt}</b></div><div class="barre"><div style="width:${Math.max(0, Math.min(100, v / max * 100))}%"></div></div></div>`).join('');
+  const NOMS_M = { plaisirs: 'plaisirs (usés par la répétition)', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'assiette monotone', vacances: 'vacances', stress: 'stress (argent, pannes, maladie, marchés)', controle: 'budget maîtrisé' };
+  if (s.mor?.raisons?.length) $('jauges').insertAdjacentHTML('beforeend', `<div class="jauge" style="grid-column:1/-1"><small>💪 Moral, tendance ${Math.round(s.mor.base)} : ${s.mor.raisons.slice(0, 4).map(([k, x]) => `${NOMS_M[k] || k} ${x > 0 ? '+' : ''}${Math.round(x)}`).join(' · ')}</small></div>`);
   const tot = s.joursTotal || 365, nAns = Math.round(tot / 365);
   const ch = chapitreDuJour(Math.min(s.jour, tot - 1));
   const dt = dateDuJour(Math.min(s.jour, tot - 1)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
