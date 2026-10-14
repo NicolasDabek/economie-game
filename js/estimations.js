@@ -260,20 +260,20 @@ export const ESTIMATIONS = {
   "incertitude": 0.5
  },
  "puitsPro": {
-  "hiver": 0.825,
-  "printemps": 0.178,
-  "ete": 0.01,
+  "hiver": 0.55,
+  "printemps": 0.176,
+  "ete": 0.066,
   "incertitude": 0.5
  },
  "puitsDIY": {
-  "hiver": 0.808,
-  "printemps": 0.173,
+  "hiver": 0.546,
+  "printemps": 0.174,
   "ete": 0.121,
   "incertitude": 0.5
  },
  "puitsHydro": {
-  "hiver": 0.662,
-  "printemps": 0.166,
+  "hiver": 0.459,
+  "printemps": 0.169,
   "ete": 0.121,
   "incertitude": 0.5
  }

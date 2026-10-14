@@ -64,7 +64,15 @@ Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude él
   - Chantiers de 1 à 5 jours de temps libre, by-pass automatique, clapet de nuit (le laisser ouvert provoque un contre-tirage), zone radon (kit étanchéité), pente ratée en fait maison (15 %), regard et filtres, moisissures si l'humidité dépasse 70 % pendant 48 h.
   - Combos « Clim de la Terre », « Respiration d'hiver », « Purge nocturne », « Séchoir à tirage », « Cave naturelle », et l'anti-combo « Serre humide ».
   - Les prix incertains sont affichés avec leur fourchette réelle.
-- **88 principes** dans une encyclopédie filtrable par domaine (quoi, pourquoi, comment, piège, transfert). Les principes verrouillés montrent « ??? » et un indice.
+- **Banque (v0.5)** : choix d'un profil de revenus (LEP réservé aux RFR ≤ 23 028 €). Livret A et LDDS à 1,7 %, LEP à 2,5 %, avec leurs plafonds et des intérêts par quinzaines capitalisés le 31 décembre. PEL à 2 % (PFU 30 %, clôture avant 2 ans au taux du CEL). Assurance vie en ligne ou en banque : fonds euros et UC, frais, prélèvements sociaux annuels. Virement automatique depuis les livrets ; sinon découvert (16 %, 20 % au-delà de l'autorisation, 8 € de commission par jour plafonnés à 80 €/mois). Le jeu suit un calendrier réel (1er décembre 2026 → 11 août 2027), semaines entre chapitres comprises.
+- **Équipement ou placement ? (v0.5)** : la boutique affiche le rendement annuel de chaque équipement (économie annuelle ÷ prix) à côté du Livret A. L'onglet Banque compare équipements et placements : rendement brut, net d'impôt, réel (inflation 3 %), liquidité et risque. Le principe « coût d'opportunité » débloque un conseiller « Meilleur usage de 100 € ». Un euro placé ne peut plus acheter d'équipement. Un euro bloqué (PEL, SCPI, actions en baisse) ne paie pas une panne : il faut vendre, éventuellement à perte, ou passer à découvert.
+- **Investissement (v0.5)** :
+  - ETF monde et ETF CAC 40 en PEA ou en compte-titres, avec courtage et fiscalité 2026 (PFU 31,4 %) ; obligations ; SCPI (10 % de frais, délai de jouissance, retrait en 60 jours, loyers imposés TMI + 17,2 %).
+  - Marché stochastique déterministe par graine : ~7 %/an, volatilité ~15 %, régimes agités et krachs.
+  - Tableau risque, liquidité, frais et impôts. Les baisses stressent (moral) ; épargne de précaution = petit bonus de sérénité.
+  - « Avance rapide » 10/20/30 ans : 300 scénarios, fourchettes 10/50/90 %, en euros courants et constants.
+  - Les gains nets des placements (valeur de revente après frais et impôts, moins les gains du voisin resté au Livret A) entrent dans le score.
+- **99 principes** dans une encyclopédie filtrable par domaine (quoi, pourquoi, comment, piège, transfert). Les principes verrouillés montrent « ??? » et un indice.
 - **Fin de partie** : économies nettes face au voisin « tout chauffé », économies par domaine, investissements rentabilisés ou non, meilleure découverte, puis un titre : Dépensier, Malin, Optimiseur, Autonome ou Maître de la sobriété.
 - **Sauvegarde** automatique chaque jour dans le navigateur, plus des boutons Sauvegarder, Charger et Nouvelle partie.
 
@@ -79,7 +87,8 @@ Astuce : `?graine=1234` dans l'URL change la météo.
 
 ## Tests
 ```bash
-node test/sim-test.mjs       # 6 stratégies × 3 graines, migration de sauvegarde v3 → v4
+node test/sim-test.mjs       # 6 stratégies × 3 graines, migrations de sauvegarde v3 → v5 et v4 → v5
+node test/finance-test.mjs   # banque, marchés, projection, 3 stratégies d'arbitrage équipement/placement
 node test/passif-test.mjs    # cheminée solaire et puits canadien : rentabilité, pièges, combos
 node outils/estimations.mjs  # régénère js/estimations.js (estimations avant achat)
 ```
@@ -87,34 +96,53 @@ node outils/estimations.mjs  # régénère js/estimations.js (estimations avant 
 - le naïf, ne rien toucher et le glacial perdent, et que l'austère extrême perd malgré ses économies ;
 - le maître a un moral moyen d'au moins 45 et le titre « Maître de la sobriété » ;
 - au moins 3 combos sont trouvés et que les principes sont au moins 75 ;
-- une sauvegarde v3 est migrée, et qu'une sauvegarde plus ancienne est effacée proprement.
+- les sauvegardes v3 et v4 sont migrées (la banque démarre au jour de la sauvegarde, sans rattrapage), et qu'une sauvegarde plus ancienne est effacée proprement.
+
+`test/finance-test.mjs` vérifie :
+- le calendrier et les quinzaines (dépôt le 1er = 2 quinzaines en décembre, le 2 = 1 quinzaine ; retrait le 14 = quinzaine perdue) ;
+- l'éligibilité au LEP, le verrouillage du profil et les plafonds ;
+- la clôture du PEL avant 2 ans (taux du CEL, PFU 30 %) ;
+- la SCPI : −10 % à la revente immédiate, délai de jouissance, loyers nets, retrait différé de 60 jours ;
+- les agios et commissions du découvert, et le virement automatique ;
+- le calage du marché et la projection.
+
+Il joue aussi trois stratégies sur trois graines. « Équipements rentables d'abord, puis placement » doit battre « tout placer tout de suite » et « tout acheter, ne jamais placer » :
+
+| Graine 2026 | Économies (score) | Placements vs Livret A | Banque (agios) | Patrimoine final | Moral moyen |
+|---|---|---|---|---|---|
+| Équipements à fort rendement, 2 500 € de précaution, reste en fonds euros | **+352 €** | −4 € | 0 € | 1 609 € | 74 |
+| Tout placer dans un ETF au jour 1 | −1 435 € | −289 € | −1 131 € | 991 € | 34 |
+| Tout acheter, ne jamais placer | −1 032 € | −44 € | −976 € | −4 708 € | 71 |
+
+Tout placer laisse le compte courant à découvert pendant des mois (agios, commissions, stress) et expose aux baisses. Tout acheter engloutit l'épargne dans des équipements à faible rendement (puits, capteur pro, batterie : 0 à 12 %/an) et finit lourdement à découvert.
 
 `test/passif-test.mjs` vérifie, sur trois graines, la rentabilité de la ventilation passive et que le gain attribué correspond au gaz réellement économisé. Il vérifie aussi le contre-tirage, la « serre humide », le radon, la pente ratée et le chantier.
 
-`test/navigateur.cjs` (playwright-core et Chromium) joue une partie complète dans le navigateur, sans aucune erreur JavaScript. Il passe par le transport, le tri du tableau de rentabilité, les filtres de l'encyclopédie, le stockage solaire, un chantier de cheminée et un puits. Il teste aussi la migration d'une sauvegarde v3.
+`test/navigateur.cjs` (playwright-core et Chromium) joue une partie complète dans le navigateur, sans aucune erreur JavaScript. Il passe par le transport, le tri du tableau de rentabilité, les filtres de l'encyclopédie, le stockage solaire, un chantier de cheminée et un puits. Il passe aussi par la banque et l'investissement (profil, LEP, assurance vie, PEA, projection) et teste les migrations de sauvegardes v3 et v4.
 
 Résultats pour la graine 2026 (les graines 7 et 1789 donnent moins de 1 point d'écart en économies) :
 
 | Stratégie | Coût | Voisin | Économies | Confort | Santé | Moral | Hygiène | Bien-être | Titre |
 |---|---|---|---|---|---|---|---|---|---|
-| Ne rien toucher | 4 469 € | 4 425 € | −44 € (−1 %) | 72 | 87 | 78 | 97 | 68 | Dépensier |
-| Naïf | 6 739 € | 4 425 € | −2 314 € (−52 %) | 83 | 89 | 82 | 99 | 82 | Dépensier |
-| Glacial | 4 470 € | 4 425 € | −45 € | 27 | 1 | 15 | 99 | 59 | Dépensier |
-| Austère extrême | 1 937 € | 4 425 € | +2 488 € (56 %) | 46 | 1 | 14 | 15 | 2 | Dépensier |
-| Malin | 3 051 € | 4 425 € | +1 374 € (31 %) | 90 | 99 | 58 | 96 | 67 | Optimiseur |
-| Maître | 1 910 € | 4 425 € | +2 515 € (57 %) | 90 | 95 | 47 | 98 | 74 | Maître de la sobriété |
+| Ne rien toucher | 4 469 € | 4 425 € | −45 € (−1 %) | 72 | 87 | 79 | 97 | 68 | Dépensier |
+| Naïf | 6 739 € | 4 425 € | −2 326 € (−53 %) | 83 | 89 | 82 | 99 | 82 | Dépensier |
+| Glacial | 4 195 € | 4 425 € | +230 € (5 %) | 27 | 1 | 3 | 99 | 55 | Dépensier |
+| Austère extrême | 1 480 € | 4 425 € | +2 946 € (67 %) | 47 | 1 | 3 | 15 | 2 | Dépensier |
+| Malin | 3 051 € | 4 425 € | +1 375 € (31 %) | 90 | 99 | 61 | 96 | 67 | Optimiseur |
+| Maître | 1 903 € | 4 425 € | +2 523 € (57 %) | 90 | 95 | 58 | 98 | 74 | Maître de la sobriété |
 
-Sur les trois graines, le moral moyen du maître va de 45 à 52. Le voisin roule en voiture et achète son repas au travail : le transport pèse maintenant dans les deux budgets.
+Sur les trois graines, le moral moyen du maître va de 55 à 61. Le voisin roule en voiture et achète son repas au travail : le transport pèse maintenant dans les deux budgets.
 
-Ventilation passive (test/passif-test.mjs, retour projeté) :
+Ventilation passive (test/passif-test.mjs, chiffres réalistes v0.5 ; méthode et sources dans docs/prix.md) :
 
-| Installation | Gain/an | Retour |
-|---|---|---|
-| Cheminée solaire faite maison (Trombe l'hiver) | 110-133 € | 3,4-4,1 ans |
-| Puits pro seul | ~91 € moins 60 € d'entretien | > 170 ans |
-| Puits fait maison + cheminée, clim évitée (1 500 €) | 211-235 € | ~5-6 ans |
+| Installation | Gain/an | Retour | Fourchette |
+|---|---|---|---|
+| Cheminée solaire faite maison (Trombe l'hiver) | 74-87 € | 5,2-6,0 ans | 3,4-16 ans selon le prix (300-1 200 €) |
+| Puits pro seul | ~57 € moins 60 € d'entretien | jamais | |
+| Puits fait maison (2 900 €) + cheminée, clim mobile évitée (84 €/an) | 215-228 € | 16,9-18,1 ans | ~7 à ~27 ans |
+| Même chose sans clim à éviter | 131-144 € | 23-26 ans | |
 
-Le salon est 2,3 °C plus frais l'après-midi d'été avec le puits et la cheminée.
+Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la cheminée. La clim évitée n'est comptée que s'il y a eu une canicule et que le joueur n'a pas de clim.
 
 ## Structure
 - `js/data.js` : constantes et équilibrage
@@ -126,7 +154,9 @@ Le salon est 2,3 °C plus frais l'après-midi d'été avec le puits et la chemin
 - `js/roi.js` et `js/estimations.js` : rentabilité mesurée, projections, estimations avant achat (v0.4)
 - `js/combos.js` : stockage du surplus solaire et détection des combos (v0.4)
 - `js/passif.js` : cheminée solaire et puits canadien (v0.4)
-- `js/principes.js` : encyclopédie des 88 principes (v0.4)
+- `js/finance.js` : banque, placements, marchés, projection (v0.5)
+- `js/ui-finance.js` : onglets Banque et Investissement (v0.5)
+- `js/principes.js` : encyclopédie des 99 principes
 - `js/onglets.js` : onglets par domaine
 - `js/ui.js` et `js/main.js` : interface
 - `docs/conception.md` : document de conception
@@ -136,6 +166,7 @@ Le salon est 2,3 °C plus frais l'après-midi d'été avec le puits et la chemin
 - ✅ v0.2 : prix réels 2026, chauffage au gaz avec robinets, purge et appoint, humidité et aération, volets, rideaux thermiques, boudins, solaire et sa rentabilité, vêtements premier prix ou durables, sous-couche, réparation, laverie, temps, capital investi, événements, sauvegarde, bilan par domaine
 - ✅ v0.3 : eau chaude, tarifs Base, HC et Tempo, chapitres hiver → printemps → été, cuisine et cuisine solaire, veilles, jardin, abonnements et tentations, jauges hygiène et bien-être, onglets par domaine
 - ✅ v0.4 : moral rééquilibré (seuil 40), transport, rentabilité mesurée, stockage solaire et combos, ventilation passive (cheminée solaire et puits canadien), encyclopédie de 88 principes
+- ✅ v0.5 : ventilation passive aux prix réels, banque (livrets, LEP, PEL, assurance vie, découvert), investissement (PEA, CTO, obligations, SCPI, marché stochastique, projection 10/20/30 ans), arbitrage équipement / placement, 99 principes
 1. Automne et année complète, avec un panneau solaire qui se rentabilise vraiment.
 2. Effet rebond, et plus de fausses économies.
 3. Scénarios (étudiant, famille, retraité), voisinage et partage, défis (« Hiver à 200 € »).

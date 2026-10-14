@@ -215,7 +215,13 @@ if (charger(mem) !== 'ancienne' || mem.getItem('economie-game-sauvegarde') !== n
 // migration v0.3 -> v0.4 : la partie continue
 { const v3 = defaut(); const o = JSON.parse(JSON.stringify(v3)); delete o.meteo; delete o.transport; delete o.roi; o.version = 3; delete o.depenses.transport; delete o.base.transport;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  if (!(m && m.version === 4 && m.transport && m.jour === v3.jour)) { ok = false; console.log('✗ migration v3'); } }
+  if (!(m && m.version === 5 && m.transport && m.fin && m.jour === v3.jour)) { ok = false; console.log('✗ migration v3'); } }
+// migration v0.4 -> v0.5 : la banque démarre au jour de la sauvegarde, sans rattrapage
+{ const v4 = defaut(); const o = JSON.parse(JSON.stringify(v4)); delete o.meteo; delete o.fin; delete o.coutVoisinCumul; delete o.depenses.banque; delete o.base.banque; o.version = 4; o.fini = false; o.jour = 40;
+  mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
+  const okM = m && m.version === 5 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
+  if (okM) { jourSuivant(m); }
+  if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v5'); }
 console.log('principes :', Object.keys(PRINCIPES).length);
 if (Object.keys(PRINCIPES).length < 75) ok = false;
 console.log(ok ? '\nOK' : '\nÉCHEC'); process.exit(ok ? 0 : 1);

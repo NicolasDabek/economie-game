@@ -106,3 +106,9 @@ dl.fiche{font-size:12px;margin:6px 0 0}
 dl.fiche dt{font-weight:600;color:#1e3a8a;margin-top:4px}
 dl.fiche dd{margin:0 0 0 8px}
 .spark{display:block;margin-top:2px}
+/* v0.5 banque et investissement */
+input.montant{width:72px;padding:3px 4px;margin-right:4px;border:1px solid #cbd5e1;border-radius:6px}
+[data-panneau="banque"] p.ok{color:var(--ok);font-weight:600}[data-panneau="banque"] p.alerte{color:#b91c1c;font-weight:600}
+[data-panneau="banque"] tr.off,[data-panneau="invest"] tr.off{opacity:.5}
+[data-panneau="banque"] table,[data-panneau="invest"] table{font-size:.85em;width:100%}
+.stats small{display:block;font-weight:400;color:#64748b}

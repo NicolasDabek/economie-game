@@ -1,6 +1,6 @@
 // Rentabilité mesurée des équipements (v0.4)
 // Gain mesuré = ce que le même usage aurait coûté sans l'équipement (contrefactuel calculé chaque jour par la simulation).
-import { ACHATS, ROI_ITEMS, FINANCE } from './data.js';
+import { ACHATS, ROI_ITEMS, FINANCE, PASSIF, PRIX } from './data.js';
 import { chapitreDuJour } from './meteo.js';
 import { ESTIMATIONS } from './estimations.js';
 
@@ -36,16 +36,18 @@ export function analyseROI(s, id) {
   const a = ACHATS[id], P = ROI_ITEMS[id], r = s.roi?.[id];
   const prix = prixPaye(s, id), occasion = prix < a.prix;
   const pj = parJour(s, id);
-  const annuel = SAISONS.reduce((t, k) => t + pj[k].v * FINANCE.joursSaison[k], 0);
+  const J = P.saisonChauffe ? FINANCE.joursChauffe : FINANCE.joursSaison;
+  const annuel = SAISONS.reduce((t, k) => t + pj[k].v * J[k], 0) + (climEviteeAn(s, id)?.an || 0);
   const infl = FINANCE[{ energie: 'inflationEnergie', eau: 'inflationEau', carburant: 'inflationCarburant', alim: 'inflationAlim' }[P.poste]] ?? 0.02;
   const vieAns = occasion ? Math.max(1, a.vie * 0.6) : a.vie;
   const mesure = r ? r.dernier : 0, entretienPaye = r ? r.entretien : 0;
   const jours = r ? r.serie.length : 0;
   // projection annuelle : gain qui s'érode (dégradation), prix de l'énergie qui monte, entretien, coût d'opportunité (Livret A)
   // achat de clim évité (puits + cheminée en « clim de la Terre », sans clim achetée) : borne basse de la fourchette
-  const climEvitee = P.climEvitee && s.combos?.climTerre && !s.possede.clim ? P.climEvitee[0] : 0;
+  const ce = climEviteeAn(s, id);
+  const climEvitee = ce ? ce.an : 0;
   const proj = [];
-  let cumul = mesure - entretienPaye + climEvitee, payback = null;
+  let cumul = mesure - entretienPaye, payback = null;
   const t0 = jours / 365;
   for (let y = 1; y <= FINANCE.annees; y++) {
     const facteur = Math.pow(1 + infl, y - 1) * Math.pow(1 - (P.degr || 0), y - 1);
@@ -57,13 +59,13 @@ export function analyseROI(s, id) {
   // date de retour : atteint (jour de jeu) ou projeté (mois)
   let atteint = null;
   if (r) { const i = r.serie.findIndex(v => v >= prix); if (i >= 0) atteint = r.depuis + i + 1; }
-  if (atteint === null && annuel - (P.entretien || 0) > 0) payback = Math.max(0, (prix - (mesure - entretienPaye + climEvitee)) / ((annuel - (P.entretien || 0)) / 12));
+  if (atteint === null && annuel - (P.entretien || 0) > 0) payback = Math.max(0, (prix - (mesure - entretienPaye)) / ((annuel - (P.entretien || 0)) / 12));
   const residuelAuj = prix * (P.revente || 0) * Math.max(0, 1 - t0 / vieAns);
   const incertitude = pj.ete.mesure && pj.hiver.mesure && pj.printemps.mesure ? 0.15 : (ESTIMATIONS[id]?.incertitude ?? 0.4);
   return {
     id, nom: a.nom, prix, prixNeuf: a.prix, occasion, mesure, entretienPaye, entretienAn: P.entretien || 0, jours, pj, annuel, vieAns,
     degr: P.degr || 0, residuelAuj, proj, atteint, payback, incertitude, note: P.note || '', serie: r ? r.serie : [],
-    net5: proj.at(-1).net, climEvitee, climEviteeFourchette: P.climEvitee, ratio: proj.at(-1).net / Math.max(1, prix),
+    net5: proj.at(-1).net, climEvitee, climEviteeFourchette: ce ? [ce.min, ce.max] : null, ratio: proj.at(-1).net / Math.max(1, prix),
   };
 }
 
@@ -76,9 +78,17 @@ export function estimationAchat(id, occasion = false) {
   const a = ACHATS[id], e = ESTIMATIONS[id], P = ROI_ITEMS[id];
   if (!e || !P) return null;
   const prix = occasion && a.occasion ? a.occasion : a.prix;
-  const annuel = SAISONS.reduce((t, k) => t + (e[k] || 0) * FINANCE.joursSaison[k], 0) - (P.entretien || 0);
+  const annuel = SAISONS.reduce((t, k) => t + (e[k] || 0) * (P.saisonChauffe ? FINANCE.joursChauffe : FINANCE.joursSaison)[k], 0) - (P.entretien || 0);
   if (annuel <= 0.5) return { annuel, mois: null, prix };
   const u = e.incertitude ?? 0.4;
   const m = prix / annuel * 12;
   return { annuel, prix, mois: m, min: m / (1 + u), max: m / Math.max(0.2, 1 - u) };
+}
+
+// clim mobile évitée : amortissement (prix / vie) + électricité d'un été, seulement si l'été a vraiment chauffé
+export function climEviteeAn(s, id) {
+  const P = ROI_ITEMS[id], C = PASSIF.climEvitee;
+  if (!P?.climEvitee || !s.combos?.climTerre || s.possede.clim || !(s.joursCanicule > 0)) return null;
+  const v = (i) => C.prix[i] / C.vie + C.kwhAn[i] * PRIX.elecKwh;
+  return { an: v(1), min: v(0), max: v(2) };
 }

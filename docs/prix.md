@@ -197,28 +197,111 @@ Le voisin de référence en v0.4 fait tout en voiture et va au bureau 3 jours pa
 | Bidon 10 L + caisse isolée + thermoplongeur 300 W | 40 € | τ ≈ 20 h |
 | Eau chauffée à 90 °C ; τ sans isolant 2 h, torchon 3,5 h, housse 6 h | | refroidissement de Newton |
 
-### Ventilation passive (docs/cheminee-solaire-puits-canadien.md)
-Les prix sont des estimations reconstituées, sans barème officiel. Le jeu affiche la fourchette.
+### Ventilation passive (docs/cheminee-solaire-puits-canadien.md) : chiffres réalistes (v0.5)
+En v0.5, les chiffres ont été recalés sur des devis et des prix de matériaux réels. Le but n'est plus d'atteindre les retours visés par le document de conception. Le jeu affiche la fourchette de prix de chaque objet.
 
 | Objet | Prix du jeu | Fourchette | Chantier | Entretien |
 |---|---|---|---|---|
 | Cheminée solaire faite maison | 450 € | 300-1 200 € | 3 jours | vitrage 1 h/an |
-| Capteur solaire à air posé (pro) | 2 500 € | 1 000-3 000 € (3 000-8 000 € intégré au bâti) | 1 jour | 30 €/an |
-| Puits canadien fait maison 45 m Ø160 | 2 200 € | 1 500-3 000 € | 5 jours, 15 % de pente ratée | filtres 2 × 15 €/an |
-| Puits canadien pro | 5 800 € | 4 000-10 000 € [P1][P2] | 2 jours | filtres 30 €/an + inspection 150 €/5 ans |
-| Puits hydraulique | 3 500 € | 1 900-4 500 € [P1] | 2 jours | 20 €/an |
-| Kit étanchéité radon | 300 € | estimation | 2 h | |
-| Reprise de pente (pro) | 900 € | 600-1 200 € (estimation) | 1 jour | |
-| Clim évitée (ROI) | 1 500 € comptés | 1 500-3 000 € | | |
+| Capteur solaire à air posé (pro) | 2 500 € | 1 000-3 000 € | 1 jour | 30 €/an |
+| Puits canadien fait maison 45 m Ø160 | **2 900 €** | **2 000-3 800 €** (détail ci-dessous) | 5 jours, 15 % de pente ratée | filtres 2 × 15 €/an |
+| Puits canadien pro | 5 800 € | **4 000-12 000 €** (monbatiment.fr 2026 : 5 000-12 000 € TTC posé) | 2 jours | filtres 30 €/an + inspection 150 €/5 ans |
+| Puits hydraulique | 3 500 € | 1 900-4 500 € | 2 jours | 20 €/an |
 
-Calage du modèle :
-- capteur fait maison ~3 m² avec un rendement de 0,5 en mode Trombe ;
-- extracteur de 30 W pour le puits seul ;
-- renouvellement d'air hygiénique remplacé de 100 m³/h.
+Détail du puits fait maison (`PUITS_DIY` dans js/data.js) :
 
-Retours obtenus, comparés à la cible du document :
-- cheminée seule : 3,4 à 4,1 ans (cible 4-8) ;
-- puits pro seul : plus de 170 ans (cible > 35) ;
-- puits fait maison + cheminée qui remplace une clim : 5 à 6 ans (cible 8-12).
+| Poste | Bas | Haut | Source |
+|---|---|---|---|
+| Gaine PEHD alimentaire Ø160-200, 45 m | 675 € | 900 € | 15-20 €/m (négoces 2026) |
+| Regard étanche de condensats + siphon ou pompe | 210 € | 880 € | regard simple ~150 € ; Helios 740 € + 142 € |
+| Borne de prise d'air inox + filtre G3 | 150 € | 500 € | Fiabishop, Helios |
+| Extracteur ~15 W + gaines intérieures | 80 € | 150 € | |
+| Mini-pelle 1-2 t, 2 jours + livraison | 790 € | 940 € | 295-329 € HT/jour (loueurs 2026) |
+| Sable 0/4 (~6 t) et joints IP68 | 150 € | 300 € | |
+| **Total** | **~2 050 €** | **~3 670 €** | recoupé avec le kit Fiabishop 2 × 35 m + regard : 2 010-2 480 € hors terrassement |
 
-Le gain attribué correspond au gaz réellement économisé à ±40 % près, ce que vérifie `test/passif-test.mjs`. Le document annonce lui-même 100 à 160 €/an pour le puits ; avec ce gain et la clim évitée, le retour tombe à 5-6 ans, pas à 8-12 ans.
+Hypothèses du modèle thermique :
+- volumes réels de la maison : salon 50 m³, chambre 35 m³, cuisine 27 m³, soit 112 m³ ;
+- renouvellement hygiénique remplacé : 55 m³/h (~0,5 vol/h) ;
+- extracteur ~15 W pour 55 m³/h (Fiabitat : ~30 W pour 150 m²) ;
+- capteur fait maison : 3 m², rendement 0,5 en mode Trombe ;
+- annualisation des objets de chauffage sur 151 jours de chauffe en hiver et 62 au printemps (et non sur toute la saison) ;
+- le gain hivernal du puits reste bien en dessous du plafond de Fiabitat (≤ 1 500 kWh/an pour 150 m²).
+
+**Clim évitée, méthode réaliste.** On compte une **clim mobile**, pas un split à 1 500 €. Le coût annuel évité est l'amortissement plus l'électricité :
+- prix 250-800 € (central 349 €) ÷ 8 ans de vie ;
+- plus 120-400 kWh par été (central 200 kWh ; calculateurenligne.fr donne 396 kWh pour 90 jours × 4 h) × 0,2001 €/kWh ;
+- soit **84 €/an** (fourchette 55-180 €/an).
+
+Ce montant n'est compté que si trois conditions sont réunies : la partie a connu au moins un jour de canicule, le combo « clim de la Terre » est trouvé (le salon est vraiment rafraîchi, ~2 °C l'après-midi), et le joueur ne possède pas déjà de clim. Sans canicule, personne n'aurait acheté de clim, donc rien n'est évité.
+
+**Retours finaux (`test/passif-test.mjs`, graines 2026 / 7 / 1789) :**
+
+| Configuration | Gain mesuré | Retour (prix du jeu) | Fourchette (prix et clim mini-maxi) |
+|---|---|---|---|
+| Cheminée solaire faite maison seule | 74-87 €/an | **5,2-6,0 ans** | 3,4-16 ans (300-1 200 €) |
+| Puits canadien pro seul | ~57 €/an, moins 60 €/an d'entretien | **jamais** | jamais (même à 4 000 €) |
+| Puits fait maison + cheminée, clim mobile évitée | 215-228 €/an (dont 84 € de clim) | **16,9-18,1 ans** | ~7 ans (2 300 €, clim chère) à ~27 ans (5 000 €, clim bon marché) |
+| Puits fait maison + cheminée, sans clim à éviter | 131-144 €/an | 23-26 ans | |
+
+Ces retours sont plus longs que ceux du document de conception (cible 8-12 ans pour le combo, avant recalage). La raison est le recalage : vrais coûts du fait-maison (mini-pelle, regard), clim mobile plutôt que split, et seulement 62 jours de chauffe au printemps. Le puits canadien reste surtout un objet de confort d'été. Ce n'est pas un placement.
+
+## v0.5 : banque et investissement (taux d'octobre 2026)
+
+### Épargne réglementée
+| Produit | Taux | Plafond | Fiscalité | Source |
+|---|---|---|---|---|
+| Livret A | 1,70 % | 22 950 € | exonéré | arrêté du 28 juillet 2026 (JO 29/07/2026), valable du 1er août 2026 au 31 janvier 2027 ; maintien supposé ensuite |
+| LDDS | 1,70 % | 12 000 € | exonéré | idem |
+| LEP | 2,50 % | 10 000 € | exonéré | idem ; éligibilité RFR ≤ 23 028 € pour 1 part (service-public.gouv.fr, 2026) |
+| PEL ouvert en 2026 | 2,00 % brut | 61 200 € | PFU 30 % dès la 1re année (12,8 + 17,2 : le PEL échappe à la hausse de CSG) | Banque de France ; ouverture 225 €, 540 €/an minimum ; clôture avant 2 ans → taux du CEL 1,25 % |
+
+Règles simulées :
+- intérêts par **quinzaines** (dépôt compté à partir du 1er ou du 16 suivant, retrait décompté depuis le début de la quinzaine en cours) ;
+- capitalisation le 31 décembre ;
+- retrait du PEL = clôture.
+
+Le jeu suit un calendrier réel : 1er décembre 2026 → 26 janvier 2027, puis 6 avril → 3 mai, puis 1er juillet → 11 août 2027. Les semaines entre deux chapitres comptent aussi (intérêts, loyers de SCPI, marchés).
+
+### Profils (choisis avant le premier placement)
+| Profil | RFR (1 part) | TMI | Épargne de départ (sur le Livret A) | LEP |
+|---|---|---|---|---|
+| Revenus modestes | 18 000 € | 11 % | 1 500 € | oui |
+| Revenus médians (défaut) | 26 000 € | 11 % | 4 000 € | non |
+| Revenus confortables | 48 000 € | 30 % | 12 000 € | non |
+
+### Assurance vie
+- Fonds euros : **2,63 %** de rendement moyen en 2025 (ACPR). Le jeu retient 2,6 % pour un contrat en ligne, 2,2 % pour un contrat de banque de réseau.
+- Prélèvements sociaux de 17,2 % chaque 31 décembre (l'assurance vie reste à 17,2 % malgré la LFSS 2026).
+- Frais d'entrée : 0 % en ligne, 2,5 % en banque. Frais sur les UC : 0,5 %/an en ligne, 0,85 %/an en banque.
+- Rachat : avant 8 ans, 12,8 % d'IR sur la part de gains ; après 8 ans, abattement de 4 600 € puis 7,5 % (projections).
+
+### Marchés et comptes-titres
+- **Fiscalité 2026 (LFSS 2026)** : la CSG sur les revenus du capital passe de 9,2 % à 10,6 %. Les prélèvements sociaux passent donc à 18,6 % et le **PFU à 31,4 %** (dividendes, plus-values, intérêts). L'assurance vie, les revenus fonciers, les livrets et le PEL n'en sont pas affectés.
+- **PEA** : après 5 ans, seulement 18,6 % de prélèvements sociaux. Avant 5 ans, tout retrait clôture le plan. Plafond de versements 150 000 €. Courtage plafonné à 0,5 % en ligne (décret 2020-95).
+- **Compte-titres** : PFU 31,4 %. Courtage ~0,2 %, minimum 1,99 € (courtiers en ligne 2026).
+- **ETF MSCI World** : frais 0,2 %/an. Modèle en deux régimes de volatilité (11 % au calme, 25 % en période agitée) avec de rares sauts de krach. Calage vérifié sur 2 000 années simulées :
+  - moyenne arithmétique 7,8 %/an, géométrique 6,6 % ;
+  - volatilité 15,7 % ;
+  - pire année −36 % ;
+  - baisse maximale médiane en cours d'année −12 % (historique : ~−14 %).
+- **ETF CAC 40** (dividendes réinvestis) : volatilité un peu plus forte, corrélation 0,85 avec le monde.
+- **Obligations** : ~4 %/an, volatilité ~5 %. Référence : OAT 10 ans ~4,8 % (TEC 10 de la Banque de France, 9 octobre 2026).
+- **SCPI** :
+  - taux de distribution **4,91 %** (ASPIM, moyenne 2025) ;
+  - frais de souscription ~10 % (8-12 %), inclus dans le prix de part : revente au prix de retrait −10 % ;
+  - délai de jouissance 4 mois (3-6) ;
+  - retrait exécuté en ~60 jours, non garanti ;
+  - loyers imposés en micro-foncier : abattement de 30 %, puis TMI + 17,2 % ;
+  - aléa de revalorisation, dont un choc de −10 % environ une année sur huit (baisses de 2023-2024).
+- **Inflation** : 3,0 % sur un an en septembre 2026 (Insee, provisoire) pour le rendement réel affiché. Hypothèse de 2 % pour les projections longues.
+- **Découvert** :
+  - autorisé jusqu'à 500 € à 16 % ;
+  - au-delà, 20 % ;
+  - commission d'intervention de 8 € par jour d'incident, plafonnée à 80 €/mois (art. R312-4-1 CMF).
+
+### Comment les placements entrent dans le score
+- Score financier = valeur de liquidation du jour (frais de sortie, impôts, règles PEL/SCPI/PEA appliqués) + revenus versés en cash (loyers SCPI) − apports nets. On retranche ce qu'a gagné le voisin, qui garde la même épargne sur son Livret A et y pioche quand son compte passe à découvert.
+- Ce montant est ajouté aux économies (ligne « Épargne et placements »). Les agios ont leur propre ligne, « Banque ».
+- Les titres restent conditionnés aux jauges de bien-être. L'écran final affiche aussi le patrimoine total, comparé à celui du voisin.
+

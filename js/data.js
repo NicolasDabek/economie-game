@@ -200,9 +200,9 @@ export const ACHATS = {
                   desc: 'Une colonne vitrée noire au soleil : l\'air chauffé monte et aspire l\'air de la maison sans ventilateur. Clapet été (purge) / hiver (mode Trombe). 3 jours de chantier.' },
   chemineePro:  { nom: 'Capteur solaire à air posé (pro)', prix: 2500, temps: 0, chantier: 1, invest: true, vie: 25, cat: 'Ventilation passive', fourchette: [1000, 3000],  // SolarVenti / Grammer / TWINSOLAR posé (doc §2)
                   desc: 'Débit 1,2 fois plus fort, clapets automatiques (pas de contre-tirage). 1 jour de pose.' },
-  puitsDIY:     { nom: 'Puits canadien fait maison (45 m, Ø160)', prix: 2200, temps: 0, chantier: 5, invest: true, vie: 40, cat: 'Ventilation passive', fourchette: [1500, 3000],  // tube alimentaire 900-1500 € + mini-pelle 250 €/j (doc §3, [P1])
+  puitsDIY:     { nom: 'Puits canadien fait maison (45 m, Ø160)', prix: 2900, temps: 0, chantier: 5, invest: true, vie: 40, cat: 'Ventilation passive', fourchette: [2000, 3800],  // détail PUITS_DIY ci-dessous (gaine PEHD alimentaire, regard, borne, mini-pelle 2 j)
                   desc: 'Tube enterré à 2 m : l\'air entre à la température du sol. 5 jours de chantier, risque de pente ratée (15 %) : condensats qui stagnent.' },
-  puitsPro:     { nom: 'Puits canadien posé (pro)', prix: 5800, temps: 0, chantier: 2, invest: true, vie: 50, cat: 'Ventilation passive', fourchette: [4000, 10000],  // moyenne ~5 800 € [P1][P2]
+  puitsPro:     { nom: 'Puits canadien posé (pro)', prix: 5800, temps: 0, chantier: 2, invest: true, vie: 50, cat: 'Ventilation passive', fourchette: [4000, 12000],  // moyenne ~5 800 € [P1][P2] ; 5 000-12 000 € TTC tout compris (monbatiment.fr 2026)
                   desc: 'Pente garantie vers un regard à siphon. Filtres 2×/an, inspection tous les 5 ans. 2 jours de chantier.' },
   puitsHydro:   { nom: 'Puits hydraulique (eau glycolée)', prix: 3500, temps: 0, chantier: 2, invest: true, vie: 30, cat: 'Ventilation passive', fourchette: [1900, 4500],  // [P1]
                   desc: 'Une boucle d\'eau enterrée alimente une batterie dans la gaine : ni radon ni condensation dans le sol, efficacité 0,8 fois celle du puits à air.' },
@@ -410,15 +410,16 @@ export const FINANCE = {
   inflationCarburant: 0.02,// +2 %/an : hypothèse
   inflationAlim: 0.02,     // +2 %/an : hypothèse (après le pic 2022-2023)
   annees: 5,               // horizon de projection
-  joursSaison: { hiver: 151, printemps: 122, ete: 92 }, // hiver = nov.-mars ; printemps = avril-juin + sept.-oct. ; été = juil.-août
+  joursSaison: { hiver: 151, printemps: 122, ete: 92 },
+  joursChauffe: { hiver: 151, printemps: 62, ete: 0 }, // gains de chauffage : saison de chauffe 15 oct.-15 mai (≈ 213 j), pas toute la mi-saison // hiver = nov.-mars ; printemps = avril-juin + sept.-oct. ; été = juil.-août
 };
 // entretien (€/an), consommables, perte d'efficacité (%/an), part de revente (du prix payé, par an d'âge décroît), poste d'inflation
 export const ROI_ITEMS = {
-  calfeutrage: { entretien: 0, degr: 0.15, revente: 0, poste: 'energie' },
-  boudin: { entretien: 0, degr: 0.05, revente: 0, poste: 'energie' },
-  rideauxTh: { entretien: 0, degr: 0.02, revente: 0.3, poste: 'energie' },
-  robinets: { indirect: 'permet de zoner : le gain dépend de tes consignes', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
-  purge: { entretien: 0, degr: 0.5, revente: 0, poste: 'energie', note: 'à refaire chaque automne' },
+  calfeutrage: { saisonChauffe: true, entretien: 0, degr: 0.15, revente: 0, poste: 'energie' },
+  boudin: { saisonChauffe: true, entretien: 0, degr: 0.05, revente: 0, poste: 'energie' },
+  rideauxTh: { saisonChauffe: true, entretien: 0, degr: 0.02, revente: 0.3, poste: 'energie' },
+  robinets: { saisonChauffe: true, indirect: 'permet de zoner : le gain dépend de tes consignes', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
+  purge: { saisonChauffe: true, entretien: 0, degr: 0.5, revente: 0, poste: 'energie', note: 'à refaire chaque automne' },
   appoint: { indirect: 'permet de chauffer local', entretien: 0, degr: 0, revente: 0.3, poste: 'energie' },
   solaire: { entretien: 0, degr: 0.005, revente: 0.4, poste: 'energie', note: 'production ~3× plus forte en été qu\'en hiver' },
   bouillotte: { indirect: 'permet de baisser la chambre la nuit', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
@@ -455,11 +456,11 @@ export const ROI_ITEMS = {
   batterie: { entretien: 0, degr: 0.03, revente: 0.3, poste: 'energie', note: 'perd ~3 %/an de capacité ; rendement 88 %' },
   thermos: { entretien: 0, degr: 0, revente: 0, poste: 'energie' },
   caisse: { entretien: 0, degr: 0.03, revente: 0, poste: 'energie' },
-  chemineeDIY: { entretien: 0, degr: 0.01, revente: 0, poste: 'energie', note: 'nettoyage du vitrage 1 h/an ; gagne l\'hiver (Trombe) et l\'été (purge de nuit)' },
-  chemineePro: { entretien: 30, degr: 0.005, revente: 0, poste: 'energie', note: 'contrat d\'entretien ~30 €/an' },
-  puitsDIY: { entretien: 30, degr: 0, revente: 0, poste: 'energie', climEvitee: [1500, 3000], note: 'filtres 2×/an à 15 € ; rentable surtout s\'il remplace une clim' },
-  puitsPro: { entretien: 60, degr: 0, revente: 0, poste: 'energie', climEvitee: [1500, 3000], note: 'filtres 30 €/an + inspection 150 € tous les 5 ans' },
-  puitsHydro: { entretien: 20, degr: 0, revente: 0, poste: 'energie', climEvitee: [1500, 3000], note: 'contrôle du glycol ~20 €/an' },
+  chemineeDIY: { saisonChauffe: true, entretien: 0, degr: 0.01, revente: 0, poste: 'energie', note: 'nettoyage du vitrage 1 h/an ; gagne l\'hiver (Trombe) et l\'été (purge de nuit)' },
+  chemineePro: { saisonChauffe: true, entretien: 30, degr: 0.005, revente: 0, poste: 'energie', note: 'contrat d\'entretien ~30 €/an' },
+  puitsDIY: { saisonChauffe: true, entretien: 30, degr: 0, revente: 0, poste: 'energie', climEvitee: true, note: 'filtres 2×/an à 15 € ; rentable surtout s\'il remplace une clim' },
+  puitsPro: { saisonChauffe: true, entretien: 60, degr: 0, revente: 0, poste: 'energie', climEvitee: true, note: 'filtres 30 €/an + inspection 150 € tous les 5 ans' },
+  puitsHydro: { saisonChauffe: true, entretien: 20, degr: 0, revente: 0, poste: 'energie', climEvitee: true, note: 'contrôle du glycol ~20 €/an' },
   kitRadon: { entretien: 0, degr: 0, revente: 0, poste: 'energie', indirect: 'santé : évite d\'aspirer du radon par le tube' },
 };
 
@@ -507,13 +508,70 @@ export const PASSIF = {
   facteurContre: 0.35,                    // contre-tirage nocturne, clapet bas ouvert
   qTubeMax: 250, L: 45, L0: 12,           // Ø160 : 250 m³/h ; L0 = 12·(Q/150)^0,8
   efficaciteHydro: 0.8,
-  debitVentilo: 100, ventiloW: 30,        // puits seul : extracteur 30 W (≈ 12 €/an pour 2 000 h)
+  debitVentilo: 55, ventiloW: 15,         // puits seul : petit extracteur ~15 W pour 55 m³/h (Fiabitat : 30 W pour une maison de 150 m²)
   bypassBas: 14, bypassHaut: 20,          // by-pass : puits sous 14 °C et au-dessus de 20 °C [P4]
-  Qhyg: 100,                              // renouvellement hygiénique remplacé (m³/h, ~0,5 vol/h pour 200 m³)
-  part: { salon: 0.5, chambre: 0.3, cuisine: 0.2 }, volume: { salon: 90, chambre: 60, cuisine: 50 },
+  Qhyg: 55,                               // renouvellement hygiénique remplacé : ~0,5 vol/h pour 112 m³ (règles de l'art puits climatiques 2015)
+  part: { salon: 0.5, chambre: 0.3, cuisine: 0.2 }, volume: { salon: 50, chambre: 35, cuisine: 27 },   // 45 m² × 2,5 m ≈ 112 m³,
   hrExt: { hiver: 0.85, printemps: 0.72, ete: 0.62 }, wLourd: 18.7,  // jour lourd : rosée ~21 °C
   risquePente: 0.15, reprisePente: 900, reprisePenteFourchette: [600, 1200],  // reprise de pente : estimation
   seuilStagnant: 2, seuilRegard: 6, radonSante: 0.6,
-  climEvitee: [1500, 3000],
+  // clim évitée : seulement si l'été a vraiment demandé du froid (canicule) et qu'aucune clim n'a été achetée.
+  // On compte une clim MOBILE (la seule plausible pour 45 m² en location) amortie sur sa vie + son électricité, pas un prix d'achat d'un coup.
+  climEvitee: { prix: [250, 349, 800], vie: 8, kwhAn: [120, 200, 400] },  // prix mobile 250-800 € (QuelleEnergie, Effy 2026) ; 120-400 kWh/été (calculateurenligne.fr : 396 kWh pour 90 j × 4 h)
   noms: { chemineeDIY: 'la cheminée solaire', chemineePro: 'le capteur solaire à air', puitsDIY: 'le puits canadien', puitsPro: 'le puits canadien', puitsHydro: 'le puits hydraulique' },
+};
+
+// Puits canadien fait maison : décomposition du prix (sources : fiabishop.com kit 2×35 m + regard 2 010-2 480 € ; monbatiment.fr ; czn-machinery.com location 2026)
+export const PUITS_DIY = [
+  ['Gaine PEHD alimentaire annelée/lisse Ø160-200, 45 m', 675, 900],      // 15-20 €/m
+  ['Regard étanche de condensats + tampon + siphon/pompe', 210, 880],       // regard simple ~150 € ; Helios 740 + 142 €
+  ['Borne de prise d\'air inox + filtre G3', 150, 500],
+  ['Extracteur basse consommation ~15 W + gaines intérieures', 80, 150],
+  ['Mini-pelle 1-2 t, 2 jours (295-329 € HT/j) + livraison', 790, 940],
+  ['Sable 0/4 (lit + enrobage, ~6 t) et joints IP68', 150, 300],
+];
+
+// ---------- Banque et placements (v0.5) — taux et règles en vigueur en octobre 2026 ----------
+export const CALENDRIER = { debut: '2026-12-01', chapitres: { hiver: '2026-12-01', printemps: '2027-04-06', ete: '2027-07-01' } };
+export const PROFILS = {
+  // RFR d'une personne seule (1 part). LEP : RFR ≤ 23 028 € en métropole (service-public.gouv.fr, plafonds 2026).
+  modeste: { nom: 'Revenus modestes', rfr: 18000, tmi: 0.11, epargne: 1500, desc: 'SMIC + un peu : éligible au LEP.' },
+  median:  { nom: 'Revenus médians', rfr: 26000, tmi: 0.11, epargne: 4000, desc: 'Salaire médian : trop pour le LEP.' },
+  aise:    { nom: 'Revenus confortables', rfr: 48000, tmi: 0.30, epargne: 12000, desc: 'Cadre : tranche à 30 %.' },
+};
+export const BANQUE = {
+  // Arrêté du 28 juillet 2026 (JO 29/07/2026) : taux du 1er août 2026 au 31 janvier 2027. Au-delà : hypothèse de maintien.
+  livretA: { nom: 'Livret A', taux: 0.017, plafond: 22950, exonere: true },
+  ldds:    { nom: 'LDDS', taux: 0.017, plafond: 12000, exonere: true },
+  lep:     { nom: 'LEP', taux: 0.025, plafond: 10000, exonere: true, plafondRfr: 23028 },   // 2,5 % maintenu au 1er août 2026 (coup de pouce)
+  pel:     { nom: 'PEL', taux: 0.02, tauxCel: 0.0125, plafond: 61200, ouverture: 225, versementAn: 540, pfu: 0.30 }, // PEL ouverts en 2026 : 2 % brut ; PFU 30 % (12,8 + 17,2 : le PEL échappe à la hausse de CSG)
+  // Assurance vie : fonds euros 2,63 % en 2025 (ACPR, net de frais de gestion, avant prélèvements sociaux)
+  av: {
+    enLigne: { nom: 'Contrat en ligne', entree: 0, gestionUC: 0.005, fondsEuros: 0.026 },
+    banque:  { nom: 'Contrat de banque de réseau', entree: 0.025, gestionUC: 0.0085, fondsEuros: 0.022 },
+    psFondsEuros: 0.172,          // prélèvements sociaux sur les intérêts du fonds euros, prélevés chaque année (assurance vie : reste à 17,2 %)
+    irAvant8: 0.128, abattement8: 4600, irApres8: 0.075,   // rachat : PFU avant 8 ans ; après 8 ans abattement 4 600 € (personne seule) puis 7,5 %
+  },
+  pfu: 0.314,                     // 12,8 % IR + 18,6 % PS : LFSS 2026 (CSG 9,2 → 10,6 %) sur dividendes, plus-values, intérêts
+  psPea: 0.186,                   // PEA après 5 ans : seulement les prélèvements sociaux
+  psFoncier: 0.172,               // revenus fonciers : restent à 17,2 %
+  microFoncier: 0.30,             // abattement forfaitaire du micro-foncier
+  decouvert: { autorise: 500, taeg: 0.16, horsAutorisation: 0.20, commission: 8, commissionMois: 80 }, // découvert autorisé ~7-16 % ; commission d'intervention plafonnée 8 €/op, 80 €/mois (art. R312-4-1 CMF)
+  precautionMois: 1,              // épargne de précaution conseillée : au moins 1 à 3 mois de dépenses sur un livret
+};
+export const MARCHES = {
+  // Modèle stochastique déterministe par graine : 2 régimes de volatilité (calme / tendu), sauts de krach rares.
+  // Calage : MSCI World en euros ~7 %/an nominal, volatilité ~15 %, krachs de −20 à −35 % quelques fois par décennie.
+  // Vérifié sur 2 000 années simulées (outil : test/finance-test.mjs) : moyenne arithmétique 7,8 %, géométrique 6,6 %,
+  // volatilité 15,7 %, pire année −36 %, baisse maximale médiane en cours d'année −12 % (historique MSCI World : ~−14 %).
+  monde: { nom: 'ETF MSCI World', mu: 0.077, sigma: [0.11, 0.25], ter: 0.002, pea: true },
+  cac:   { nom: 'ETF CAC 40 (dividendes réinvestis)', mu: 0.075, sigma: [0.13, 0.29], ter: 0.0025, pea: true, correl: 0.85 },
+  oblig: { nom: 'Fonds obligataire États zone euro', mu: 0.04, sigma: [0.05, 0.08], ter: 0.003, correl: 0.1 },  // OAT 10 ans 4,8 % (TEC 10, 9 oct. 2026) ; mix euro ~4 %
+  regime: { pTendu: 0.005, pCalme: 0.03 },   // probabilités journalières de bascule : ~15 % du temps en régime tendu
+  krach: { p: 0.0012, taille: [-0.05, -0.09] },
+  scpi: { distribution: 0.0491, frais: 0.10, jouissanceMois: 4, retraitJours: 60, revalo: 0.0, revaloSigma: 0.04, chocP: 0.12, choc: -0.10 }, // ASPIM 2025 : 4,91 % ; frais 8-12 % ; jouissance 3-6 mois
+  courtage: { pea: 0.005, ctoPct: 0.002, ctoMin: 1.99 },   // PEA : 0,5 % max en ligne (décret 2020-95) ; CTO : courtier en ligne ~0,1-0,5 %, min ~2 €
+  peaPlafond: 150000,
+  inflation: 0.030,               // Insee : +3,0 % sur un an en septembre 2026 (provisoire)
+  inflationLongTerme: 0.02,       // hypothèse pour les projections (cible BCE)
 };

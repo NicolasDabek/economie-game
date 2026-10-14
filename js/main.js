@@ -3,6 +3,8 @@ import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
 import { etatUI } from './onglets.js';
+import { etatFin } from './ui-finance.js';
+import { changerProfil, deposer, retirer, ouvrirAV, projection } from './finance.js';
 import { actions, prendreTemps, payer } from './simulation.js';
 import { viderRegard, changerFiltre, reprendrePente } from './passif.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from './transport.js';
@@ -74,6 +76,21 @@ document.addEventListener('click', (e) => {
   else if (d.tri) { if (etatUI.roiTri === d.tri) etatUI.roiSens *= -1; else { etatUI.roiTri = d.tri; etatUI.roiSens = d.tri === 'nom' || d.tri === 'payback' ? 1 : -1; } }
   else if (d.filtre) etatUI.filtrePrincipes = d.filtre;
   else if (d.principe) etatUI.principeOuvert = etatUI.principeOuvert === d.principe ? null : d.principe;
+  else if (d.fin) {
+    const c = actions(s), f = d.fin, montant = () => Number(document.getElementById('m-' + d.v)?.value || 0);
+    let r = null;
+    if (f === 'profil') changerProfil(s, d.v);
+    else if (f === 'auto') s.fin.autoLivret = d.v === '1';
+    else if (f === 'dep') r = deposer(s, d.v, montant(), c);
+    else if (f === 'ret') { if (d.v !== 'pel' && d.v !== 'pea' || confirm(d.v === 'pel' ? 'Clôturer le PEL ?' : 'Vendre tout le PEA ? Avant 5 ans, il sera clôturé.')) r = retirer(s, d.v, d.v === 'pea' || d.v === 'pel' ? Infinity : montant(), c); }
+    else if (f === 'av') r = ouvrirAV(s, d.v);
+    else if (f === 'alloc') etatFin.proj.alloc = d.v;
+    else if (f === 'ans') etatFin.proj.ans = Number(d.v);
+    else if (f === 'vers') etatFin.proj.versement = Number(d.v);
+    else if (f === 'projeter') { const p = etatFin.proj; p.res = { ...projection(s.seed, p.versement, p.ans, p.alloc), alloc: p.alloc, ans: p.ans, versement: p.versement }; c.debloquer('horizon'); c.debloquer('interetsComposes'); }
+    if (r) toast((r.ok ? '' : '⚠️ ') + r.msg);
+    autoSauvegarde();
+  }
   else if (d.set) regler(d.set, d.v);
   else if (d.action) {
     const c = actions(s);
@@ -93,7 +110,7 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnJour') return avancer(1);
   else if (b.id === 'btnSemaine') return avancer(7);
   else if (b.id === 'btnCommencer') { $('intro').classList.add('cache'); return; }
-  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') { s = c; if (s.migre === 3) { toast('Sauvegarde v0.3 mise à jour : le transport et la rentabilité démarrent aujourd\'hui.'); delete s.migre; } } else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
+  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') { s = c; if (s.migre === 3) { toast('Sauvegarde v0.3 mise à jour : le transport, la rentabilité et la banque démarrent aujourd\'hui.'); delete s.migre; } else if (s.migre === 4) { toast('Sauvegarde v0.4 mise à jour : ta banque démarre aujourd\'hui (profil médian, 4 000 € sur le Livret A).'); delete s.migre; } } else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
   else if (b.id === 'btnSauver') { autoSauvegarde(); toast('💾 Partie sauvegardée dans ce navigateur.'); return; }
   else if (b.id === 'btnCharger') { const c = charger(); if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible avec cette version : elle a été effacée.'); else if (c) { s = c; $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else toast('Aucune sauvegarde trouvée.'); }
   else if (b.id === 'btnNouvelle' || b.id === 'btnRejouer') {

@@ -3,6 +3,9 @@ import { PIECES, ORDRE_PIECES, VETEMENTS, ACHATS, GESTES, JOURS_HABITUDE, PRINCI
 import { prevision, chapitreDuJour } from './meteo.js';
 import { ONGLETS, etatUI, rendreEte, rendrePassif, rendreEau, rendreCuisine, rendreElec, rendreJardin, rendreBudget, rendreTransport, rendreEncyclopedie, rendreCombos } from './onglets.js';
 import { tableauROI, estimationAchat } from './roi.js';
+import { rendreBanque, rendreInvest, tauxTxt } from './ui-finance.js';
+import { projection } from './finance.js';
+import { BANQUE } from './data.js';
 import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
 import { JOURS, COMBOS } from './data.js';
 import {
@@ -213,13 +216,13 @@ export function rendreBoutique(s) {
   const cats = {};
   const filtre = ONGLETS.find(o => o[0] === etatUI.onglet)?.[2] || [];
   for (const [id, a] of Object.entries(ACHATS)) if (filtre.includes(a.cat)) (cats[a.cat] ||= []).push([id, a]);
-  if (!Object.keys(cats).length) { $('boutique').innerHTML = '<p class="aide">Rien à acheter pour ce domaine. Change d\'onglet pour voir d\'autres articles.</p>'; return; }
+  if (!Object.keys(cats).length) { $('boutique').innerHTML = ['banque', 'invest'].includes(etatUI.onglet) ? '<p class="aide">La boutique de chaque domaine affiche le rendement annuel de chaque équipement, à comparer aux placements.</p>' : '<p class="aide">Rien à acheter pour ce domaine. Change d\'onglet pour voir d\'autres articles.</p>'; return; }
   $('boutique').innerHTML = Object.entries(cats).map(([cat, items]) => `<h3>${cat}</h3>` + items.map(([id, a]) => {
     const bloque = id === 'housse' && !s.possede.bouillotte;
     const btn = s.possede[id] ? '<span class="tag habitude">acquis</span>' : `<div class="acts"><button class="btn" data-acheter="${id}" ${(s.argent < a.prix || bloque || tempsLibre(s) < (a.temps || 0)) ? 'disabled' : ''}>${eur(a.prix)}</button>${a.occasion ? `<button class="btn" data-acheter="${id}" data-occasion="1" title="Chercher d'occasion : 1 h de recherche" ${(s.argent < a.occasion || bloque || tempsLibre(s) < (a.temps || 0) + 1) ? 'disabled' : ''}>Occasion ${eur(a.occasion)}</button>` : ''}</div>`;
     const est = !s.possede[id] && estimationAchat(id);
     const estTxt = est ? (est.mois === null ? (ROI_ITEMS[id]?.indirect ? `<div class="estim">📈 Gain indirect : ${ROI_ITEMS[id].indirect}</div>` : `<div class="estim">📈 Pas d'économie directe estimée (${eur(est.annuel)}/an)</div>`)
-      : `<div class="estim">📈 Retour estimé : ~${dureeTxt(est.mois)} (${dureeTxt(est.min)} à ${dureeTxt(est.max)}) · ~${eur(est.annuel)}/an${a.occasion ? ` · d'occasion ~${dureeTxt(estimationAchat(id, true).mois)}` : ''}</div>`) : '';
+      : `<div class="estim">📈 Retour estimé : ~${dureeTxt(est.mois)} (${dureeTxt(est.min)} à ${dureeTxt(est.max)}) · ~${eur(est.annuel)}/an · rendement <b>~${tauxTxt(est.annuel / est.prix)}</b> vs Livret A ${num(BANQUE.livretA.taux * 100)} %${a.occasion ? ` · d'occasion ~${dureeTxt(estimationAchat(id, true).mois)}` : ''}</div>`) : '';
     return `<div class="article"><div><b>${a.nom}</b>${a.temps ? ` <span class="tag">⏳ ${fmtH(a.temps)}</span>` : ''}<div class="d">${a.desc}${a.fourchette ? ` <i>Fourchette réelle ${a.fourchette[0]}-${a.fourchette[1]} € (estimation, pas de barème officiel).</i>` : ''}${bloque ? ' (il faut d\'abord une bouillotte)' : ''}</div>${estTxt}</div>${btn}</div>`;
   }).join('')).join('');
 }
@@ -245,7 +248,7 @@ export function rendreInvestissements(s) {
   const ligneR = (r) => {
     const sais = ['hiver', 'printemps', 'ete'].map(x => `${x === 'ete' ? 'été' : x} ${num(r.pj[x].v, 2)}${r.pj[x].mesure ? '' : '*'}`).join(' · ');
     const retour = r.atteint !== null ? `✅ jour ${r.atteint + 1}` : r.payback !== null ? `~${dureeTxt(r.payback)} (±${Math.round(r.incertitude * 100)} %)` : (ROI_ITEMS[r.id].indirect ? 'indirect' : '∞');
-    return `<tr><td><b>${r.nom}</b>${r.occasion ? ' <span class="tag">occasion</span>' : ''}<br><small>€/jour : ${sais}${r.note ? ' · ' + r.note : ''}${ROI_ITEMS[r.id].indirect ? ' · ' + ROI_ITEMS[r.id].indirect : ''}${r.climEvitee ? ` · clim évitée comptée ${eur(r.climEvitee)} (fourchette ${r.climEviteeFourchette.join('-')} €)` : ''}${ACHATS[r.id].fourchette ? ` · prix réel ${ACHATS[r.id].fourchette.join('-')} €` : ''}</small><br>${sparkline(r)}</td>
+    return `<tr><td><b>${r.nom}</b>${r.occasion ? ' <span class="tag">occasion</span>' : ''}<br><small>€/jour : ${sais}${r.note ? ' · ' + r.note : ''}${ROI_ITEMS[r.id].indirect ? ' · ' + ROI_ITEMS[r.id].indirect : ''}${r.climEvitee ? ` · clim mobile évitée ${eur(r.climEvitee)}/an (${r.climEviteeFourchette.map(x => Math.round(x)).join('-')} €/an : amortissement + électricité)` : ''}${ACHATS[r.id].fourchette ? ` · prix réel ${ACHATS[r.id].fourchette.join('-')} €` : ''}</small><br>${sparkline(r)}</td>
       <td>${eur(r.prix)}</td><td>${eur(r.mesure)}<br><small>${r.jours} j</small></td><td>${eur(r.annuel)}</td><td>${eur(r.entretienAn)}</td><td>${retour}</td><td>${eur(r.residuelAuj)}<br><small>vie ${num(r.vieAns, 0)} ans, −${Math.round(r.degr * 100)} %/an</small></td>
       <td style="color:${r.net5 >= 0 ? '#16a34a' : '#b91c1c'}">${eur(r.net5)}</td><td>${num(r.ratio, 2)}</td></tr>`;
   };
@@ -296,6 +299,12 @@ export function rendreDilemme(s) {
   $('dilemme').classList.remove('cache');
 }
 
+function finProjection(s, r) {
+  if (r.economies <= 0) return '';
+  const an = Math.round(r.economies * 365 / 212 / 10) * 10;   // ~212 jours calendaires du 1er décembre à la fin de l'été
+  const p = { livret: projection(s.seed, an, 20, 'livret', 120), mixte: projection(s.seed, an, 20, 'mixte', 120), actions: projection(s.seed, an, 20, 'actions', 120) };
+  return `<h3>⏩ Et si tu plaçais ces économies pendant 20 ans ?</h3><p>Tes habitudes économisent ~${eur(an)}/an. Placés chaque année pendant 20 ans (médiane, après impôts) : Livret A <b>${eur(p.livret.p50.nominal)}</b> · 50/50 fonds euros-ETF <b>${eur(p.mixte.p50.nominal)}</b> (10 % des cas sous ${eur(p.mixte.p10.nominal)}) · 100 % ETF monde <b>${eur(p.actions.p50.nominal)}</b> (10 % des cas sous ${eur(p.actions.p10.nominal)}).</p>`;
+}
 export function rendreFin(s) {
   const r = scoreFinal(s);
   const dom = r.domaines.map(d => `<tr><td>${d.nom}</td><td style="color:${d.valeur >= 0 ? '#16a34a' : '#b91c1c'}">${eur(d.valeur)}</td></tr>`).join('');
@@ -312,13 +321,16 @@ export function rendreFin(s) {
       <div>Capital investi<b>${eur(r.capital)}</b></div>
       <div>Habitudes · principes<b>${r.habitudes} · ${r.principes}/${Object.keys(PRINCIPES).length}</b></div>
       <div>Rechutes<b>${s.rechutes}</b></div>
+      <div>Patrimoine final (après frais et impôts de sortie)<b>${eur(r.patrimoine)}</b><small>voisin : ${eur(r.patrimoineVoisin)}</small></div>
+      <div>Épargne et placements vs Livret A<b style="color:${r.fin.net >= 0 ? '#16a34a' : '#b91c1c'}">${r.fin.net >= 0 ? '+' : ''}${eur(r.fin.net)}</b></div>
     </div>
+    ${finProjection(s, r)}
     <h3>Moyennes sur la partie</h3><div class="stats">${g('😊 Confort', m.confort)}${g('❤️ Santé', m.sante)}${g('💪 Moral', m.moral)}${g('🧼 Hygiène', m.hygiene)}${g('🌻 Bien-être', m.bienetre)}</div>
     <h3>Économies par domaine</h3><table class="domaines">${dom}</table>
     <h3>Classement de rentabilité (net sur ${FINANCE.annees} ans par euro investi)</h3>${classement ? `<ol>${classement}</ol>` : '<p class="aide">Aucun équipement.</p>'}
     <h3>Combos découverts</h3><p>${Object.keys(s.combos || {}).length ? Object.keys(s.combos).map(id => '🔗 ' + COMBOS[id].nom).join('<br>') : 'Aucun.'}</p>
     <h3>Meilleure découverte</h3><p>🏆 <b>${r.meilleure.nom}</b> : ${eur(r.meilleure.gain)} économisés.</p>
-    <p class="aide">Les abonnements d'énergie (${eur(r.abonnements)}) sont exclus de la comparaison. Les équipements comptent pour prix ÷ durée de vie, les vêtements pour leur part usée, les reventes en déduction.</p>
+    <p class="aide">Les abonnements d'énergie (${eur(r.abonnements)}) sont exclus de la comparaison. Les équipements comptent pour prix ÷ durée de vie, les vêtements pour leur part usée, les reventes en déduction. Les placements comptent pour leur valeur de revente du jour (frais et impôts de sortie déduits) plus les revenus versés, moins ce que le voisin a gagné en laissant la même épargne sur son Livret A.</p>
     <p class="aide">Titres : Dépensier &lt; 8 % · Malin &lt; 20 % · Optimiseur &lt; 32 % · Autonome &lt; 45 % · Maître de la sobriété. Autonome et Maître exigent en moyenne confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40 ; Maître demande aussi 28 principes et 8 habitudes. Hygiène &lt; 45, bien-être &lt; 40 ou plus de 4 rechutes plafonnent à Malin.</p>
     <button class="primaire btn" id="btnRejouer" style="width:100%;padding:12px">Rejouer une nouvelle année</button>`;
   $('fin').classList.remove('cache');
@@ -342,4 +354,6 @@ export function rendreOnglets(s) {
   if (o === 'jardin') $('pJardin').innerHTML = rendreJardin(s);
   if (o === 'budget') $('pBudget').innerHTML = rendreBudget(s);
   if (o === 'transport') $('pTransport').innerHTML = rendreTransport(s);
+  if (o === 'banque') $('pBanque').innerHTML = rendreBanque(s);
+  if (o === 'invest') $('pInvest').innerHTML = rendreInvest(s);
 }

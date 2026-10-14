@@ -31,7 +31,7 @@ function partie(seed, items, regl = {}, hook) {
   st.gaz = s.depenses.gaz;
   return { s, st };
 }
-const ans = (s, id) => { const r = analyseROI(s, id); const net = r.annuel - r.entretienAn; return { r, ans: net > 0 ? (r.prix - r.climEvitee) / net : Infinity }; };
+const ans = (s, id) => { const r = analyseROI(s, id); const net = r.annuel - r.entretienAn; return { r, ans: net > 0 ? r.prix / net : Infinity }; };
 const moy = (l) => l.reduce((a, b) => a + b, 0) / Math.max(1, l.length);
 
 const climEte = (s, c) => { if (c.id === 'ete' && c.index === 0) { s.climActive = true; s.climConsigne = 26; } };
@@ -44,14 +44,14 @@ for (const seed of [2026, 7, 1789]) {
   const combo = partie(seed, ['chemineeDIY', 'puitsDIY', 'kitRadon'], { ...SAISONS, ete: { mode: 'purge', puitsMode: 'auto', debit: 'hygro' } });
   console.log("gaz ref", ref.st.gaz.toFixed(0), "chem", ch.st.gaz.toFixed(0), "combo", combo.st.gaz.toFixed(0), "attr chem", ch.s.attribution.chemineeDIY.toFixed(0), "attr combo", (combo.s.attribution.chemineeDIY + combo.s.attribution.puitsDIY).toFixed(0));
   const a1 = ans(ch.s, 'chemineeDIY'), a2 = ans(pp.s, 'puitsPro'), a3 = ans(combo.s, 'puitsDIY'), a3c = ans(combo.s, 'chemineeDIY');
-  const ansCombo = (a3.r.prix + a3c.r.prix - a3.r.climEvitee) / Math.max(1e-6, a3.r.annuel + a3c.r.annuel - a3.r.entretienAn);
+  const ansCombo = (a3.r.prix + a3c.r.prix) / Math.max(1e-6, a3.r.annuel + a3c.r.annuel - a3.r.entretienAn);
   const dT = moy(ref.st.tSalonEteApm) - moy(combo.st.tSalonEteApm);
   tab.push({ seed, chem: a1.ans, puitsPro: a2.ans, combo: ansCombo, dT, combos: Object.keys(combo.s.combos).filter(k => ['climTerre', 'respirationHiver', 'purgeNocturne', 'sechoirTirage', 'caveNaturelle'].includes(k)) });
-  console.log(`graine ${seed} : cheminée DIY ${a1.r.annuel.toFixed(0)} €/an → ${a1.ans.toFixed(1)} ans · puits pro ${a2.r.annuel.toFixed(0)} €/an → ${a2.ans.toFixed(0)} ans · puits DIY + cheminée (clim évitée ${a3.r.climEvitee} €) ${(a3.r.annuel + a3c.r.annuel).toFixed(0)} €/an → ${ansCombo.toFixed(1)} ans · salon été 14-18 h ${dT.toFixed(1)} °C plus frais · combos ${tab.at(-1).combos.join(', ')}`);
-  verif(a1.ans >= 3 && a1.ans <= 8, `${seed} cheminée DIY seule : retour ${a1.ans.toFixed(1)} ans (doc : 4-8)`);
+  console.log(`graine ${seed} : cheminée DIY ${a1.r.annuel.toFixed(0)} €/an → ${a1.ans.toFixed(1)} ans · puits pro ${a2.r.annuel.toFixed(0)} €/an → ${a2.ans.toFixed(0)} ans · puits DIY + cheminée (clim évitée ${a3.r.climEvitee.toFixed(0)} €/an) ${(a3.r.annuel + a3c.r.annuel).toFixed(0)} €/an → ${ansCombo.toFixed(1)} ans · salon été 14-18 h ${dT.toFixed(1)} °C plus frais · combos ${tab.at(-1).combos.join(', ')}`);
+  verif(a1.ans >= 4 && a1.ans <= 8, `${seed} cheminée DIY seule : retour ${a1.ans.toFixed(1)} ans`);
   verif(Math.abs(ch.s.attribution.chemineeDIY - (ref.st.gaz - ch.st.gaz)) < 0.4 * (ref.st.gaz - ch.st.gaz), `${seed} gain attribué cohérent avec le gaz réellement économisé`);
-  verif(a2.ans > 35, `${seed} puits pro seul : plus de 35 ans`);
-  verif(ansCombo >= 4.5 && ansCombo <= 12, `${seed} puits DIY + cheminée remplaçant une clim : ${ansCombo.toFixed(1)} ans (doc : 8-12)`);
+  verif(a2.ans > 50, `${seed} puits pro seul : jamais ou presque (gain ${a2.r.annuel.toFixed(0)} €/an, entretien ${a2.r.entretienAn} €/an)`);
+  verif(ansCombo >= 12 && ansCombo <= 25, `${seed} puits DIY + cheminée, clim mobile évitée : ${ansCombo.toFixed(1)} ans (réaliste : 12-25)`);
   verif(dT >= 2, `${seed} clim de la Terre : salon nettement plus frais l'après-midi d'été`);
   verif(combo.s.combos.climTerre && combo.s.combos.respirationHiver, `${seed} combos clim de la Terre et respiration d'hiver`);
 }

@@ -17,6 +17,8 @@ export const ONGLETS = [
   ['transport', '🚲 Transport', ['Transport']],
   ['jardin', '🌱 Jardin', ['Jardin']],
   ['budget', '💶 Budget', []],
+  ['banque', '🏦 Banque', []],
+  ['invest', '📈 Investissement', []],
 ];
 export const etatUI = { onglet: 'maison', roiTri: 'ratio', roiSens: -1, filtrePrincipes: 'tous', principeOuvert: null };
 

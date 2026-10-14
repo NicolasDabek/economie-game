@@ -23,6 +23,16 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   await p.click('[data-onglet="jardin"]');
   await p.click('[data-onglet="transport"]'); await p.click('[data-acheter="gourde"]:not([data-occasion])'); await p.click('[data-set="transport.mode"][data-v="commun"]'); await p.click('[data-set="transport.courses"][data-v="regroupees"]'); await p.click('[data-set="transport.repas"][data-v="emporte"]');
   await p.click('[data-filtre="transport"]'); await p.click('[data-filtre="tous"]');
+  // v0.5 : banque et investissement
+  await p.click('[data-onglet="banque"]'); await p.click('[data-fin="profil"][data-v="modeste"]');
+  await p.fill('#m-lep', '200'); await p.click('[data-fin="dep"][data-v="lep"]');
+  await p.click('[data-fin="av"][data-v="enLigne"]'); await p.fill('#m-avEuros', '150'); await p.click('[data-fin="dep"][data-v="avEuros"]');
+  await p.screenshot({ path: '/tmp/shotBanque.png', fullPage: true });
+  await p.click('[data-onglet="invest"]'); await p.fill('#m-peaMonde', '300'); await p.click('[data-fin="dep"][data-v="peaMonde"]');
+  await p.click('[data-fin="alloc"][data-v="actions"]'); await p.click('[data-fin="ans"][data-v="30"]'); await p.click('[data-fin="projeter"]');
+  await p.screenshot({ path: '/tmp/shotInvest.png', fullPage: true });
+  console.log('finance', await p.evaluate(() => { const f = window.__jeu().fin; return JSON.stringify({ profil: f.profil, lep: f.livrets.lep.solde, av: f.av?.euros, pea: f.pea?.verse, principes: window.__jeu().principes.filter(x => ['quinzaine', 'enveloppe', 'coutOpportunite', 'horizon', 'fraisRendement'].includes(x)) }); }));
+  await p.click('[data-onglet="banque"]'); console.log('meilleur usage affiché', await p.isVisible('text=Meilleur usage de 100 €'), (await p.textContent('#pBanque')).includes('%/an'));
   await p.click('[data-onglet="maison"]');
   console.log('A', await p.evaluate(() => JSON.stringify(window.__jeu().possede)));
   await p.click('#btnJour'); await p.waitForTimeout(1500);
@@ -60,7 +70,10 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   console.log('sys rechargé', await p.evaluate(() => typeof window.__jeu().sys.ballon.consigne));
   // sauvegarde v0.3 : migrée
   await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('economie-game-sauvegarde')); delete o.transport; o.version = 3; localStorage.setItem('economie-game-sauvegarde', JSON.stringify(o)); });
-  await p.reload(); await p.click('#btnReprendre'); console.log('migration v3 → v4', await p.evaluate(() => window.__jeu().version), typeof (await p.evaluate(() => window.__jeu().transport.mode)));
+  await p.reload(); await p.click('#btnReprendre'); console.log('migration v3 → v5', await p.evaluate(() => window.__jeu().version), typeof (await p.evaluate(() => window.__jeu().transport.mode)));
+  await p.click('#btnSauver'); await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('economie-game-sauvegarde')); delete o.fin; o.version = 4; localStorage.setItem('economie-game-sauvegarde', JSON.stringify(o)); });
+  await p.reload(); await p.click('#btnReprendre'); console.log('migration v4 → v5', await p.evaluate(() => window.__jeu().version), await p.evaluate(() => window.__jeu().fin.livrets.livretA.solde));
+  await p.click('[data-onglet="banque"]'); await p.click('[data-onglet="invest"]'); await p.click('#btnJour'); await p.waitForTimeout(1500);
   await p.evaluate(() => localStorage.setItem('economie-game-sauvegarde', JSON.stringify({ version: 2, jour: 9 })));
   await p.reload(); await p.waitForTimeout(300);
   console.log('ancienne sauvegarde : reprendre visible', await p.isVisible('#btnReprendre'), 'effacée', await p.evaluate(() => localStorage.getItem('economie-game-sauvegarde') === null));

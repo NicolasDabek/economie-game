@@ -3,13 +3,14 @@ import {
   PRIX, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, CHARGE_FOND_W, LESSIVE, JOURS, PIECES, ORDRE_PIECES,
   PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour,
   VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND,
-  JOURS_HABITUDE, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, PLAISIRS_MORAL, CHAPITRES, STOCKAGE, ROI_ITEMS,
+  JOURS_HABITUDE, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, PLAISIRS_MORAL, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART,
 } from './data.js';
 import { stockerSurplus, detecterCombos } from './combos.js';
 import { tExt, soleil, chapitreDuJour, FACTEUR_FENETRE } from './meteo.js';
 import { systemesJour, voisinJour, tempsRoutines, prixElec } from './systemes.js';
 import { transportJour, voisinTransport, tempsTransport } from './transport.js';
 import { suivreROI } from './roi.js';
+import { financeJour, gainFinancier, valeurLiquidation, valeurs } from './finance.js';
 import { passifHeure, passifCumul, passifJour, debutJourPassif, hasCheminee, typePuits, chantierEnCours, nouvelEtatPassif } from './passif.js';
 
 const T_HORS_GEL = 8;
@@ -154,6 +155,7 @@ export function acheter(s, id, occasion = false) {
   }
   const tps = a.temps + (occasion ? 1 : 0);
   if (!prendreTemps(s, tps)) return false;
+  if (s.fin?.verrou) debloquer(s, 'coutOpportunite');
   if (a.chantier) {
     s.passif ||= nouvelEtatPassif(s.seed);
     s.passif.chantiers.push({ id, reste: a.chantier, risque: id === 'puitsDIY' });
@@ -424,6 +426,7 @@ export function jourSuivant(s) {
   const surplusH = new Array(24).fill(0), jourElec = new Array(24);
   s.battSoc ||= 0;
   debutJourPassif(s);
+  if (jm.canicule) s.joursCanicule = (s.joursCanicule || 0) + 1;
   const tirageLinge = sechageInterieur && hasCheminee(s) && s.passif.mode !== 'ferme';
   for (let k = 0; k < 24; k++) {
     const h = (7 + k) % 24;
@@ -692,6 +695,9 @@ export function jourSuivant(s) {
   if (s.historique.length > 140) s.historique.shift();
   s.sommeConfort += confortJour; s.nbJours++;
   s.tempsUtilise = 0;
+  // banque et placements : le voisin dépense ce que coûte sa vie ; le calendrier avance (y compris les semaines entre chapitres)
+  s.coutVoisinCumul = coutBaseVariable(s) - (s.base.banque || 0);
+  if (s.fin) financeJour(s, actions(s));
   s.jour++;
   if (s.jour % 7 === 0) {
     s.factures.push({ semaine: s.jour / 7, montant: s.factureSemaine, parPiece: Object.fromEntries(ORDRE_PIECES.map(p => [p, s.pieces[p].eurSemaine])) });
@@ -828,12 +834,12 @@ export function amortissement(s) {
     + (s.depenses.vetements - Object.values(s.vetements).reduce((t, v) => t + (v.possede ? v.prixPaye : 0), 0));
   return { equip, vet };
 }
-const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport'];
+const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport', 'banque'];
 export function coutVariable(s) {
   const d = s.depenses;
   return POSTES.reduce((t, k) => t + (d[k] || 0), 0) + d.equipement + d.vetements - (d.reventes || 0);
 }
-export function coutBaseVariable(s) { const b = s.base; return b.gaz + b.elec + b.eau + b.produits + (b.nourriture || 0) + (b.services || 0) + (b.plaisirs || 0) + (b.transport || 0); }
+export function coutBaseVariable(s) { const b = s.base; return b.gaz + b.elec + b.eau + b.produits + (b.nourriture || 0) + (b.services || 0) + (b.plaisirs || 0) + (b.transport || 0) + (b.banque || 0); }
 export function moyennes(s) {
   const n = Math.max(1, s.nbJours), m = s.sommes;
   return { confort: m.confort / n, sante: m.sante / n, moral: m.volonte / n, hygiene: m.hygiene / n, bienetre: m.bienetre / n };
@@ -845,7 +851,8 @@ export function scoreFinal(s) {
   const tresorerie = coutVariable(s);
   const cout = tresorerie - d.equipement - d.vetements + am.equip + am.vet;
   const base = coutBaseVariable(s);
-  const economies = base - cout;
+  const fin = s.fin ? gainFinancier(s) : { gain: 0, voisin: 0, net: 0 };
+  const economies = base - cout + fin.net;
   const pct = base > 0 ? economies / base * 100 : 0;
   const moy = moyennes(s);
   const habitudes = Object.values(s.gestes).filter(g => g.habitude).length;
@@ -866,6 +873,8 @@ export function scoreFinal(s) {
     { nom: 'Vêtements (part usée)', valeur: -am.vet },
     { nom: 'Imprévus (rechutes, maladie, pannes, achats impulsifs)', valeur: -d.imprevus },
     { nom: 'Reventes', valeur: d.reventes || 0 },
+    { nom: 'Banque (agios, commissions)', valeur: (b.banque || 0) - (d.banque || 0) },
+    { nom: 'Épargne et placements (net, vs voisin au Livret A)', valeur: fin.net },
   ];
   const reste = economies - domaines.reduce((a, x) => a + x.valeur, 0);
   if (Math.abs(reste) >= 0.5) domaines.push({ nom: 'Autres (bouillotte, arrondis)', valeur: reste });
@@ -883,7 +892,8 @@ export function scoreFinal(s) {
   if (rang >= 2 && (moy.hygiene < 45 || moy.bienetre < 40 || s.rechutes > 4)) { rang = 1; notes.push('Économies payées par ton hygiène, ton bien-être ou tes rechutes.'); }
   if (moy.sante < 50 || moy.confort < 55 || moy.hygiene < 30 || moy.bienetre < 25) { rang = 0; notes.push('Une sobriété qui abîme : santé, confort, hygiène ou bien-être effondrés.'); }
   return { cout, base, economies, pct, moy, confortMoy: moy.confort, sante: s.sante, habitudes, principes: s.principes.length, titre: TITRES[rang], rang, note: notes.join(' '),
-    domaines, invest, meilleure, tresorerie, amort: am, capital: capitalInvesti(s), abonnements: d.abonnements };
+    domaines, invest, meilleure, tresorerie, fin,
+    patrimoine: s.fin ? s.argent + valeurLiquidation(s) : s.argent, patrimoineVoisin: s.fin ? ARGENT_DEPART - (s.coutVoisinCumul || 0) - (s.base.banque || 0) + s.fin.voisin.livret.solde + s.fin.voisin.livret.courus : null, amort: am, capital: capitalInvesti(s), abonnements: d.abonnements };
 }
 
 // Contexte d'actions pour les systèmes (eau, cuisine, budget…)
