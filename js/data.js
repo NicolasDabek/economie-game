@@ -49,14 +49,18 @@ export const LESSIVE = {
 };
 
 // ---------- Maison ----------
-// Trois chapitres enchaînés : hiver (8 semaines), printemps (4 semaines), été (6 semaines)
+// v0.6 : campagne de plusieurs années, quatre saisons par an (calendrier réel à partir du 1er décembre 2026).
+// L'automne utilise le modèle de mi-saison du printemps (id « printemps ») avec sa propre météo et son nom.
 export const CHAPITRES = [
-  { id: 'hiver', nom: 'Hiver', jours: 56, debut: '1er décembre', tEauFroide: 10, lumiere: [17, 8] },
-  { id: 'printemps', nom: 'Printemps', jours: 28, debut: '6 avril', tEauFroide: 13, lumiere: [20, 7] },
-  { id: 'ete', nom: 'Été', jours: 42, debut: '1er juillet', tEauFroide: 18, lumiere: [21.5, 6] },
+  { id: 'hiver', saison: 'hiver', nom: 'Hiver', mois: [11, 0, 1], debut: '1er décembre', tEauFroide: 10, lumiere: [17, 8] },
+  { id: 'printemps', saison: 'printemps', nom: 'Printemps', mois: [2, 3, 4], debut: '1er mars', tEauFroide: 13, lumiere: [20, 7] },
+  { id: 'ete', saison: 'ete', nom: 'Été', mois: [5, 6, 7], debut: '1er juin', tEauFroide: 18, lumiere: [21.5, 6] },
+  { id: 'printemps', saison: 'automne', nom: 'Automne', mois: [8, 9, 10], debut: '1er septembre', tEauFroide: 15, lumiere: [19, 7.5] },
 ];
-export const JOURS = CHAPITRES.reduce((a, c) => a + c.jours, 0);
-export const ARGENT_DEPART = 3000;    // budget du foyer (une personne) pour les 18 semaines jouées, hors loyer
+export const CAMPAGNE = { anneesDefaut: 5, options: [3, 5, 10], debut: Date.UTC(2026, 11, 1) };
+export const joursCampagne = (annees = CAMPAGNE.anneesDefaut) => Math.round((Date.UTC(2026 + annees, 11, 1) - CAMPAGNE.debut) / 86400000);
+export const JOURS = joursCampagne(CAMPAGNE.anneesDefaut);   // 1 826 jours pour 5 ans
+export const ARGENT_DEPART = 1500;    // trésorerie de départ sur le compte courant (≈ 1 mois de « reste à vivre ») ; ensuite le salaire tombe chaque mois
 // Maison ancienne de 45 m² (DPE F) : déperditions ~105 W/K au total.
 // Avec 21 °C partout, la facture de chauffage de décembre-janvier atteint ~400 € de gaz,
 // cohérent avec une consommation annuelle de ~8 000-9 000 kWh pour ce type de logement.
@@ -259,16 +263,16 @@ export const GESTES = {
 // ---------- Principes : voir principes.js ----------
 export { PRINCIPES, DOMAINES_PRINCIPES } from './principes.js';
 
+// v0.6 : jourAn = jour de l'année de campagne (0 = 1er décembre) ; les événements reviennent chaque année sauf « unique ».
+// La hausse du gaz est désormais portée par les trajectoires de prix ; la canicule est annoncée quand la météo en prévoit une.
 export const EVENEMENTS = [
-  { jour: 8,  annonce: 3, id: 'invites',  titre: 'Des invités pour le week-end', texte: 'Ta sœur et son conjoint arrivent samedi pour deux jours. Ils sont frileux.' },
-  { jour: 17, annonce: 0, id: 'promo',    titre: 'Tentation : promo flash', texte: 'Doudoune d\'intérieur premier prix à −50 % (12,50 €) en vitrine, aujourd\'hui seulement.' },
-  { jour: 28, annonce: 7, id: 'hausse',   titre: 'Hausse du prix du gaz', texte: 'Le prix repère du gaz augmente de 12 % (+0,0175 €/kWh) jusqu\'à la fin de l\'hiver.' },
-  { jour: 38, annonce: 0, id: 'panne',    titre: 'Panne du lave-linge', texte: 'La machine fait un bruit de ferraille puis s\'arrête : la pompe de vidange a lâché.' },
-  { jour: 45, annonce: 0, id: 'livraison', titre: 'Tentation : livraison offerte', texte: 'Notification : « Frais de livraison offerts ce soir sur ton burger préféré ! » (17 €)' },
-  { jour: 66, annonce: 0, id: 'robot',    titre: 'Tentation : robot cuiseur en promo', texte: 'Un robot cuiseur « qui fait tout » passe de 299 € à 199 € pendant 24 h.' },
-  { jour: 74, annonce: 0, id: 'promoPerissable', titre: 'Promo : 3 barquettes de viande pour le prix de 2', texte: 'Date limite dans 2 jours. 12 € les trois au lieu de 18 €.' },
-  { jour: 98, annonce: 3, id: 'canicule', titre: 'Vigilance canicule', texte: 'Jusqu\'à 36 °C l\'après-midi pendant une semaine, nuits à 22 °C.' },
-  { jour: 109, annonce: 2, id: 'barbecue', titre: 'Barbecue entre voisins', texte: 'Les voisins organisent un barbecue samedi soir. Chacun apporte quelque chose.' },
+  { jourAn: 8,   annonce: 3, id: 'invites',  titre: 'Des invités pour le week-end', texte: 'Ta sœur et son conjoint arrivent samedi pour deux jours. Ils sont frileux.' },
+  { jourAn: 17,  annonce: 0, id: 'promo',    titre: 'Tentation : promo flash', texte: 'Doudoune d\'intérieur premier prix à −50 % (12,50 €) en vitrine, aujourd\'hui seulement.' },
+  { jourAn: 38,  annonce: 0, id: 'panne',    unique: true, titre: 'Panne du lave-linge', texte: 'La machine fait un bruit de ferraille puis s\'arrête : la pompe de vidange a lâché.' },
+  { jourAn: 45,  annonce: 0, id: 'livraison', titre: 'Tentation : livraison offerte', texte: 'Notification : « Frais de livraison offerts ce soir sur ton burger préféré ! » (17 €)' },
+  { jourAn: 136, annonce: 0, id: 'robot',    titre: 'Tentation : robot cuiseur en promo', texte: 'Un robot cuiseur « qui fait tout » passe de 299 € à 199 € pendant 24 h.' },
+  { jourAn: 144, annonce: 0, id: 'promoPerissable', titre: 'Promo : 3 barquettes de viande pour le prix de 2', texte: 'Date limite dans 2 jours. 12 € les trois au lieu de 18 €.' },
+  { jourAn: 237, annonce: 2, id: 'barbecue', titre: 'Barbecue entre voisins', texte: 'Les voisins organisent un barbecue samedi soir. Chacun apporte quelque chose.' },
 ];
 
 
@@ -277,10 +281,12 @@ export const EVENEMENTS = [
 // =====================================================================
 
 // ---------- Options tarifaires EDF Tarif Bleu 6 kVA (grille du 1er août 2026, € TTC) ----------
+// Indices de prix de la campagne (v0.6) : multiplicateurs appliqués chaque jour par js/annee.js (1 = octobre 2026)
+export const INDICES = { elec: 1, gaz: 1, eau: 1, alim: 1, carburant: 1, services: 1, general: 1 };
 export const TARIFS = {
-  base:  { nom: 'Base', aboMois: 15.86, prix: () => 0.2001 },
-  hphc:  { nom: 'Heures creuses', aboMois: 15.86, prix: (h) => (estHC(h) ? 0.1589 : 0.2142) },  // HP 0,2142 / HC 0,1589
-  tempo: { nom: 'Tempo', aboMois: 15.80, prix: (h, couleur) => TEMPO[couleur][estHC(h) ? 0 : 1] },
+  base:  { nom: 'Base', aboMois: 15.86, prix: () => 0.2001 * INDICES.elec },
+  hphc:  { nom: 'Heures creuses', aboMois: 15.86, prix: (h) => (estHC(h) ? 0.1589 : 0.2142) * INDICES.elec },  // HP 0,2142 / HC 0,1589
+  tempo: { nom: 'Tempo', aboMois: 15.80, prix: (h, couleur) => TEMPO[couleur][estHC(h) ? 0 : 1] * INDICES.elec },
 };
 // Tempo : [HC, HP] par couleur (bleu 0,1356/0,1654 ; blanc 0,1536/0,1921 ; rouge 0,1615/0,7295)
 export const TEMPO = { bleu: [0.1356, 0.1654], blanc: [0.1536, 0.1921], rouge: [0.1615, 0.7295] };
@@ -535,9 +541,33 @@ export const PUITS_DIY = [
 export const CALENDRIER = { debut: '2026-12-01', chapitres: { hiver: '2026-12-01', printemps: '2027-04-06', ete: '2027-07-01' } };
 export const PROFILS = {
   // RFR d'une personne seule (1 part). LEP : RFR ≤ 23 028 € en métropole (service-public.gouv.fr, plafonds 2026).
-  modeste: { nom: 'Revenus modestes', rfr: 18000, tmi: 0.11, epargne: 1500, desc: 'SMIC + un peu : éligible au LEP.' },
-  median:  { nom: 'Revenus médians', rfr: 26000, tmi: 0.11, epargne: 4000, desc: 'Salaire médian : trop pour le LEP.' },
-  aise:    { nom: 'Revenus confortables', rfr: 48000, tmi: 0.30, epargne: 12000, desc: 'Cadre : tranche à 30 %.' },
+  // Salaire net mensuel après prélèvement à la source : SMIC net ~1 440 € (2026) ; salaire net médian du privé ~2 190 € (Insee, 2024, revalorisé) ;
+  // loyer d'un T2 de 45 m² hors Paris ~11-16 €/m² (Clameur / observatoires locaux 2025). Le « reste à vivre » finance tout le jeu.
+  modeste: { nom: 'Revenus modestes', rfr: 18000, tmi: 0.11, epargne: 1500, salaire: 1650, loyer: 520, desc: 'SMIC + un peu : éligible au LEP.' },
+  median:  { nom: 'Revenus médians', rfr: 26000, tmi: 0.11, epargne: 4000, salaire: 2200, loyer: 640, desc: 'Salaire médian : trop pour le LEP.' },
+  aise:    { nom: 'Revenus confortables', rfr: 48000, tmi: 0.30, epargne: 12000, salaire: 3900, loyer: 900, desc: 'Cadre : tranche à 30 %.' },
+};
+// Trajectoires économiques annuelles (v0.6), tirées par graine autour de valeurs réalistes :
+// inflation : AR(1) autour de 2 % (cible BCE), écart-type 0,8 pt ; 1re année 3,0 % (Insee, sept. 2026).
+// gaz : inflation ± 10 %/an (prix repère CRE très volatil : +100 % en 2022, −20 % en 2024) ; électricité (TRVE, révisée en février et août) : inflation ± 5 % ;
+// alimentation : inflation ± 1,5 pt ; eau : +3 %/an (SISPEA) ; carburant : inflation ± 8 % ; abonnements : +3 %/an si on ne renégocie pas.
+// salaires : inflation + 0,5 pt ± 0,6 (Dares, SMPT) ; loyers : IRL ≈ inflation, plafonné à 3,5 % (comme en 2022-2024).
+// €STR : AR(1) autour de 2 % ; Livret A = moyenne (inflation semestrielle, €STR) arrondie au 0,1 pt, plancher 0,5 % (règle Banque de France, révisions 1er février et 1er août) ;
+// LEP = Livret A + 0,5 pt (règle 2025), LDDS = Livret A.
+export const ECONOMIE = {
+  inflation: { moy: 0.02, ecart: 0.008, rho: 0.6, depart: 0.03 },
+  estr: { moy: 0.02, ecart: 0.006, rho: 0.7, depart: 0.0193 },
+  gaz: 0.10, elec: 0.05, alim: 0.015, eau: 0.03, carburant: 0.08, services: 0.03,
+  salaire: { prime: 0.005, ecart: 0.006 }, loyerPlafond: 0.035,
+};
+// Appareils de la maison (communs au joueur et au voisin : même logement). Âge de départ, durée de vie, prix de remplacement posé.
+// Sources : ADEME « durée de vie des équipements » (frigo 10-15 ans, lave-linge 8-12, ballon 10-15, chaudière 15-25) ;
+// chaudière gaz à condensation posée 3 000-5 000 € (Effy, QuelleEnergie 2026) ; ballon 200 L posé 700-1 200 € ; frigo 400-700 € ; lave-linge 350-600 €.
+export const APPAREILS = {
+  frigo:    { nom: 'Réfrigérateur', age: 8, vie: 12, prix: 520, occasion: 260, reparation: 120, desc: 'Compresseur fatigué.' },
+  laveLinge:{ nom: 'Lave-linge', age: 6, vie: 10, prix: 450, occasion: 220, reparation: 150, desc: 'Roulements et pompe à bout.' },
+  ballon:   { nom: 'Ballon d\'eau chaude', age: 10, vie: 15, prix: 950, occasion: null, reparation: 180, desc: 'Résistance entartrée ou cuve percée.' },
+  chaudiere:{ nom: 'Chaudière gaz', age: 16, vie: 20, prix: 3900, occasion: null, reparation: 450, desc: 'Échangeur fuyard : le chauffagiste déconseille de réparer encore.' },
 };
 export const BANQUE = {
   // Arrêté du 28 juillet 2026 (JO 29/07/2026) : taux du 1er août 2026 au 31 janvier 2027. Au-delà : hypothèse de maintien.

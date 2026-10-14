@@ -1,21 +1,25 @@
 // État initial de la partie + sauvegarde
 import { nouvelEtatPassif } from './passif.js';
-import { ARGENT_DEPART, ORDRE_PIECES, VETEMENTS, GESTES, ACHATS } from './data.js';
+import { ARGENT_DEPART, ORDRE_PIECES, VETEMENTS, GESTES, ACHATS, CAMPAGNE, joursCampagne } from './data.js';
+import { nouvelleEconomie, debutJourCampagne, appliquerIndices } from './annee.js';
 import { genererMeteo } from './meteo.js';
 import { nouvelEtatSystemes } from './systemes.js';
 import { nouvelEtatTransport } from './transport.js';
-import { nouvelEtatFinance, calDuJour as calDuJourMigr } from './finance.js';
+import { nouvelEtatFinance } from './finance.js';
+// ancien calendrier (v0.5 : 3 chapitres de 56, 28 et 42 jours) -> jour calendaire depuis le 1er décembre 2026
+const calV5 = (j) => (j < 56 ? j : j < 84 ? 126 + (j - 56) : 212 + (j - 84));
 
-export function nouvellePartie(seed = 2026) {
+export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut) {
   const pieces = {};
   for (const p of ORDRE_PIECES) pieces[p] = { t: 19, hum: 50, consigneJour: 20, consigneNuit: 18, kwhSemaine: 0, eurSemaine: 0 };
   const vetements = {};
   for (const [id, v] of Object.entries(VETEMENTS)) vetements[id] = { possede: !!v.depart, qualite: 'eco', porte: !!v.depart, salete: 0, usure: 0, joursPortes: 0, reprises: 0, aere: false, prixPaye: 0 };
   const gestes = {};
   for (const id of Object.keys(GESTES)) gestes[id] = { pratique: 0, habitude: false };
-  return {
-    version: 5, seed, jour: 0, fini: false, passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
-    meteo: genererMeteo(seed),
+  const s = {
+    version: 6, seed, jour: 0, fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
+    eco: nouvelleEconomie(seed, annees), auto: { lessive: false, entretien: false, saisons: false, renouveler: false },
+    meteo: genererMeteo(seed, annees),
     argent: ARGENT_DEPART,
     confort: 70, sante: 90, volonte: 70, hygiene: 75, bienetre: 60,
     sommes: { confort: 0, sante: 0, volonte: 0, hygiene: 0, bienetre: 0 },
@@ -34,7 +38,7 @@ export function nouvellePartie(seed = 2026) {
     lessivePrevue: null,
     prixGazMult: 1,
     invites: null,
-    depenses: { gaz: 0, elec: 0, eau: 0, produits: 0, laverie: 0, equipement: 0, vetements: 0, imprevus: 0, abonnements: 0, linge: 0, nourriture: 0, services: 0, plaisirs: 0, reventes: 0, transport: 0, banque: 0 },
+    depenses: { gaz: 0, elec: 0, eau: 0, produits: 0, laverie: 0, equipement: 0, vetements: 0, imprevus: 0, abonnements: 0, linge: 0, nourriture: 0, services: 0, plaisirs: 0, reventes: 0, transport: 0, banque: 0, remplacements: 0 },
     attribution: { calfeutrage: 0, boudin: 0, rideauxTh: 0, volets: 0, purge: 0, solaire: 0, cuisson: 0 },
     solaire: { prod: 0, auto: 0 },
     lessives: 0, sommeRemplissage: 0, aerationsVet: 0, reprises: 0,
@@ -45,9 +49,13 @@ export function nouvellePartie(seed = 2026) {
     principes: [], messages: [],
     sommeConfort: 0, nbJours: 0, rechutes: 0,
     dilemme: null, evenementsVus: [],
-    base: { pieces: Object.fromEntries(ORDRE_PIECES.map(p => [p, { t: 19, hum: 50 }])), gaz: 0, elec: 0, eau: 0, produits: 0, abonnements: 0, nourriture: 0, services: 0, plaisirs: 0, transport: 0, banque: 0, clim: 0, eauChaude: 0, linge: 0,
+    base: { pieces: Object.fromEntries(ORDRE_PIECES.map(p => [p, { t: 19, hum: 50 }])), gaz: 0, elec: 0, eau: 0, produits: 0, abonnements: 0, nourriture: 0, services: 0, plaisirs: 0, transport: 0, banque: 0, remplacements: 0, clim: 0, eauChaude: 0, linge: 0,
       chaleur: chaleurVoisin() },
   };
+  // 1er décembre 2026 : premier salaire et première mensualité d'énergie
+  appliquerIndices(s);
+  debutJourCampagne(s, { msg: () => {}, debloquer: () => {} });
+  return s;
 }
 
 function chaleurVoisin() {
@@ -68,14 +76,16 @@ export function charger(stockage = globalThis.localStorage) {
   const s = JSON.parse(txt);
   if (s.version === 3) migrerV3(s);
   if (s.version === 4) migrerV4(s);
-  if (s.version !== 5) { stockage.removeItem?.(CLE); return 'ancienne'; }
-  s.meteo = genererMeteo(s.seed);
+  if (s.version === 5) migrerV5(s);
+  if (s.version !== 6) { stockage.removeItem?.(CLE); return 'ancienne'; }
+  s.meteo = genererMeteo(s.seed, s.annees);
+  appliquerIndices(s);
   return s;
 }
 export function aUneSauvegarde(stockage = globalThis.localStorage) {
   const t = stockage.getItem(CLE);
   if (!t) return false;
-  try { const v = JSON.parse(t).version; return v === 3 || v === 4 || v === 5; } catch { return false; }
+  try { const v = JSON.parse(t).version; return v >= 3 && v <= 6; } catch { return false; }
 }
 
 // v0.3 -> v0.4 : on garde la partie, on ajoute le transport (compté à partir d'aujourd'hui pour toi et le voisin)
@@ -92,6 +102,21 @@ export function migrerV3(s) {
 export function migrerV4(s) {
   s.fin = nouvelEtatFinance('median');
   s.depenses.banque = 0; s.base.banque = 0; s.coutVoisinCumul = 0;
-  s.fin.cal = calDuJourMigr(s.jour) - 1;
+  s.fin.cal = calV5(s.jour) - 1;
   s.version = 5; s.migre ??= 4;
+}
+
+// v0.5 -> v0.6 : la partie de 18 semaines devient le début d'une campagne de 5 ans (on la poursuit, même terminée)
+export function migrerV5(s) {
+  const nouveau = calV5(Math.min(s.jour, 126));
+  s.jour = s.jour >= 126 ? 254 : nouveau;
+  s.annees = CAMPAGNE.anneesDefaut; s.joursTotal = joursCampagne(s.annees); s.fini = false;
+  s.eco = nouvelleEconomie(s.seed, s.annees, s.fin?.profil || 'median');
+  s.auto = { lessive: false, entretien: false, saisons: false, renouveler: false };
+  s.depenses.remplacements = 0; s.base.remplacements = 0;
+  s.eco.revenus = Math.max(0, (s.coutVoisinCumul || 0) - 1500);   // le passé est supposé financé : le voisin repart avec ~1 mois de trésorerie
+  s.evenementsVus = (s.evenementsVus || []).map(id => (id.startsWith('chap-') || id.includes('@') ? id : id + '@0'));
+  if (s.fin) { s.fin.cal = s.jour - 1; s.fin.voisin.transferts = -(s.fin.voisin.retire || 0); }
+  for (const k of Object.keys(s.possede)) if (s.possede[k]) s.eco.achats[k] = 0;
+  s.version = 6; s.migre ??= 5;
 }

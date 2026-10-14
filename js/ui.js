@@ -7,7 +7,9 @@ import { rendreBanque, rendreInvest, tauxTxt } from './ui-finance.js';
 import { projection } from './finance.js';
 import { BANQUE } from './data.js';
 import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
-import { JOURS, COMBOS } from './data.js';
+import { COMBOS, CAMPAGNE } from './data.js';
+import { dateDuJour, anneeDuJour } from './meteo.js';
+import { ROUTINES, routineDispo } from './simulation.js';
 import {
   isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, NOMS_JOURS, humiditeRelative,
   coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, evenementsAVenir, prixGaz, LAVAGE_MAIN,
@@ -38,9 +40,11 @@ export function rendreJauges(s) {
     ['🏗️ Capital investi', cap, 400, eur(cap)],
   ];
   $('jauges').innerHTML = j.map(([l, v, max, txt]) => `<div class="jauge"><div class="lib"><span>${l}</span><b>${txt}</b></div><div class="barre"><div style="width:${Math.max(0, Math.min(100, v / max * 100))}%"></div></div></div>`).join('');
-  const sem = Math.floor(s.jour / 7) + 1;
-  const ch = chapitreDuJour(Math.min(s.jour, JOURS - 1));
-  $('date').textContent = s.fini ? 'Fin de la partie' : `${ch.nom} · ${NOMS_JOURS[s.jour % 7]} · semaine ${sem}, jour ${s.jour + 1}/${JOURS}`;
+  const tot = s.joursTotal || 365, nAns = Math.round(tot / 365);
+  const ch = chapitreDuJour(Math.min(s.jour, tot - 1));
+  const dt = dateDuJour(Math.min(s.jour, tot - 1)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const SAI = { hiver: '❄️ Hiver', printemps: '🌱 Printemps', ete: '☀️ Été', automne: '🍂 Automne' };
+  $('date').textContent = s.fini ? 'Fin de la campagne' : `${dt} · ${SAI[ch.saison] || ch.nom} · année ${anneeDuJour(s.jour) + 1}/${nAns}`;
   const av = evenementsAVenir(s).filter(e => e.annonce > 0);
   $('annonces').innerHTML = av.map(e => `<span>📅 Dans ${e.jour - s.jour} j : <b>${e.titre}</b>. ${e.texte}</span>`).join('');
   $('annonces').classList.toggle('cache', !av.length);
@@ -282,7 +286,7 @@ export function rendreFactures(s) {
   const voit = s.possede.thermometre;
   if (!s.factures.length) { $('factures').innerHTML = '<p class="aide">Première facture à la fin de la semaine 1 (gaz, électricité, eau et abonnements).</p>'; return; }
   $('factures').innerHTML = `<table><tr><th>Semaine</th>${voit ? ORDRE_PIECES.map(p => `<th>${PIECES[p].nom}</th>`).join('') : ''}<th>Total</th></tr>` +
-    s.factures.map(f => `<tr><td>S${f.semaine}</td>${voit ? ORDRE_PIECES.map(p => `<td>${eur(f.parPiece[p])}</td>`).join('') : ''}<td><b>${eur(f.montant)}</b></td></tr>`).join('') +
+    s.factures.slice(-12).map(f => `<tr><td>S${f.semaine}</td>${voit ? ORDRE_PIECES.map(p => `<td>${eur(f.parPiece[p])}</td>`).join('') : ''}<td><b>${eur(f.montant)}</b></td></tr>`).join('') +
     `</table>${voit ? '' : '<p class="aide">Détail du chauffage par pièce visible avec les thermomètres.</p>'}`;
 }
 
@@ -294,14 +298,34 @@ export function toast(texte) {
 export function rendreDilemme(s) {
   if (!s.dilemme) { $('dilemme').classList.add('cache'); return; }
   const e = titreDilemme(s);
-  $('dilemmeContenu').innerHTML = `<h2>${e.titre}</h2><p>${e.texte}</p>` + choixDilemme(s).map(o =>
+  const corps = s.dilemme === 'bilan' && s.eco?.dernierBilan ? rendreBilan(s.eco.dernierBilan) : `<p>${e.texte}</p>`;
+  $('dilemmeContenu').innerHTML = `<h2>${e.titre}</h2>${corps}` + choixDilemme(s).map(o =>
     `<button class="btn choixDilemme" data-dilemme="${o.id}" ${o.possible === false ? 'disabled' : ''}><b>${o.texte}</b><br><small>${o.effet}</small></button>`).join('');
   $('dilemme').classList.remove('cache');
 }
 
+function rendreBilan(b) {
+  const c = (v) => `color:${v >= 0 ? '#16a34a' : '#b91c1c'}`;
+  const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? '#16a34a' : v >= 40 ? '#b45309' : '#b91c1c'}">${Math.round(v)} %</b></div>`;
+  const dom = [...b.parDomaine].sort((x, y) => y.valeur - x.valeur).map(d => `<tr><td>${d.nom}</td><td style="${c(d.valeur)}">${eur(d.valeur)}</td></tr>`).join('');
+  return `<div class="stats"><div>Économies de l'année<b style="${c(b.economies)}">${eur(b.economies)}</b></div><div>Cumul depuis le début<b style="${c(b.economiesCumul)}">${eur(b.economiesCumul)}</b></div>
+    <div>Patrimoine<b>${eur(b.patrimoine)}</b><small>voisin : ${eur(b.patrimoineVoisin)}</small></div><div>Livrets · placements<b>${eur(b.livrets)} · ${eur(b.placements - b.livrets)}</b></div>
+    <div>Placements vs Livret A (année)<b style="${c(b.gainFin)}">${eur(b.gainFin)}</b></div><div>Salaire · inflation<b>${eur(b.salaire)}/mois · ${(b.inflation * 100).toFixed(1).replace('.', ',')} %</b></div></div>
+    <h3>Jauges moyennes de l'année</h3><div class="stats">${g('😊 Confort', b.moy.confort)}${g('❤️ Santé', b.moy.sante)}${g('💪 Moral', b.moy.volonte)}${g('🧼 Hygiène', b.moy.hygiene)}${g('🌻 Bien-être', b.moy.bienetre)}</div>
+    <h3>Économies par domaine</h3><table class="domaines">${dom || '<tr><td>Aucune</td></tr>'}</table>
+    <h3>🎯 Objectifs pour l'année prochaine</h3><ul>${b.objectifs.map(o => `<li>${o}</li>`).join('')}</ul>`;
+}
+export function rendreRoutines(s) {
+  const el = $('routines'); if (!el) return;
+  el.innerHTML = Object.entries(ROUTINES).map(([k, r]) => {
+    const ok = routineDispo(s, k), on = !!s.auto?.[k];
+    return `<div class="ligne"><span>${r.nom}${ok ? '' : ` <small class="aide">(débloqué par le principe « ${PRINCIPES[r.principe]?.nom || r.principe} »)</small>`}</span><button class="btn" data-routine="${k}" ${ok ? '' : 'disabled'}>${on && ok ? '✅ Automatique' : '⬜ Manuel'}</button></div>`;
+  }).join('') + '<p class="aide">Une fois un principe compris, la routine se fait toute seule : utile pour avancer d\'un mois sans tout refaire à la main.</p>';
+}
+
 function finProjection(s, r) {
   if (r.economies <= 0) return '';
-  const an = Math.round(r.economies * 365 / 212 / 10) * 10;   // ~212 jours calendaires du 1er décembre à la fin de l'été
+  const an = Math.round(r.economies * 365 / Math.max(1, s.joursTotal || 365) / 10) * 10;   // moyenne annuelle sur la campagne
   const p = { livret: projection(s.seed, an, 20, 'livret', 120), mixte: projection(s.seed, an, 20, 'mixte', 120), actions: projection(s.seed, an, 20, 'actions', 120) };
   return `<h3>⏩ Et si tu plaçais ces économies pendant 20 ans ?</h3><p>Tes habitudes économisent ~${eur(an)}/an. Placés chaque année pendant 20 ans (médiane, après impôts) : Livret A <b>${eur(p.livret.p50.nominal)}</b> · 50/50 fonds euros-ETF <b>${eur(p.mixte.p50.nominal)}</b> (10 % des cas sous ${eur(p.mixte.p10.nominal)}) · 100 % ETF monde <b>${eur(p.actions.p50.nominal)}</b> (10 % des cas sous ${eur(p.actions.p10.nominal)}).</p>`;
 }
@@ -312,7 +336,7 @@ export function rendreFin(s) {
   const classement = tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `<li><b>${x.nom}</b> : payé ${eur(x.prix)}, mesuré ${eur(x.mesure)}, net 5 ans ${eur(x.net5)} ${x.atteint !== null ? '✅ rentabilisé' : x.payback !== null ? `(retour ~${dureeTxt(x.payback)})` : ROI_ITEMS[x.id].indirect ? '(gain indirect)' : '❌'}</li>`).join('');
   const m = r.moy;
   const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? '#16a34a' : v >= 40 ? '#b45309' : '#b91c1c'}">${Math.round(v)} %</b></div>`;
-  $('finContenu').innerHTML = `<h2>Fin de la partie : hiver, printemps, été 🌱☀️</h2><div class="grand">${r.titre}</div>
+  $('finContenu').innerHTML = `<h2>Fin de la campagne : ${Math.round((s.joursTotal || 365) / 365)} ans ❄️🌱☀️🍂</h2><div class="grand">${r.titre}</div>
     ${r.note ? `<p style="text-align:center;color:#b45309">${r.note}</p>` : ''}
     <div class="stats">
       <div>Économies nettes<b style="color:${r.economies >= 0 ? '#16a34a' : '#b91c1c'}">${eur(r.economies)} (${Math.round(r.pct)} %)</b></div>
@@ -321,25 +345,27 @@ export function rendreFin(s) {
       <div>Capital investi<b>${eur(r.capital)}</b></div>
       <div>Habitudes · principes<b>${r.habitudes} · ${r.principes}/${Object.keys(PRINCIPES).length}</b></div>
       <div>Rechutes<b>${s.rechutes}</b></div>
+      <div>Économies par an en moyenne<b>${eur(r.economies * 365 / Math.max(1, s.joursTotal || 365))}</b></div>
       <div>Patrimoine final (après frais et impôts de sortie)<b>${eur(r.patrimoine)}</b><small>voisin : ${eur(r.patrimoineVoisin)}</small></div>
       <div>Épargne et placements vs Livret A<b style="color:${r.fin.net >= 0 ? '#16a34a' : '#b91c1c'}">${r.fin.net >= 0 ? '+' : ''}${eur(r.fin.net)}</b></div>
     </div>
     ${finProjection(s, r)}
+    ${(s.eco?.bilans || []).length ? `<h3>Année par année</h3><table class="domaines"><tr><th>Année</th><th>Économies</th><th>Patrimoine</th><th>Moral moyen</th></tr>${s.eco.bilans.map(b => `<tr><td>${b.an + 1}</td><td>${eur(b.economies)}</td><td>${eur(b.patrimoine)}</td><td>${Math.round(b.moy.volonte)} %</td></tr>`).join('')}</table>` : ''}
     <h3>Moyennes sur la partie</h3><div class="stats">${g('😊 Confort', m.confort)}${g('❤️ Santé', m.sante)}${g('💪 Moral', m.moral)}${g('🧼 Hygiène', m.hygiene)}${g('🌻 Bien-être', m.bienetre)}</div>
     <h3>Économies par domaine</h3><table class="domaines">${dom}</table>
     <h3>Classement de rentabilité (net sur ${FINANCE.annees} ans par euro investi)</h3>${classement ? `<ol>${classement}</ol>` : '<p class="aide">Aucun équipement.</p>'}
     <h3>Combos découverts</h3><p>${Object.keys(s.combos || {}).length ? Object.keys(s.combos).map(id => '🔗 ' + COMBOS[id].nom).join('<br>') : 'Aucun.'}</p>
     <h3>Meilleure découverte</h3><p>🏆 <b>${r.meilleure.nom}</b> : ${eur(r.meilleure.gain)} économisés.</p>
     <p class="aide">Les abonnements d'énergie (${eur(r.abonnements)}) sont exclus de la comparaison. Les équipements comptent pour prix ÷ durée de vie, les vêtements pour leur part usée, les reventes en déduction. Les placements comptent pour leur valeur de revente du jour (frais et impôts de sortie déduits) plus les revenus versés, moins ce que le voisin a gagné en laissant la même épargne sur son Livret A.</p>
-    <p class="aide">Titres : Dépensier &lt; 8 % · Malin &lt; 20 % · Optimiseur &lt; 32 % · Autonome &lt; 45 % · Maître de la sobriété. Autonome et Maître exigent en moyenne confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40 ; Maître demande aussi 28 principes et 8 habitudes. Hygiène &lt; 45, bien-être &lt; 40 ou plus de 4 rechutes plafonnent à Malin.</p>
-    <button class="primaire btn" id="btnRejouer" style="width:100%;padding:12px">Rejouer une nouvelle année</button>`;
+    <p class="aide">Titres : Dépensier &lt; 8 % · Malin &lt; 20 % · Optimiseur &lt; 32 % · Autonome &lt; 45 % · Maître de la sobriété. Autonome et Maître exigent en moyenne confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40 ; Maître demande aussi 28 principes et 8 habitudes. Maître exige aussi une épargne gérée au moins aussi bien que le Livret A du voisin et au plus 10 jours de découvert non autorisé par an. Hygiène &lt; 45, bien-être &lt; 40 ou plus de 4 × √(années) rechutes plafonnent à Malin. Les pourcentages comparent tes dépenses à celles du voisin sur toute la campagne.</p>
+    <button class="primaire btn" id="btnRejouer" style="width:100%;padding:12px">Rejouer une nouvelle campagne</button>`;
   $('fin').classList.remove('cache');
 }
 
 export function rendreTout(s) {
   rendreJauges(s); rendreMaison(s); rendreGraphe(s); rendreGrapheElec(s); rendreOnglets(s); rendreMeteo(s); rendreBoutique(s); rendreInvestissements(s); rendrePrincipes(s); rendreJournal(s); rendreFactures(s);
-  rendreDilemme(s);
-  $('btnJour').disabled = $('btnSemaine').disabled = s.fini;
+  rendreDilemme(s); rendreRoutines(s);
+  for (const id of ['btnJour', 'btnSemaine', 'btnMois', 'btnEvenement']) if ($(id)) $(id).disabled = s.fini;
 }
 
 export function rendreOnglets(s) {

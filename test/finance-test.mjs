@@ -1,8 +1,8 @@
-// Test v0.5 : banque (quinzaines, LEP, PEL, SCPI, découvert), calage des marchés, projection,
+// Test v0.6 : banque (quinzaines, LEP, PEL, SCPI, découvert), calage des marchés, projection,
 // et les trois stratégies d'arbitrage équipement / placement sur 3 graines.
 import { nouvellePartie } from '../js/state.js';
 import { jourSuivant, actions, acheter, scoreFinal, choixDilemme, resoudreDilemme, planifierLessive, payer } from '../js/simulation.js';
-import { nouvelEtatFinance, deposer, retirer, ouvrirAV, changerProfil, eligibleLEP, valeurs, valeurLiquidation, gainFinancier, pasMarche, projection, financeJour, calDuJour, dateTexte } from '../js/finance.js';
+import { nouvelEtatFinance, deposer, retirer, ouvrirAV, changerProfil, eligibleLEP, valeurs, valeurLiquidation, gainFinancier, pasMarche, projection, financeJour, calDuJour, dateTexte, dateCal, peaCinqAns } from '../js/finance.js';
 import { estimationAchat } from '../js/roi.js';
 import { ROI_ITEMS, ACHATS, BANQUE, MARCHES } from '../js/data.js';
 import { makeRng } from '../js/rng.js';
@@ -12,7 +12,7 @@ const ch = (c, t) => { if (!c) { ok = false; console.log('✗', t); } else conso
 const near = (a, b, tol) => Math.abs(a - b) <= tol;
 
 // ---- calendrier
-ch(calDuJour(0) === 0 && dateTexte(calDuJour(56)) === '6 avril 2027' && dateTexte(calDuJour(84)) === '1 juillet 2027', 'calendrier : 1er déc., 6 avril, 1er juillet');
+ch(calDuJour(0) === 0 && dateTexte(calDuJour(126)) === '6 avril 2027' && dateTexte(calDuJour(212)) === '1 juillet 2027', 'calendrier : 1er déc., 6 avril, 1er juillet');
 
 // ---- quinzaines : 1 000 € déposés le 1er décembre -> 1000 × 1,7 % × q/24 au 31/12 ; dépôt le 2 décembre -> une quinzaine de moins
 function finSeule(profil = 'median') { const s = { seed: 1, argent: 5000, volonte: 50, jour: 0, depenses: {}, base: {}, coutVoisinCumul: 0, fin: nouvelEtatFinance(profil), principes: [] }; s.fin.livrets.livretA.solde = s.fin.livrets.livretA.debutQ = 0; s.fin.voisin.livret.solde = s.fin.voisin.livret.debutQ = 0; s.fin.epargneInitiale = s.fin.apport = 0; return s; }
@@ -75,8 +75,14 @@ function jouer(seed, strat) {
   return scoreFinal(s);
 }
 for (const seed of [2026, 7, 1789]) {
-  const R = Object.fromEntries(['prioritaire', 'toutPlacer', 'toutAcheter'].map(k => [k, jouer(seed, k)]));
+  const R = Object.fromEntries(['prioritaire', 'toutPlacer', 'toutAcheter', 'jamais'].map(k => [k, jouer(seed, k)]));
   console.log(`  graine ${seed} : ` + Object.entries(R).map(([k, r]) => `${k} éco ${Math.round(r.economies)} € (placements ${Math.round(r.fin.net)}, banque ${Math.round(r.domaines.find(d => d.nom.startsWith('Banque')).valeur)}) patrimoine ${Math.round(r.patrimoine)} € moral ${Math.round(r.moy.moral)}`).join(' | '));
-  ch(R.prioritaire.economies > R.toutPlacer.economies && R.prioritaire.economies > R.toutAcheter.economies, `graine ${seed} : équipements rentables puis placement > tout placer et > tout acheter`);
+  ch(R.prioritaire.economies > R.toutPlacer.economies && R.prioritaire.economies > R.toutAcheter.economies && R.prioritaire.economies > R.jamais.economies && R.prioritaire.patrimoine > R.jamais.patrimoine, `graine ${seed} : équipements rentables puis placement > tout placer, > tout acheter et > ne jamais investir`);
 }
+// ---- campagne : révision du Livret A, PEA 5 ans, durée de calcul
+{ const s = nouvellePartie(2026, 5); const taux = [];
+  while (!s.fini) { if (s.dilemme) resoudreDilemme(s, choixDilemme(s).filter(o => o.possible !== false).at(-1).id); const d = dateCal(s.jour); if (d.getUTCDate() === 2 && [1, 7].includes(d.getUTCMonth())) taux.push(s.eco.taux.livretA); jourSuivant(s); }
+  ch(taux.length >= 9 && taux.every(x => x >= 0.005 && x <= 0.06 && Math.abs(x * 1000 - Math.round(x * 1000)) < 1e-6), `Livret A révisé chaque 1er février/1er août (plancher 0,5 %, arrondi 0,1 pt) : ${taux.map(x => (x * 100).toFixed(1)).join(' · ')} %`); }
+{ const s = finSeule(); s.argent = 5000; s.fin.cal = 0; deposer(s, 'peaMonde', 1000); ch(!peaCinqAns(s.fin), 'PEA neuf : pas encore 5 ans'); s.fin.cal = 5 * 365 + 2; ch(peaCinqAns(s.fin), 'PEA : seuil fiscal des 5 ans atteint'); }
+for (const n of [5, 10]) { const t0 = performance.now(); const s = nouvellePartie(7, n); while (!s.fini) { if (s.dilemme) resoudreDilemme(s, choixDilemme(s).filter(o => o.possible !== false).at(-1).id); jourSuivant(s); } const ms = performance.now() - t0; ch(ms < 4000 * n / 5, `campagne de ${n} ans simulée en ${(ms / 1000).toFixed(2)} s`); }
 console.log(ok ? '\nOK' : '\nÉCHEC'); process.exit(ok ? 0 : 1);

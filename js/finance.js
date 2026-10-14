@@ -1,17 +1,13 @@
 // Banque et placements (v0.5) : livrets à quinzaines, PEL, assurance vie, PEA, CTO, SCPI, découvert,
 // marchés stochastiques déterministes par graine, projection à long terme.
-import { BANQUE, MARCHES, PROFILS, CALENDRIER, ARGENT_DEPART } from './data.js';
+import { BANQUE, MARCHES, PROFILS, ARGENT_DEPART } from './data.js';
 import { makeRng } from './rng.js';
-import { chapitreDuJour } from './meteo.js';
 
 const J = 86400000;
 const D0 = Date.UTC(2026, 11, 1);
 export const dateCal = (c) => new Date(D0 + c * J);
-export function calDuJour(jour) {
-  const ch = chapitreDuJour(jour);
-  const [y, m, d] = CALENDRIER.chapitres[ch.id].split('-').map(Number);
-  return Math.round((Date.UTC(y, m - 1, d) - D0) / J) + ch.index;
-}
+// v0.6 : le jour de jeu EST le jour calendaire (depuis le 1er décembre 2026)
+export function calDuJour(jour) { return jour; }
 export const dateTexte = (c) => dateCal(c).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const LIVRETS = ['livretA', 'ldds', 'lep'];
 // jour calendaire en cours (les opérations du joueur ont lieu pendant la journée, avant sa clôture)
@@ -27,7 +23,7 @@ export function nouvelEtatFinance(profil = 'median') {
     pel: null, av: null, pea: null, cto: { monde: 0, oblig: 0, cout: { monde: 0, oblig: 0 } }, scpi: null,
     cours: { monde: 100, cac: 100, oblig: 100 }, regime: 0, enAttente: [],
     epargneInitiale: P.epargne, apport: P.epargne, revenusCash: 0, frais: 0, impots: 0, agios: 0, commissionsMois: {},
-    voisin: { livret: liv(), agios: 0, retire: 0 }, autoLivret: true, hist: [], pic: 0, alerteBaisse: false, stats: { joursNegatif: 0, joursHorsAutorisation: 0, ventesPerte: 0 },
+    voisin: { livret: liv(), agios: 0, retire: 0, transferts: 0 }, autoLivret: true, hist: [], pic: 0, alerteBaisse: false, stats: { joursNegatif: 0, joursHorsAutorisation: 0, ventesPerte: 0 },
   };
   f.livrets.livretA.solde = f.livrets.livretA.debutQ = P.epargne;
   f.voisin.livret.solde = f.voisin.livret.debutQ = P.epargne;
@@ -76,19 +72,22 @@ export function valeurLiquidation(s) {
   let net = v.livrets + v.attente;
   if (f.pel) { const ans = (f.cal - f.pel.ouvert) / 365; const courus = ans < 2 ? f.pel.courusCel : f.pel.courus; net += f.pel.solde + courus * (1 - B.pel.pfu); }
   if (f.av) {
+    const huit = (f.cal - f.av.ouvert) / 365 >= 8;
     const gainUC = Math.max(0, v.avUC - f.av.coutUC), gainEur = Math.max(0, f.av.euros + f.av.courus * (1 - B.av.psFondsEuros) - f.av.versesEuros);
-    net += f.av.euros + f.av.courus * (1 - B.av.psFondsEuros) + v.avUC - gainUC * (B.av.irAvant8 + B.av.psFondsEuros) - gainEur * B.av.irAvant8;
+    const ir = huit ? Math.max(0, gainUC + gainEur - B.av.abattement8) * B.av.irApres8 : (gainUC + gainEur) * B.av.irAvant8;
+    net += f.av.euros + f.av.courus * (1 - B.av.psFondsEuros) + v.avUC - gainUC * B.av.psFondsEuros - ir;
   }
-  if (f.pea) { const g = v.pea - f.pea.verse; net += v.pea - Math.max(0, g) * B.pfu - v.pea * MARCHES.courtage.pea; }
+  if (f.pea) { const g = v.pea - f.pea.verse; net += v.pea - Math.max(0, g) * (peaCinqAns(f) ? B.psPea : B.pfu) - v.pea * MARCHES.courtage.pea; }
   for (const k of ['monde', 'oblig']) { const val = f.cto[k] * c[k]; if (val > 0) net += val - Math.max(0, val - f.cto.cout[k]) * B.pfu - Math.max(MARCHES.courtage.ctoMin, val * MARCHES.courtage.ctoPct); }
   if (f.scpi) net += f.scpi.parts * f.scpi.prix * (1 - MARCHES.scpi.frais);
   return net;
 }
+export const peaCinqAns = (f) => !!f.pea && (f.cal - f.pea.ouvert) / 365 >= 5;
 export function gainFinancier(s) {
   const f = s.fin;
   const gain = valeurLiquidation(s) + f.revenusCash - f.apport;   // les agios sont comptés au poste « banque »
   const vl = f.voisin.livret;
-  const voisin = vl.solde + vl.courus + f.voisin.retire - f.epargneInitiale;   // = ses intérêts
+  const voisin = vl.solde + vl.courus - (f.voisin.transferts || 0) - f.epargneInitiale;   // = ses intérêts
   return { gain, voisin, net: gain - voisin, agios: f.agios, voisinAgios: f.voisin.agios };
 }
 
@@ -108,6 +107,7 @@ function jourCalendaire(s, c, ctx) {
     if (LIVRETS.some(k => f.livrets[k].courus > 0.5)) ctx?.debloquer?.('interetsComposes');
     for (const k of LIVRETS) { const l = f.livrets[k]; l.solde += l.courus; l.debutQ += l.courus; l.interets += l.courus; l.courus = 0; }
     const vl = f.voisin.livret; vl.solde += vl.courus; vl.debutQ += vl.courus; vl.courus = 0;
+    if (f.pel && (c - f.pel.ouvert) / 365 >= 2 && f.pel.courus > 0) { const t = f.pel.courus * B.pel.pfu; f.pel.solde += f.pel.courus - t; f.impots += t; f.pel.courus = 0; f.pel.courusCel = 0; }
     if (f.av && f.av.courus > 0) { const ps = f.av.courus * B.av.psFondsEuros; f.av.euros += f.av.courus - ps; f.impots += ps; f.av.courus = 0; }
     if (f.scpi) { const rng = makeRng(s.seed * 31 + c); const choc = rng() < MARCHES.scpi.chocP ? MARCHES.scpi.choc : 0; f.scpi.prix *= 1 + MARCHES.scpi.revalo + MARCHES.scpi.revaloSigma * gauss(rng) * 0.5 + choc; }
   }
@@ -117,7 +117,11 @@ function jourCalendaire(s, c, ctx) {
   // frais de gestion des UC de l'assurance vie
   if (f.av && f.av.uc > 0) { const fr = f.av.uc * BANQUE.av[f.av.contrat].gestionUC / 365; f.av.uc -= fr; f.frais += fr * f.cours.monde; }
   // PEL : versement mensuel automatique (540 €/an minimum)
-  if (f.pel && dm === 1) { s.argent -= 45; f.pel.solde += 45; f.apport += 45; }
+  if (f.pel && dm === 1 && (c - f.pel.ouvert) / 365 < 10) { s.argent -= 45; f.pel.solde += 45; f.apport += 45; }
+  // jalons : PEL 4 ans (prêt épargne logement), PEA 5 ans (fiscalité allégée, retraits partiels), assurance vie 8 ans (abattement)
+  if (f.pel && c - f.pel.ouvert === 4 * 365) { ctx?.msg?.('🏠 Ton PEL a 4 ans : il ouvre droit au prêt d\'épargne logement. Versements possibles jusqu\'à 10 ans ; garde-le s\'il rapporte plus qu\'un livret.', 'decouverte'); ctx?.debloquer?.('horizon'); }
+  if (f.pea && c - f.pea.ouvert === 5 * 365) { ctx?.msg?.('📈 Ton PEA a 5 ans : les gains ne supportent plus que les prélèvements sociaux (18,6 %), et un retrait ne le clôture plus.', 'decouverte'); ctx?.debloquer?.('enveloppe'); }
+  if (f.av && c - f.av.ouvert === 8 * 365) ctx?.msg?.('🛡️ Ton assurance vie a 8 ans : abattement annuel de 4 600 € sur les gains rachetés, puis 7,5 %.', 'decouverte');
   // SCPI : loyers mensuels versés sur le compte courant après le délai de jouissance, imposés (micro-foncier)
   if (f.scpi && dernier && c >= f.scpi.jouissance) {
     const brut = f.scpi.parts * f.scpi.prixSouscription * MARCHES.scpi.distribution / 12;
@@ -143,12 +147,16 @@ function jourCalendaire(s, c, ctx) {
     if (-s.argent > D.autorise && (f.commissionsMois[cle] || 0) < D.commissionMois) { com = D.commission; f.commissionsMois[cle] = (f.commissionsMois[cle] || 0) + com; }
     s.argent -= a + com; f.agios += a + com; s.depenses.banque = (s.depenses.banque || 0) + a + com;
   }
-  // le voisin : même budget de départ, il dépense ce que coûte sa vie ; quand son compte passe à découvert,
-  // il pioche dans son Livret A (comme le virement automatique du joueur), puis seulement paie des agios
-  const besoin = Math.max(0, (s.coutVoisinCumul || 0) - ARGENT_DEPART) - f.voisin.retire;
-  if (besoin > 0) { const vl = f.voisin.livret, m = Math.min(besoin, vl.solde); vl.solde -= m; vl.retraitsQ = Math.min(vl.debutQ, vl.retraitsQ + m); f.voisin.retire += m; }
-  const decVoisin = Math.max(0, (s.coutVoisinCumul || 0) - ARGENT_DEPART - f.voisin.retire);
-  if (decVoisin > 0) { const a = Math.min(decVoisin, D.autorise) * D.taeg / 365 + Math.max(0, decVoisin - D.autorise) * D.horsAutorisation / 365; f.voisin.agios += a; s.base.banque = (s.base.banque || 0) + a; }
+  // le voisin : même salaire, il dépense ce que coûte sa vie ; son surplus (au-delà d'un mois de trésorerie) va sur son Livret A,
+  // et il y pioche quand son compte passe à découvert. Ses gains financiers = les intérêts de ce livret.
+  const vl = f.voisin.livret, tampon = s.eco ? (s.eco.salaire - s.eco.loyer) : 1000;
+  const vCash = ARGENT_DEPART + (s.eco?.revenus || 0) - (s.coutVoisinCumul || 0) - (s.base.banque || 0) - (f.voisin.transferts || 0);
+  if (vCash > tampon + 200 && dernier) { const m = Math.min(vCash - tampon, Math.max(0, B.livretA.plafond + B.ldds.plafond - vl.solde)); vl.solde += m; f.voisin.transferts = (f.voisin.transferts || 0) + m; }
+  else if (vCash < 0) {
+    const m = Math.min(-vCash, vl.solde); vl.solde -= m; vl.retraitsQ = Math.min(vl.debutQ, vl.retraitsQ + m); f.voisin.transferts = (f.voisin.transferts || 0) - m;
+    const dec = -vCash - m;
+    if (dec > 0) { const a = Math.min(dec, D.autorise) * D.taeg / 365 + Math.max(0, dec - D.autorise) * D.horsAutorisation / 365; f.voisin.agios += a; s.base.banque = (s.base.banque || 0) + a; }
+  }
 }
 
 // virement automatique : livrets (LEP en dernier, c'est le mieux rémunéré) -> compte courant
@@ -293,6 +301,13 @@ export function retirer(s, compte, m, ctx) {
     if (gain < 0) { f.stats.ventesPerte++; ctx?.debloquer?.('volatilite'); }
     f.enAttente.push({ cal: f.cal + 3, montant: m - imp }); f.apport -= m - imp;
     return ok(`Rachat UC de ${Math.round(m)} € : versé sous ~3 jours${gain < 0 ? `, perte réalisée de ${Math.round(-gain)} €` : ''}.`);
+  }
+  if (compte === 'pea' && peaCinqAns(f) && isFinite(m)) {
+    const val = f.pea.monde * c.monde + f.pea.cac * c.cac; m = Math.min(m, val); if (m <= 0) return err('PEA vide.');
+    const part = m / val, fr = m * MARCHES.courtage.pea, g = (val - f.pea.verse) * part, imp = Math.max(0, g) * B.psPea;
+    f.pea.monde *= 1 - part; f.pea.cac *= 1 - part; f.pea.verse *= 1 - part; f.frais += fr; f.impots += imp;
+    f.enAttente.push({ cal: f.cal + 2, montant: m - fr - imp }); f.apport -= m - fr - imp;
+    return ok(`PEA de plus de 5 ans : retrait partiel de ${Math.round(m)} € sans clôture, prélèvements sociaux ${Math.round(imp)} €.`);
   }
   if (compte === 'pea') {
     if (!f.pea) return err('Pas de PEA.');

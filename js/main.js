@@ -3,6 +3,8 @@ import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
 import { etatUI } from './onglets.js';
+import { chapitreDuJour } from './meteo.js';
+import { CAMPAGNE } from './data.js';
 import { etatFin } from './ui-finance.js';
 import { changerProfil, deposer, retirer, ouvrirAV, projection } from './finance.js';
 import { actions, prendreTemps, payer } from './simulation.js';
@@ -20,6 +22,7 @@ function regler(chemin, brut) {
 const $ = (id) => document.getElementById(id);
 let s = nouvellePartie(Number(new URLSearchParams(location.search).get('graine')) || 2026);
 let occupe = false;
+let duree = CAMPAGNE.anneesDefaut, dureeChoisie = false;
 
 function rafraichir(nbAvant) {
   const nouveaux = s.messages.slice(0, Math.max(0, s.messages.length - nbAvant));
@@ -28,6 +31,25 @@ function rafraichir(nbAvant) {
   if (s.fini) rendreFin(s);
 }
 function autoSauvegarde() { try { sauvegarder(s); } catch { /* stockage indisponible */ } }
+
+// Avance rapide : sans animation horaire, on s'arrête sur un choix, une alerte, un changement de saison ou un bilan.
+async function avancerVite(nbJours, jusquEvenement) {
+  if (occupe || s.fini) return;
+  occupe = true;
+  const n0 = s.messages.length, saison0 = chapitreDuJour(s.jour).saison;
+  for (let d = 0; d < nbJours && !s.fini && !s.dilemme; d++) {
+    const n = s.messages.length;
+    jourSuivant(s);
+    const nouveaux = s.messages.slice(0, Math.max(0, s.messages.length - n));
+    if (nouveaux.some(m => m.type === 'alerte')) break;
+    if (jusquEvenement && (chapitreDuJour(s.jour).saison !== saison0 || nouveaux.some(m => ['annonce', 'principe', 'decouverte'].includes(m.type)))) break;
+    if (d % 7 === 6) { rendreTout(s); await new Promise(r => setTimeout(r, 0)); }
+  }
+  rendreHorloge(7);
+  rafraichir(n0);
+  autoSauvegarde();
+  occupe = false;
+}
 
 async function avancer(nbJours) {
   if (occupe || s.fini) return;
@@ -109,13 +131,17 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnLessive') planifierLessive(s, options.lessive);
   else if (b.id === 'btnJour') return avancer(1);
   else if (b.id === 'btnSemaine') return avancer(7);
-  else if (b.id === 'btnCommencer') { $('intro').classList.add('cache'); return; }
-  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') { s = c; if (s.migre === 3) { toast('Sauvegarde v0.3 mise à jour : le transport, la rentabilité et la banque démarrent aujourd\'hui.'); delete s.migre; } else if (s.migre === 4) { toast('Sauvegarde v0.4 mise à jour : ta banque démarre aujourd\'hui (profil médian, 4 000 € sur le Livret A).'); delete s.migre; } } else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
+  else if (b.id === 'btnMois') return avancerVite(30, false);
+  else if (b.id === 'btnEvenement') return avancerVite(400, true);
+  else if (d.routine) { s.auto ??= {}; s.auto[d.routine] = !s.auto[d.routine]; autoSauvegarde(); }
+  else if (d.duree) { duree = Number(d.duree); dureeChoisie = true; document.querySelectorAll('[data-duree]').forEach(x => x.classList.toggle('actif-btn', x === b)); return; }
+  else if (b.id === 'btnCommencer') { if (dureeChoisie || duree !== Math.round(s.joursTotal / 365)) { s = nouvellePartie(s.seed, duree); autoSauvegarde(); } $('intro').classList.add('cache'); }
+  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') { s = c; if (s.migre === 3) { toast('Sauvegarde v0.3 mise à jour : le transport, la rentabilité et la banque démarrent aujourd\'hui.'); delete s.migre; } else if (s.migre === 4) { toast('Sauvegarde v0.4 mise à jour : ta banque démarre aujourd\'hui (profil médian, 4 000 € sur le Livret A).'); delete s.migre; } else if (s.migre === 5) { toast('Sauvegarde v0.5 mise à jour : ta partie continue en campagne de 5 ans (salaire, inflation, pannes, bilans annuels).'); delete s.migre; } else if (s.migre === 5) { toast('Sauvegarde v0.5 mise à jour : ta partie continue en campagne de 5 ans (salaire, inflation, pannes, bilans annuels).'); delete s.migre; } } else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
   else if (b.id === 'btnSauver') { autoSauvegarde(); toast('💾 Partie sauvegardée dans ce navigateur.'); return; }
   else if (b.id === 'btnCharger') { const c = charger(); if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible avec cette version : elle a été effacée.'); else if (c) { s = c; $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else toast('Aucune sauvegarde trouvée.'); }
   else if (b.id === 'btnNouvelle' || b.id === 'btnRejouer') {
     if (b.id === 'btnNouvelle' && !confirm('Commencer une nouvelle partie ? La partie en cours sera perdue si elle n\'est pas sauvegardée.')) return;
-    s = nouvellePartie(Math.floor(Math.random() * 1e6)); $('fin').classList.add('cache'); autoSauvegarde();
+    s = nouvellePartie(Math.floor(Math.random() * 1e6), Math.round(s.joursTotal / 365) || duree); $('fin').classList.add('cache'); autoSauvegarde();
   } else return;
   rafraichir(n);
 });

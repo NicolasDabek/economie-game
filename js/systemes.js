@@ -149,10 +149,16 @@ export function systemesJour(s, ctx) {
   // potager
   let recolte = 0;
   if (s.possede.potager && y.potagerDepuis !== null && chap.id !== 'hiver' && s.jour - y.potagerDepuis >= 21 && faits.jardiner) {
-    recolte = (ete ? 1.3 : 0.5) * (s.possede.composteur ? 1.3 : 1);
+    // v0.6 : le jardin mûrit (savoir-faire, sol) et le compost n'est mûr qu'après 6 à 12 mois
+    const ansJardin = Math.min(3, Math.max(0, Math.floor((s.jour - (s.eco?.jardinDepuis ?? y.potagerDepuis)) / 365)));
+    const ageCompost = s.possede.composteur ? s.jour - (s.eco?.achats?.composteur ?? 0) : 0;
+    const fCompost = !s.possede.composteur ? 1 : ageCompost < 180 ? 1.1 : ageCompost < 365 ? 1.3 : 1.45;
+    const base = (ete ? 1.3 : chap.saison === 'automne' ? 0.8 : 0.5) * (1 + 0.12 * ansJardin);
+    recolte = base * fCompost;
     ctx.debloquer('cycles');
-    attr(s, 'potager', recolte / (s.possede.composteur ? 1.3 : 1));
-    attr(s, 'composteur', recolte - recolte / (s.possede.composteur ? 1.3 : 1));
+    if (ansJardin >= 1) ctx.debloquer('jardinMurit');
+    attr(s, 'potager', base);
+    attr(s, 'composteur', recolte - base);
   }
   nourriture = Math.max(1, nourriture - recolte);
   ctx.couts.nourriture += nourriture;

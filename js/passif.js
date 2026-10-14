@@ -19,6 +19,7 @@ export function nouvelEtatPassif(seed) {
 
 // jour de l'année du jour de jeu (hiver = décembre-janvier, printemps = avril, été = juillet-août)
 export function jourAn(chap) {
+  if (chap.doy !== undefined) return chap.doy;
   const d0 = { hiver: 335, printemps: 96, ete: 182 }[chap.id];
   return (d0 + chap.index) % 365;
 }

@@ -3,6 +3,8 @@ import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
 import { tableauROI } from '../js/roi.js';
 import { PRINCIPES } from '../js/data.js';
+import { chapitreDuJour } from '../js/meteo.js';
+import { deposer } from '../js/finance.js';
 import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from '../js/systemes.js';
 let GRAINE = 2026;
 let HOOK = null;
@@ -70,15 +72,17 @@ export function maitre() {
     if (linge(s).length && (remplissage(s) >= 0.75 || Object.values(s.vetements).some(v => v.possede && v.porte && v.salete >= 88))) planifierLessive(s, { temp: 30, sechage: 'air' });
   }, { invites: 'preter', promo: 'attendre', panne: 'diy' });
 }
-// --- saisons : alléger les vêtements, stratégies d'été
-function saisons(s, malin) {
-  const j = s.jour;
-  if (j === 56) for (const id of ['pilou', 'plaid', 'polaire', 'souscouche']) if (s.vetements[id]) s.vetements[id].porte = false;
-  if (j === 56) { s.vetements.tshirt.porte = true; s.rideaux = 'ouverts'; s.utiliserBouillotte = false; }
-  if (j === 84) { for (const id of Object.keys(s.vetements)) s.vetements[id].porte = id === 'tshirt' || id === 'chaussettes' && false; s.vetements.tshirt.porte = true; s.portes = 'ouvertes'; }
-  if (malin && j === 84) { s.voletsJour = true; s.ventNuit = true; s.aeration = 'breve'; }
+// --- saisons (v0.6 : chaque année) : alléger les vêtements, stratégies d'été, retour du froid, vêtements usés rachetés
+const deb = (s, sa, idx = 0) => { const c = chapitreDuJour(s.jour); return c.saison === sa && c.index === idx; };
+const CHAUDS = ['souscouche', 'sweat', 'polaire', 'pilou', 'plaid', 'chaussettes'];
+function saisons(s, malin, qualite = 'eco') {
+  if (deb(s, 'printemps')) { for (const id of ['pilou', 'plaid', 'polaire', 'souscouche']) if (s.vetements[id]) s.vetements[id].porte = false; s.vetements.tshirt.porte = true; s.rideaux = 'ouverts'; s.utiliserBouillotte = false; }
+  if (deb(s, 'ete')) { for (const id of Object.keys(s.vetements)) s.vetements[id].porte = id === 'tshirt'; s.portes = 'ouvertes'; if (malin) { s.voletsJour = true; s.ventNuit = true; s.aeration = 'breve'; } }
+  if (deb(s, 'automne')) { s.voletsJour = false; s.ventNuit = false; s.ventilateur = false; s.climActive = false; if (s.vetements.sweat.possede) s.vetements.sweat.porte = true; }
+  if (malin && deb(s, 'automne', 45)) { for (const id of CHAUDS) { if (!s.vetements[id].possede && s.jour > 300) acheterVetement(s, id, qualite); if (s.vetements[id].possede) s.vetements[id].porte = true; } s.vetements.tshirt.porte = !s.vetements.souscouche.possede; s.rideaux = 'nuit'; s.utiliserBouillotte = !!s.possede.bouillotte; s.portes = 'fermees'; }
+  if (!malin && deb(s, 'automne', 45)) for (const id of CHAUDS) if (s.vetements[id].possede) s.vetements[id].porte = true;
 }
-const rafraichirVet = (s) => { if (s.vetements.tshirt.salete >= 80 && s.jour >= 84) laverMain(s, 'tshirt'); };
+const rafraichirVet = (s) => { if (s.vetements.tshirt.salete >= 80 && chapitreDuJour(s.jour).saison === 'ete') laverMain(s, 'tshirt'); };
 
 function ajoute(nom, f) { STRATS.push([nom, f]); }
 const STRATS = [];
@@ -89,7 +93,7 @@ ajoute('naïf', () => {
   s.sys.douche.minutes = 15; s.sys.regime = 'livraison'; s.sys.plaisirs = 35; s.transport.teletravail = 0;
   return jouer(s, (s) => {
     saisons(s, false);
-    if (s.jour === 84) { acheter(s, 'clim'); s.climActive = true; s.climConsigne = 23; }
+    if (deb(s, 'ete')) { acheter(s, 'clim'); s.climActive = true; s.climConsigne = 23; }
     if (s.jour % 3 === 2) planifierLessive(s, { temp: 40, sechage: 'machine' });
   }, { invites: 'chauffer', promo: 'acheter', panne: 'technicien', livraison: 'accepter', robot: 'acheter', promoPerissable: 'acheter', canicule: 'clim', barbecue: 'aller' });
 });
@@ -130,11 +134,13 @@ const HOOKS = {
     if (j === 24) s.transport.repas = 'emporte';
     if (j % 30 === 15) verifierPression(s, c);
     if (j === 60) s.sys.vaisselle = 'bassine';
-    if (j === 84) acheter(s, 'ventilateur', true), s.ventilateur = true;
+    if (deb(s, 'ete')) { acheter(s, 'ventilateur', true); s.ventilateur = true; }
+    if (j % 365 === 200) acheter(s, 'purge');
     saisons(s, true); rafraichirVet(s);
   },
   maître(s) {
     const c = actions(s), j = s.jour, y = s.sys;
+    if (j % 30 === 2 && s.argent > 2500) { const m = Math.floor(s.argent - 2000); if (!deposer(s, 'livretA', m, c).ok) deposer(s, 'ldds', Math.min(m, 12000 - s.fin.livrets.ldds.solde), c); }
     if (j === 0) { changerTarif(s, 'hphc', c); acheter(s, 'pommeau'); acheter(s, 'mousseurs'); y.ballon.consigne = 55; y.douche.minutes = 6; }
     if (j === 3) { acheter(s, 'jaquette'); acheter(s, 'multiprise'); faireReleves(s, c); }
     if (j === 16) y.multipriseGeste = true;
@@ -157,9 +163,11 @@ const HOOKS = {
     if (j === 55) { acheter(s, 'composteur'); acheter(s, 'potager'); acheter(s, 'herbes'); }
     if (j === 56) { acheter(s, 'corde'); acheter(s, 'cuve'); }
     if (j === 60) { acheter(s, 'fourSolaire', true); y.cuisineSolaire = true; y.ballon.mode = 'midi'; }
-    if (j === 84) { acheter(s, 'ventilateur', true); acheter(s, 'moustiquaire'); s.ventilateur = true; }
-    saisons(s, true); rafraichirVet(s);
-    if (j >= 56 && linge(s).length && remplissage(s) >= 0.75) planifierLessive(s, { temp: 30, sechage: 'dehors', hc: true });
+    if (deb(s, 'ete')) { acheter(s, 'ventilateur', true); acheter(s, 'moustiquaire'); s.ventilateur = true; }
+    if (j > 300) for (const id of ['purge', 'potager', 'herbes', 'calfeutrage', 'boudin', 'bouillotte', 'housse', 'gourde', 'kitSecu', 'tenuePluie', 'composteur', 'corde', 'led', 'boites']) if (!s.possede[id]) acheter(s, id);
+    if (deb(s, 'automne', 45) && s.possede.bouillotte) s.utiliserBouillotte = true;
+    saisons(s, true, 'durable'); rafraichirVet(s);
+    if (j >= 56 && linge(s).length && remplissage(s) >= 0.75) planifierLessive(s, { temp: 30, sechage: chapitreDuJour(j).saison === 'hiver' ? 'air' : 'dehors', hc: true });
   },
 };
 const _jouer = jouer;
@@ -203,7 +211,7 @@ for (let i = 0; i < graines.length; i++) {
   ch(R('glacial')[i].rang <= 1, 'glacial perd');
   ch(R('naïf')[i].rang === 0, 'naïf perd');
   ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
-  ch(R('austère extrême')[i].economies > R('maître')[i].economies - 200 && R('austère extrême')[i].rang < R('maître')[i].rang, 'l\'austère économise autant mais perd');
+  ch(R('austère extrême')[i].economies > R('maître')[i].economies * 0.85 && R('austère extrême')[i].rang < R('maître')[i].rang, 'l\'austère économise autant mais perd');
   ch(R('ne rien toucher')[i].rang <= 1, 'défaut perd');
 }
 // sauvegarde aller-retour + ancienne sauvegarde
@@ -215,13 +223,19 @@ if (charger(mem) !== 'ancienne' || mem.getItem('economie-game-sauvegarde') !== n
 // migration v0.3 -> v0.4 : la partie continue
 { const v3 = defaut(); const o = JSON.parse(JSON.stringify(v3)); delete o.meteo; delete o.transport; delete o.roi; o.version = 3; delete o.depenses.transport; delete o.base.transport;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  if (!(m && m.version === 5 && m.transport && m.fin && m.jour === v3.jour)) { ok = false; console.log('✗ migration v3'); } }
+  if (!(m && m.version === 6 && m.transport && m.fin && m.eco && !m.fini)) { ok = false; console.log('✗ migration v3'); } }
 // migration v0.4 -> v0.5 : la banque démarre au jour de la sauvegarde, sans rattrapage
 { const v4 = defaut(); const o = JSON.parse(JSON.stringify(v4)); delete o.meteo; delete o.fin; delete o.coutVoisinCumul; delete o.depenses.banque; delete o.base.banque; o.version = 4; o.fini = false; o.jour = 40;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  const okM = m && m.version === 5 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
+  const okM = m && m.version === 6 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
   if (okM) { jourSuivant(m); }
-  if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v5'); }
+  if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v6'); }
+// migration v0.5 -> v0.6 : une partie de 18 semaines terminée devient le début d'une campagne de 5 ans
+{ const v5 = defaut(); const o = JSON.parse(JSON.stringify(v5)); delete o.meteo; delete o.eco; delete o.auto; delete o.annees; delete o.joursTotal; o.version = 5; o.jour = 126; o.fini = true; o.evenementsVus = ['invites', 'chap-printemps'];
+  mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
+  let okM = m && m.version === 6 && !m.fini && m.jour === 254 && m.annees === 5 && m.evenementsVus.includes('invites@0');
+  if (okM) { for (let i = 0; i < 400 && !m.fini; i++) { if (m.dilemme) resoudreDilemme(m, choixDilemme(m).filter(x => x.possible !== false).at(-1).id); else jourSuivant(m); } okM = m.jour > 600 && Number.isFinite(scoreFinal(m).economies); }
+  if (!okM) { ok = false; console.log('✗ migration v5'); } else console.log('✓ migration v5 -> v6 (la partie continue, jour', m.jour, ')'); }
 console.log('principes :', Object.keys(PRINCIPES).length);
 if (Object.keys(PRINCIPES).length < 75) ok = false;
 console.log(ok ? '\nOK' : '\nÉCHEC'); process.exit(ok ? 0 : 1);

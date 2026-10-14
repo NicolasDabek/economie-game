@@ -1,9 +1,9 @@
-# Économie Game ❄️🌱☀️ : une année sobre
+# Économie Game ❄️🌱☀️🍂 : des années sobres
 
-Jeu de gestion dans le navigateur où l'on **gagne en dépensant moins**. On vit 18 semaines enchaînées (hiver 8 semaines, printemps 4, été 6) dans une petite maison mal isolée de 3 pièces. Le but est de dépenser bien moins que le voisin qui vit sans réfléchir, sans sacrifier son confort, sa santé, son moral, son hygiène ni son bien-être.
+Jeu de gestion dans le navigateur où l'on **gagne en dépensant moins**. Depuis la v0.6, la partie est une **campagne de 3, 5 ou 10 ans** (5 par défaut). Chaque année a ses quatre saisons. On la vit dans une petite maison mal isolée de 3 pièces. Le but est de dépenser bien moins que le voisin qui vit sans réfléchir, sans sacrifier son confort, sa santé, son moral, son hygiène ni son bien-être.
 
 ## Concept
-Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude électrique de 200 L, en télétravail. La partie va de décembre à mi-août, en trois chapitres. Le budget est de 3 000 € hors loyer. Les prix sont réalistes pour la France en 2026 (détail dans [docs/prix.md](docs/prix.md)).
+Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude électrique de 200 L, en télétravail. La partie commence le 1er décembre 2026. On part avec 1 500 € sur le compte et 4 000 € sur le Livret A, et le salaire arrive chaque mois (loyer déduit). Les prix sont réalistes pour la France en 2026 (détail dans [docs/prix.md](docs/prix.md)).
 
 - **Un seul modèle physique** : chaque heure, chaque pièce perd `coefficient × (T intérieure − T extérieure)`, avec une masse thermique qui lisse les variations. Les pertes se répartissent entre murs, fenêtres et fuites d'air. Radiateurs, appoint, cuisson, corps, appareils et soleil chauffent la même pièce. L'humidité suit le même principe : respiration, cuisine et linge qui sèche l'augmentent, l'aération la fait baisser.
 - **Ressenti** = pièce + vêtements (selon saleté et usure) − courants d'air − humidité − mains froides sous 17 °C. Trop de couches gêne les mouvements, surtout en cuisine.
@@ -76,6 +76,61 @@ Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude él
 - **Fin de partie** : économies nettes face au voisin « tout chauffé », économies par domaine, investissements rentabilisés ou non, meilleure découverte, puis un titre : Dépensier, Malin, Optimiseur, Autonome ou Maître de la sobriété.
 - **Sauvegarde** automatique chaque jour dans le navigateur, plus des boutons Sauvegarder, Charger et Nouvelle partie.
 
+## Campagne de plusieurs années (v0.6)
+- **Calendrier réel** : du 1er décembre 2026 au 1er décembre 2029, 2031 ou 2036. Chaque année a un hiver, un printemps, un été et un automne, avec une météo propre à chaque année (normales Météo-France, vagues de froid, canicules).
+- **Commandes du temps** :
+  - Jour (animé heure par heure) et Semaine.
+  - **Mois** et **Jusqu'au prochain événement** : avance rapide sans animation. Elle s'arrête sur un choix, une alerte, une découverte ou un changement de saison.
+- **Routines automatiques** : chaque routine se débloque avec un principe (lessive pleine à 30 °C, entretien des vêtements, garde-robe et volets selon la saison, rachat des consommables). Le joueur peut l'activer.
+- **Économie qui bouge** :
+  - salaire revalorisé chaque 1er janvier, loyer indexé sur l'IRL ;
+  - inflation, gaz, électricité et alimentation selon des trajectoires tirées par graine ;
+  - Livret A révisé le 1er février et le 1er août selon la formule officielle ;
+  - énergie mensualisée, régularisée le 15 juin.
+- **Rendez-vous annuels** :
+  - 10 janvier : assurance habitation.
+  - 15 juin : régularisation.
+  - 1er septembre : rentrée.
+  - 15 septembre : impôts.
+  - 1er novembre : renégociation box et mobile.
+  - 1er décembre : **bilan annuel** (économies par domaine, patrimoine, jauges moyennes, objectifs pour l'année suivante).
+- **Usure** :
+  - frigo, lave-linge, ballon et chaudière tombent en panne ; on choisit neuf, reconditionné ou réparation ;
+  - vêtements et équipements arrivent en fin de vie ;
+  - la rentabilité de long terme se mesure vraiment dans la partie.
+- **Placements dans la durée** : cap des 4 ans du PEL, seuil fiscal des 5 ans du PEA, 8 ans de l'assurance vie, jouissance des SCPI, cycles de marché.
+- **Ce qui mûrit** : rendement du potager (+12 %/an pendant 3 ans), compost, habitudes.
+- **Sauvegardes** : une sauvegarde v0.5 continue en campagne de 5 ans, au même jour du calendrier.
+
+### Résultats simulés sur 5 ans (graines 2026 / 7 / 1789)
+
+| Stratégie | Économies vs voisin | Titre |
+|---|---|---|
+| Ne rien toucher | −1 345 / −692 / +1 905 € | Dépensier |
+| Naïf (tout à fond) | ≈ −35 000 € (−50 %) | Dépensier |
+| Glacial | +1 559 / +2 540 / +5 313 € (santé effondrée) | Dépensier |
+| Austère extrême | +43 332 / +44 250 / +49 872 € (santé 0, hygiène 7) | Dépensier |
+| Malin | +21 654 / +23 044 / +27 958 € (31 à 38 %) | Optimiseur / Autonome / Autonome |
+| Maître | +43 211 / +44 553 / +50 845 € (61 à 68 %) | Maître de la sobriété |
+
+Le voisin dépense environ 67 000 à 74 000 € en 5 ans, hors loyer.
+
+Arbitrage équipement / placement sur 5 ans, en économies vs voisin :
+
+| Stratégie | Graine 2026 | Graine 7 | Graine 1789 |
+|---|---|---|---|
+| Équipements rentables puis placement | 5 530 € | 6 163 € | 9 523 € |
+| Tout placer | 900 € | 3 727 € | 1 764 € |
+| Tout acheter | 4 271 € | 4 806 € | 7 910 € |
+| Ne jamais investir | −192 € | 560 € | 3 270 € |
+
+Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s.
+
+### Durée de jeu
+- Jour par jour, avec l'animation, une année demande environ 365 clics : c'est trop long.
+- En avançant au mois ou jusqu'au prochain événement, une année demande environ 35 arrêts (choix, alertes, saisons, bilan). Cela fait environ 20 à 40 minutes par an une fois les routines activées, soit 2 à 3 h pour 5 ans.
+- La première année reste plus détaillée (pauses à chaque saison).
+
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.
 
@@ -87,12 +142,13 @@ Astuce : `?graine=1234` dans l'URL change la météo.
 
 ## Tests
 ```bash
-node test/sim-test.mjs       # 6 stratégies × 3 graines, migrations de sauvegarde v3 → v5 et v4 → v5
-node test/finance-test.mjs   # banque, marchés, projection, 3 stratégies d'arbitrage équipement/placement
+node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations de sauvegarde v3/v4/v5 → v6
+node test/finance-test.mjs   # banque, marchés, projection, 4 stratégies d'arbitrage sur 5 ans, révision du Livret A, PEA 5 ans, temps de calcul 5 et 10 ans
+CHROME=/usr/bin/google-chrome node test/navigateur.cjs   # navigateur sans écran : campagne de 3 ans en avance rapide, bilans, migrations (playwright-core)
 node test/passif-test.mjs    # cheminée solaire et puits canadien : rentabilité, pièges, combos
 node outils/estimations.mjs  # régénère js/estimations.js (estimations avant achat)
 ```
-`test/sim-test.mjs` simule les 126 jours avec six stratégies, sur trois graines (2026, 7 et 1789). Il vérifie que :
+`test/sim-test.mjs` simule 5 ans (1 826 jours) avec six stratégies, sur trois graines (2026, 7 et 1789). Il vérifie que :
 - le naïf, ne rien toucher et le glacial perdent, et que l'austère extrême perd malgré ses économies ;
 - le maître a un moral moyen d'au moins 45 et le titre « Maître de la sobriété » ;
 - au moins 3 combos sont trouvés et que les principes sont au moins 75 ;
@@ -167,7 +223,8 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - ✅ v0.3 : eau chaude, tarifs Base, HC et Tempo, chapitres hiver → printemps → été, cuisine et cuisine solaire, veilles, jardin, abonnements et tentations, jauges hygiène et bien-être, onglets par domaine
 - ✅ v0.4 : moral rééquilibré (seuil 40), transport, rentabilité mesurée, stockage solaire et combos, ventilation passive (cheminée solaire et puits canadien), encyclopédie de 88 principes
 - ✅ v0.5 : ventilation passive aux prix réels, banque (livrets, LEP, PEL, assurance vie, découvert), investissement (PEA, CTO, obligations, SCPI, marché stochastique, projection 10/20/30 ans), arbitrage équipement / placement, 99 principes
-1. Automne et année complète, avec un panneau solaire qui se rentabilise vraiment.
+- ✅ v0.6 : campagne de 3, 5 ou 10 ans, quatre saisons par an, avance rapide et routines, salaire, inflation et prix qui évoluent, Livret A révisé par formule, pannes et remplacement des appareils, bilan annuel, 104 principes
+1. Rééquilibrer le moral sur le long terme (il reste haut même sans effort) et rendre l'automne plus spécifique.
 2. Effet rebond, et plus de fausses économies.
 3. Scénarios (étudiant, famille, retraité), voisinage et partage, défis (« Hiver à 200 € »).
 4. Sons, illustrations, version mobile.

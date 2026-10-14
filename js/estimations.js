@@ -2,20 +2,20 @@
 // Sert à l'estimation avant achat dans la boutique et à projeter les saisons pas encore vécues.
 export const ESTIMATIONS = {
  "calfeutrage": {
-  "hiver": 0.846,
-  "printemps": 0.146,
+  "hiver": 0.844,
+  "printemps": 0.281,
   "ete": 0,
   "incertitude": 0.3
  },
  "boudin": {
   "hiver": 0.173,
-  "printemps": 0.03,
+  "printemps": 0.057,
   "ete": 0,
   "incertitude": 0.3
  },
  "rideauxTh": {
-  "hiver": 0.088,
-  "printemps": 0.001,
+  "hiver": 0.079,
+  "printemps": 0.01,
   "ete": 0,
   "incertitude": 0.3
  },
@@ -26,8 +26,8 @@ export const ESTIMATIONS = {
   "incertitude": 0.3
  },
  "purge": {
-  "hiver": 0.323,
-  "printemps": 0.047,
+  "hiver": 0.312,
+  "printemps": 0.097,
   "ete": 0,
   "incertitude": 0.3
  },
@@ -38,9 +38,9 @@ export const ESTIMATIONS = {
   "incertitude": 0.3
  },
  "solaire": {
-  "hiver": 0.102,
-  "printemps": 0.26,
-  "ete": 0.439,
+  "hiver": 0.115,
+  "printemps": 0.229,
+  "ete": 0.435,
   "incertitude": 0.5
  },
  "bouillotte": {
@@ -56,27 +56,27 @@ export const ESTIMATIONS = {
   "incertitude": 0.3
  },
  "pommeau": {
-  "hiver": 0.399,
-  "printemps": 0.373,
-  "ete": 0.334,
+  "hiver": 0.412,
+  "printemps": 0.382,
+  "ete": 0.35,
   "incertitude": 0.3
  },
  "mousseurs": {
-  "hiver": 0.156,
-  "printemps": 0.147,
-  "ete": 0.134,
+  "hiver": 0.161,
+  "printemps": 0.151,
+  "ete": 0.14,
   "incertitude": 0.3
  },
  "jaquette": {
   "hiver": 0.093,
-  "printemps": 0.089,
-  "ete": 0.06,
+  "printemps": 0.087,
+  "ete": 0.069,
   "incertitude": 0.3
  },
  "seau": {
-  "hiver": 0.039,
-  "printemps": 0.039,
-  "ete": 0.039,
+  "hiver": 0.042,
+  "printemps": 0.043,
+  "ete": 0.043,
   "incertitude": 0.3
  },
  "boites": {
@@ -106,7 +106,7 @@ export const ESTIMATIONS = {
  "fourSolaire": {
   "hiver": 0.002,
   "printemps": 0.016,
-  "ete": 0.045,
+  "ete": 0.042,
   "incertitude": 0.5
  },
  "sechoir": {
@@ -116,7 +116,7 @@ export const ESTIMATIONS = {
   "incertitude": 0.5
  },
  "pierre": {
-  "hiver": 0.008,
+  "hiver": 0.009,
   "printemps": 0,
   "ete": 0,
   "incertitude": 0.5
@@ -129,14 +129,14 @@ export const ESTIMATIONS = {
  },
  "led": {
   "hiver": 0.173,
-  "printemps": 0.074,
-  "ete": 0.05,
+  "printemps": 0.094,
+  "ete": 0.051,
   "incertitude": 0.3
  },
  "ventilateur": {
   "hiver": 0,
-  "printemps": -0.008,
-  "ete": -0.216,
+  "printemps": -0.001,
+  "ete": -0.213,
   "incertitude": 0.3
  },
  "moustiquaire": {
@@ -158,27 +158,27 @@ export const ESTIMATIONS = {
   "incertitude": 0.3
  },
  "composteur": {
-  "hiver": 0,
-  "printemps": 0.051,
-  "ete": 0.39,
+  "hiver": 0.003,
+  "printemps": 0.326,
+  "ete": 0.67,
   "incertitude": 0.5
  },
  "potager": {
-  "hiver": 0,
-  "printemps": 0.171,
-  "ete": 1.3,
+  "hiver": 0.007,
+  "printemps": 0.79,
+  "ete": 1.574,
   "incertitude": 0.5
  },
  "cuve": {
   "hiver": 0,
-  "printemps": 0.008,
-  "ete": 0.001,
+  "printemps": 0.014,
+  "ete": 0,
   "incertitude": 0.5
  },
  "velo": {
-  "hiver": 3.37,
-  "printemps": 3.362,
-  "ete": 3.321,
+  "hiver": 3.402,
+  "printemps": 3.397,
+  "ete": 3.384,
   "incertitude": 0.5
  },
  "kitSecu": {
@@ -200,39 +200,39 @@ export const ESTIMATIONS = {
   "incertitude": 0.3
  },
  "gourde": {
-  "hiver": 0.789,
-  "printemps": 0.771,
-  "ete": 0.746,
+  "hiver": 0.777,
+  "printemps": 0.772,
+  "ete": 0.767,
   "incertitude": 0.3
  },
  "routeur": {
-  "hiver": 0,
-  "printemps": 0.031,
-  "ete": 0.084,
+  "hiver": 0.001,
+  "printemps": 0.028,
+  "ete": 0.066,
   "incertitude": 0.5
  },
  "caisse": {
-  "hiver": 0.002,
-  "printemps": 0.032,
-  "ete": 0.062,
+  "hiver": 0.004,
+  "printemps": 0.026,
+  "ete": 0.049,
   "incertitude": 0.5
  },
  "fresnel": {
   "hiver": 0.002,
   "printemps": 0.016,
-  "ete": 0.045,
+  "ete": 0.042,
   "incertitude": 0.5
  },
  "vae": {
-  "hiver": 3.235,
-  "printemps": 3.229,
-  "ete": 3.189,
+  "hiver": 3.268,
+  "printemps": 3.263,
+  "ete": 3.251,
   "incertitude": 0.5
  },
  "batterie": {
-  "hiver": 0.003,
-  "printemps": 0.07,
-  "ete": 0.155,
+  "hiver": 0.005,
+  "printemps": 0.059,
+  "ete": 0.124,
   "incertitude": 0.5
  },
  "thermos": {
@@ -243,38 +243,38 @@ export const ESTIMATIONS = {
  },
  "clim": {
   "hiver": 0,
-  "printemps": -0.001,
-  "ete": -0.867,
+  "printemps": -0.01,
+  "ete": -0.381,
   "incertitude": 0.3
  },
  "chemineeDIY": {
-  "hiver": 0.19,
-  "printemps": 0.415,
+  "hiver": -0.002,
+  "printemps": -0.036,
   "ete": 0,
   "incertitude": 0.5
  },
  "chemineePro": {
-  "hiver": 0.226,
-  "printemps": 0.413,
+  "hiver": -0.031,
+  "printemps": -0.061,
   "ete": 0,
   "incertitude": 0.5
  },
  "puitsPro": {
-  "hiver": 0.55,
-  "printemps": 0.176,
-  "ete": 0.066,
+  "hiver": 0.369,
+  "printemps": 0.192,
+  "ete": 0.062,
   "incertitude": 0.5
  },
  "puitsDIY": {
-  "hiver": 0.546,
-  "printemps": 0.174,
-  "ete": 0.121,
+  "hiver": 0.458,
+  "printemps": 0.252,
+  "ete": 0.104,
   "incertitude": 0.5
  },
  "puitsHydro": {
-  "hiver": 0.459,
-  "printemps": 0.169,
-  "ete": 0.121,
+  "hiver": 0.4,
+  "printemps": 0.23,
+  "ete": 0.104,
   "incertitude": 0.5
  }
 };

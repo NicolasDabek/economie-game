@@ -305,3 +305,67 @@ Le jeu suit un calendrier réel : 1er décembre 2026 → 26 janvier 2027, puis 6
 - Ce montant est ajouté aux économies (ligne « Épargne et placements »). Les agios ont leur propre ligne, « Banque ».
 - Les titres restent conditionnés aux jauges de bien-être. L'écran final affiche aussi le patrimoine total, comparé à celui du voisin.
 
+
+## v0.6 : campagne de plusieurs années (3, 5 ou 10 ans)
+
+La partie commence le 1er décembre 2026 et dure 3, 5 ou 10 ans (5 par défaut, soit 1 826 jours). Chaque année a ses quatre saisons : hiver (déc.-fév.), printemps (mars-mai), été (juin-août) et automne (sept.-nov.). Les températures suivent les normales mensuelles de Météo-France (Paris-Montsouris 1991-2020), plus une anomalie AR(1). Chaque hiver a une vague de froid. Chaque été a 0 à 2 canicules. Les jours Tempo respectent les quotas réels : 22 rouges et 43 blancs.
+
+### Trajectoires économiques (tirées par graine, `js/annee.js`, paramètres `ECONOMIE` dans `js/data.js`)
+
+| Grandeur | Modèle | Repère |
+|---|---|---|
+| Inflation | AR(1) autour de 2 %, écart-type 0,8 pt, ρ = 0,6, 1re année 3,0 % | Cible BCE ; Insee, sept. 2026 |
+| €STR | AR(1) autour de 2 %, ρ = 0,7 | BCE |
+| Gaz | inflation ± 10 %/an | Prix repère CRE : +100 % en 2022, −20 % en 2024 |
+| Électricité (TRVE) | inflation ± 5 %, appliquée le 1er février et le 1er août | CRE |
+| Alimentation | inflation ± 1,5 pt | Insee |
+| Eau | +3 %/an | SISPEA |
+| Carburant | inflation ± 8 % | |
+| Abonnements, assurances | +3 %/an, sauf si on renégocie (−5 % box/mobile en novembre, −7 % en changeant d'assureur en janvier, loi Hamon) | |
+| Salaire | inflation + 0,5 pt ± 0,6, au 1er janvier | Dares, SMPT |
+| Loyer | IRL ≈ inflation, plafonné à 3,5 % | Bouclier loyers 2022-2024 |
+
+Le **Livret A** est révisé le 1er février et le 1er août selon la formule réglementaire : moyenne de l'inflation et de l'€STR, arrondie au dixième de point, avec un plancher de 0,5 %. Le LDDS a le même taux. Le LEP vaut Livret A + 0,5 pt. Dans la simulation, l'inflation est annuelle : les deux révisions d'une même année donnent donc souvent le même taux. Taux obtenus sur la graine 2026 : 1,8 · 1,8 · 2,4 · 2,4 · 2,2 · 2,2 · 1,7 · 1,7 · 1,4 · 1,4 %.
+
+### Revenus et énergie
+- **Salaire net** et loyer, selon le profil choisi : modeste 1 650 € / 520 €, médian 2 200 € / 640 €, aisé 3 900 € / 900 €. Le reste à vivre (salaire − loyer) arrive le 1er de chaque mois. Le voisin a les mêmes revenus. Chaque fin de mois, il range sur son Livret A ce qui dépasse un mois de reste à vivre, et il y puise s'il passe à découvert.
+- **Mensualisation de l'énergie** : on paie chaque mois 1/12 de la facture estimée. La régularisation tombe le 15 juin (rappel ou remboursement) et fixe la nouvelle mensualité.
+- **Événements annuels** :
+  - 10 janvier : renouvellement de l'assurance habitation (+4 %).
+  - 15 juin : régularisation de l'énergie.
+  - 1er septembre : rentrée (180 € neuf, 70 € d'occasion, ou impasse).
+  - 15 septembre : avis d'impôt.
+  - 1er novembre : renégociation box et mobile.
+  - 1er décembre : bilan annuel.
+
+### Appareils et usure
+| Appareil | Âge au départ | Durée de vie | Neuf posé | Reconditionné | Réparation |
+|---|---|---|---|---|---|
+| Réfrigérateur | 8 ans | 12 ans | 520 € | 260 € | 120 € |
+| Lave-linge | 6 ans | 10 ans | 450 € | 220 € | 150 € |
+| Ballon 200 L | 10 ans | 15 ans | 950 € | — | 180 € |
+| Chaudière gaz | 16 ans | 20 ans | 3 900 € | — | 450 € |
+
+Sources : ADEME, durée de vie des équipements (frigo 10-15 ans, lave-linge 8-12, ballon 10-15, chaudière 15-25). Chaudière à condensation posée 3 000 à 5 000 € (Effy, QuelleEnergie 2026).
+
+- **Pannes** : la date de panne est tirée autour de la fin de vie. On choisit alors entre neuf, reconditionné (durée de vie moitié moindre) ou une seule réparation (1 à 4 ans de répit). Le voisin remplace toujours à neuf, selon son propre calendrier.
+- **Équipements achetés** (vêtements, petits équipements) : durée de vie ± 20 %. En fin de vie ils disparaissent. La routine « renouveler » rachète automatiquement les consommables à 60 € ou moins. Le score amortit les dépenses d'équipement moins la valeur résiduelle de ce qu'on possède encore.
+
+### Placements dans la durée
+- **PEL** : les intérêts sont capitalisés au 31 décembre et imposés au PFU après 2 ans. Les versements s'arrêtent après 10 ans. Un message signale le cap des 4 ans.
+- **PEA** : après 5 ans, on ne paie plus que les prélèvements sociaux (18,6 %), et les retraits partiels sont permis sans clôture.
+- **Assurance vie** : après 8 ans, abattement de 4 600 € puis 7,5 %.
+- **SCPI** : délai de jouissance de 4 mois.
+- **Marchés** : régime de marché par chaînes de Markov, calé sur l'ETF monde (7,6 %/an, volatilité 16 %, pire année −36 %). Les cycles se voient sur 5 et 10 ans.
+
+### Jardin et habitudes qui mûrissent
+- **Potager** : +12 % de rendement par année d'expérience, jusqu'à 3 ans. Récolte d'automne à 80 %.
+- **Compost** : facteur 1,1 la 1re année, 1,3 la 2e, puis 1,45.
+- **Routines automatiques** : une fois le principe correspondant compris, lessive pleine à 30 °C, entretien et reprise des vêtements, changements de saison (garde-robe, volets, bouillotte) et rachat des consommables se font tout seuls.
+
+### Score sur la campagne
+Le pourcentage d'économies compare toujours ta dépense à celle du voisin, sur toute la campagne. Le titre de Maître exige aussi :
+- placements au moins aussi bons que le Livret A du voisin ;
+- au plus 10 jours de découvert non autorisé par an.
+
+Le plafond de rechutes passe à 4 × √(années).

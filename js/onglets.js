@@ -36,7 +36,7 @@ const ligne = (lab, contenu) => `<div class="ligne"><label>${lab}</label>${conte
 const aide = (t) => `<p class="aide">${t}</p>`;
 
 export function rendreEte(s) {
-  const chap = chapitreDuJour(Math.min(s.jour, 125)).id;
+  const chap = chapitreDuJour(Math.min(s.jour, (s.joursTotal || 365) - 1)).id;
   if (chap === 'hiver') return aide('☀️ Commandes d\'été (volets le jour, nuits ouvertes, ventilateur, clim) disponibles à partir du printemps.');
   const g = gestesActifs(s);
   let h = `<h3>☀️ Contre la chaleur</h3>`;
@@ -100,7 +100,7 @@ export function rendreElec(s) {
 }
 
 export function rendreJardin(s) {
-  const y = s.sys, chap = chapitreDuJour(Math.min(s.jour, 125)).id;
+  const y = s.sys, chap = chapitreDuJour(Math.min(s.jour, (s.joursTotal || 365) - 1)).id;
   let h = '';
   if (!s.possede.potager && !s.possede.herbes) h += aide('Un petit potager (tomates, courgettes, salades) et des herbes aromatiques réduisent les courses à partir du printemps. Il faut ~3 semaines avant la première récolte et un quart d\'heure par jour.');
   if (s.possede.potager) h += ligne('Potager', y.potagerDepuis === null ? 'semé dès le printemps' : chap === 'hiver' ? 'en sommeil' : `${s.jour - y.potagerDepuis >= 21 ? '🥗 récoltes en cours' : `🌱 récolte dans ${21 - (s.jour - y.potagerDepuis)} j`} ${tagGeste(s, 'jardiner')}`);
@@ -197,7 +197,7 @@ export function rendrePassif(s) {
   const enCours = (P?.chantiers || []).filter(c => c.reste > 0);
   if (enCours.length) h += aide(`🏗️ Chantier en cours : ${enCours.map(c => `${PASSIF.noms[c.id]} (${c.reste} j restant${c.reste > 1 ? 's' : ''})`).join(', ')}. Tout ton temps libre y passe.`);
   if (!ch && !pt) return h + aide('Cheminée solaire (tirage gratuit) et puits canadien (air à la température du sol, ~12 °C) : voir la boutique ci-dessous. Ensemble, ils ventilent sans ventilateur.');
-  const chap = chapitreDuJour(Math.min(s.jour, 125));
+  const chap = chapitreDuJour(Math.min(s.jour, (s.joursTotal || 365) - 1));
   if (ch) {
     h += ligne('Cheminée', choixSet('passif.mode', [['ferme', 'Fermée'], ['trombe', 'Mode Trombe (hiver)'], ['purgeNuit', 'Purge la nuit'], ['purge', 'Purge jour et nuit']], P.mode));
     if (P.mode === 'trombe' && !s.possede.chemineePro) h += ligne('Clapet bas la nuit', choixSet('passif.clapetNuit', [['ferme', 'Fermé'], ['ouvert', 'Laissé ouvert']], P.clapetNuit));

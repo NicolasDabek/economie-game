@@ -1,6 +1,6 @@
 // Moteur de simulation : modèle thermique et hydrique unique, jauges, habitudes, linge, événements
 import {
-  PRIX, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, CHARGE_FOND_W, LESSIVE, JOURS, PIECES, ORDRE_PIECES,
+  PRIX, INDICES, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, CHARGE_FOND_W, LESSIVE, JOURS, PIECES, ORDRE_PIECES,
   PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour,
   VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND,
   JOURS_HABITUDE, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, PLAISIRS_MORAL, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART,
@@ -11,6 +11,8 @@ import { systemesJour, voisinJour, tempsRoutines, prixElec } from './systemes.js
 import { transportJour, voisinTransport, tempsTransport } from './transport.js';
 import { suivreROI } from './roi.js';
 import { financeJour, gainFinancier, valeurLiquidation, valeurs } from './finance.js';
+import { appliquerIndices, debutJourCampagne, mensualiser, choixCampagne, titreCampagne, resoudreCampagne, resteAVivre } from './annee.js';
+import { anneeDuJour, dateDuJour } from './meteo.js';
 import { passifHeure, passifCumul, passifJour, debutJourPassif, hasCheminee, typePuits, chantierEnCours, nouvelEtatPassif } from './passif.js';
 
 const T_HORS_GEL = 8;
@@ -163,10 +165,11 @@ export function acheter(s, id, occasion = false) {
   }
   s.possede[id] = true;
   s.prixPayes = s.prixPayes || {}; s.prixPayes[id] = prix;
+  if (s.eco) s.eco.achats[id] = s.jour;
   payer(s, prix, 'equipement');
   msg(s, `🛒 ${a.nom}${occasion ? ' d\'occasion' : ''} : −${eur(prix)}${tps ? ` et ${fmtH(tps)}${occasion ? ' (annonce, rendez-vous)' : ' d\'installation'}` : ''}.`, 'achat');
   if (occasion) { debloquer(s, 'occasion'); if (ROI_ITEMS[id]?.revente) debloquer(s, 'residuel'); }
-  if (id === 'potager') s.sys.potagerDepuis = s.jour;
+  if (id === 'potager') { s.sys.potagerDepuis = s.jour; if (s.eco) s.eco.jardinDepuis ??= s.jour; }
   if (id === 'composteur' || id === 'cuve') debloquer(s, 'cycles');
   if (id === 'jaquette') debloquer(s, 'prolonger');
   if (id === 'thermometre') {
@@ -333,6 +336,8 @@ function scoreConfort(ressenti, mini, maxi) {
 // ---------------------------------------------------------------- journée
 export function jourSuivant(s) {
   if (s.fini || s.dilemme) return;
+  appliquerIndices(s);
+  routines(s);
   const jm = s.meteo[s.jour];
   const chap = chapitreDuJour(s.jour);
   const hiver = chap.id === 'hiver', ete = chap.id === 'ete';
@@ -552,10 +557,10 @@ export function jourSuivant(s) {
   payer(s, gazKwh * prixGaz(s), 'gaz');
   payer(s, elecEur, 'elec');
   payer(s, ctx.couts.eau, 'eau');
-  payer(s, ctx.couts.nourriture, 'nourriture');
-  payer(s, ctx.couts.services, 'services');
-  payer(s, ctx.couts.plaisirs, 'plaisirs');
-  payer(s, ctx.couts.transport, 'transport');
+  payer(s, ctx.couts.nourriture * INDICES.alim, 'nourriture');
+  payer(s, ctx.couts.services * INDICES.services * (s.eco?.remise ?? 1), 'services');
+  payer(s, ctx.couts.plaisirs * INDICES.general, 'plaisirs');
+  payer(s, ctx.couts.transport * INDICES.carburant, 'transport');
   payer(s, ctx.couts.imprevus, 'imprevus');
   const aboJour = (TARIFS[s.sys.tarif].aboMois * 12 + PRIX.aboGazAn) / 365;
   payer(s, aboJour, 'abonnements');
@@ -566,7 +571,8 @@ export function jourSuivant(s) {
   const eurGazUtile = prixGaz(s) / RENDEMENT_CHAUDIERE;
   for (const a of Object.keys(attrJour)) s.attribution[a] += attrJour[a] * eurGazUtile;
   if (s.possede.purge) s.attribution.purge += gazKwh * prixGaz(s) * 0.08;
-  else if (gazKwh > 0) { const surcout = gazKwh * prixGaz(s) * 0.08; payer(s, surcout, 'gaz'); s.factureSemaine += surcout; }
+  else if (gazKwh > 0) { const surcout = gazKwh * prixGaz(s) * 0.08; payer(s, surcout, 'gaz'); s.factureSemaine += surcout; mensualiser(s, surcout); }
+  mensualiser(s, gazKwh * prixGaz(s) + elecEur + aboJour);   // v0.6 : l'énergie se paie par mensualités, régularisées en juin
   if (jm.tempo === 'rouge' && s.sys.tarif === 'tempo') {
     const hpRouge = jour.heures.filter(x => x.prix > 0.5).length;
     if (hpRouge) debloquer(s, 'tempo');
@@ -579,10 +585,10 @@ export function jourSuivant(s) {
   s.base.clim = (s.base.clim || 0) + climBase * PRIX.elecKwh;
   s.base.eauChaude = (s.base.eauChaude || 0) + vz.eauChaude;
   s.base.eau += vz.eau;
-  s.base.nourriture = (s.base.nourriture || 0) + vz.nourriture * 1.06;   // courses 4 fois par semaine : achats d'impulsion
-  s.base.services = (s.base.services || 0) + vz.services;
-  s.base.plaisirs = (s.base.plaisirs || 0) + vz.plaisirs;
-  s.base.transport = (s.base.transport || 0) + voisinTransport(s);
+  s.base.nourriture = (s.base.nourriture || 0) + vz.nourriture * 1.06 * INDICES.alim;   // courses 4 fois par semaine : achats d'impulsion
+  s.base.services = (s.base.services || 0) + vz.services * INDICES.services;
+  s.base.plaisirs = (s.base.plaisirs || 0) + vz.plaisirs * INDICES.general;
+  s.base.transport = (s.base.transport || 0) + voisinTransport(s) * INDICES.carburant;
   s.base.abonnements += aboJour;
   if (s.jour % 3 === 2) {
     const l = (LESSIVE.kwh[40] + LESSIVE.secheLingeKwh) * PRIX.elecKwh + LESSIVE.litres / 1000 * PRIX.eauM3 + PRIX.doseLessive;
@@ -706,36 +712,53 @@ export function jourSuivant(s) {
     for (const p of ORDRE_PIECES) { s.pieces[p].kwhSemaine = 0; s.pieces[p].eurSemaine = 0; }
   }
   if (s.invites && s.jour >= s.invites.jusqua) s.invites = null;
-  if (s.jour >= JOURS) { s.fini = true; return; }
+  if (s.jour >= (s.joursTotal || JOURS)) { s.fini = true; return; }
   verifierEvenements(s);
 }
 
 // ---------------------------------------------------------------- événements
+const jourEvt = (s, e) => { const an = anneeDuJour(s.jour); return Math.round((Date.UTC(2026 + an, 11, 1) - Date.UTC(2026, 11, 1)) / 86400000) + e.jourAn; };
+const vu = (s, id) => s.evenementsVus.includes(id + '@' + anneeDuJour(s.jour)) || s.evenementsVus.includes(id);
 export function evenementsAVenir(s) {
-  return EVENEMENTS.filter(e => e.jour >= s.jour && s.jour >= e.jour - e.annonce && !s.evenementsVus.includes(e.id));
+  return EVENEMENTS.filter(e => { const j = jourEvt(s, e); return j >= s.jour && s.jour >= j - e.annonce && !vu(s, e.id) && !(e.unique && anneeDuJour(s.jour) > 0); }).map(e => ({ ...e, jour: jourEvt(s, e) }));
 }
 function verifierEvenements(s) {
-  const c = chapitreDuJour(s.jour);
-  if (c.index === 0 && s.jour > 0 && !s.evenementsVus.includes('chap-' + c.id)) { s.dilemme = 'chap-' + c.id; return; }
+  const ctxC = { msg: (t, ty) => msg(s, t, ty), debloquer: (id) => debloquer(s, id), racheter: (id) => acheter(s, id) };
+  const dc = debutJourCampagne(s, ctxC);
+  if (dc === 'bilan') faireBilan(s);
+  if (dc) { s.dilemme = dc; return; }
+  const c = chapitreDuJour(s.jour), an = anneeDuJour(s.jour), cle = `chap-${c.saison}-${an}`;
+  if (c.index === 0 && s.jour > 0 && c.saison !== 'hiver' && !s.evenementsVus.includes(cle)) {
+    if (an === 0) { s.dilemme = cle; return; }
+    s.evenementsVus.push(cle); msg(s, `🍂 ${c.nom} ${dateDuJour(s.jour).getUTCFullYear()} : ${TEXTES_CHAPITRE[c.saison].split('.')[0]}.`, 'annonce');
+  }
   for (const e of EVENEMENTS) {
-    if (e.annonce && s.jour === e.jour - e.annonce) msg(s, `📅 Annonce : ${e.titre}, dans ${e.annonce} jours. ${e.texte}`, 'annonce');
-    if (s.jour === e.jour && !s.evenementsVus.includes(e.id)) {
-      if (e.id === 'panne' && s.machine.enPanne) { s.evenementsVus.push(e.id); continue; }
+    if (e.unique && an > 0) continue;
+    const j = jourEvt(s, e);
+    if (e.annonce && s.jour === j - e.annonce) msg(s, `📅 Annonce : ${e.titre}, dans ${e.annonce} jours. ${e.texte}`, 'annonce');
+    if (s.jour === j && !vu(s, e.id)) {
+      if (e.id === 'panne' && s.machine.enPanne) { s.evenementsVus.push(e.id + '@' + an); continue; }
       s.dilemme = e.id;
     }
   }
 }
 const TEXTES_CHAPITRE = {
-  printemps: 'Deux mois ont passé. Les jours rallongent, il fait 10 à 14 °C dehors : le chauffage peut presque s\'arrêter, le soleil devient un allié et le jardin s\'éveille.',
-  ete: 'Juillet. Le danger n\'est plus le froid mais la chaleur : volets fermés le jour, fenêtres ouvertes la nuit, cuisson dehors… tout s\'inverse. Pense à ranger les pulls !',
+  printemps: 'Mars. Les jours rallongent, il fait 8 à 15 °C dehors : le chauffage peut ralentir, le soleil devient un allié et le jardin s\'éveille.',
+  ete: 'Juin. Le danger n\'est plus le froid mais la chaleur : volets fermés le jour, fenêtres ouvertes la nuit, cuisson dehors… tout s\'inverse. Pense à ranger les pulls !',
+  automne: 'Septembre. Les nuits fraîchissent, la saison de chauffe reprend mi-octobre : purge les radiateurs, ressors les pulls, récolte le potager et prépare l\'hiver.',
+  hiver: 'Décembre. Le froid revient.',
 };
 export function titreDilemme(s) {
-  if (s.dilemme?.startsWith('chap-')) { const id = s.dilemme.slice(5); const c = CHAPITRES.find(x => x.id === id); return { titre: `Chapitre : ${c.nom} (${c.debut})`, texte: TEXTES_CHAPITRE[id] }; }
+  if (s.dilemme?.startsWith('chap-')) { const id = s.dilemme.split('-')[1]; const c = CHAPITRES.find(x => x.saison === id); return { titre: `Saison : ${c.nom} (${c.debut})`, texte: TEXTES_CHAPITRE[id] }; }
+  if (EST_CAMPAGNE(s.dilemme)) return titreCampagne(s, s.dilemme);
   return EVENEMENTS.find(x => x.id === s.dilemme) || { titre: '', texte: '' };
 }
 const refus = (s) => (s.sys.refusTentations >= 2 ? 'La règle des 48 h est devenue un réflexe : aucun effort.' : 'Un peu frustrant (−2 bien-être).');
+const EST_CAMPAGNE = (id) => !!id && (id.startsWith('appareil-') || ['regul', 'assurance', 'renego', 'rentree', 'impots', 'canicule', 'bilan'].includes(id));
+const OUTILS = { tempsLibre: (s) => tempsLibre(s) };
 export function choixDilemme(s) {
   if (s.dilemme?.startsWith('chap-')) return [{ id: 'ok', texte: 'Continuer', effet: 'Ta maison, tes équipements, tes habitudes et ton argent te suivent.' }];
+  if (EST_CAMPAGNE(s.dilemme)) return choixCampagne(s, s.dilemme, OUTILS);
   switch (s.dilemme) {
     case 'invites': return [
       { id: 'chauffer', texte: 'Chauffer le salon à 21 °C pendant deux jours', effet: 'Coûte du gaz, invités ravis.' },
@@ -785,6 +808,12 @@ export function resoudreDilemme(s, choix) {
   if (!id) return;
   const opt = choixDilemme(s).find(o => o.id === choix);
   if (!opt || opt.possible === false) return false;
+  if (EST_CAMPAGNE(id)) {
+    resoudreCampagne(s, id, choix, { payer: (s2, m, p) => payer(s2, m, p), msg: (t, ty) => msg(s, t, ty), debloquer: (x) => debloquer(s, x) });
+    if (id === 'rentree') s.base.plaisirs = (s.base.plaisirs || 0) + 180;
+    s.volonte = Math.max(0, Math.min(100, s.volonte));
+    s.evenementsVus.push(id + '@' + s.jour); s.dilemme = null; return true;
+  }
   if (id === 'invites') {
     s.invites = { mode: choix, jusqua: s.jour + 2 };
     if (choix === 'chauffer') s.volonte += 5;
@@ -815,7 +844,7 @@ export function resoudreDilemme(s, choix) {
     else msg(s, '🧺 Machine en panne : les lessives se feront à la laverie.', 'info');
   }
   s.volonte = Math.max(0, Math.min(100, s.volonte));
-  s.evenementsVus.push(id);
+  s.evenementsVus.push(id.startsWith('chap-') ? id : id + '@' + anneeDuJour(s.jour));
   s.dilemme = null;
   return true;
 }
@@ -829,17 +858,22 @@ export function capitalInvesti(s) {
 }
 // Part des investissements « consommée » pendant la partie : prix / durée de vie (années), et usure des vêtements
 export function amortissement(s) {
-  const equip = Object.entries(ACHATS).filter(([k]) => s.possede[k]).reduce((t, [k, a]) => t + (s.prixPayes?.[k] ?? a.prix) / a.vie, 0);
+  // v0.6 : dépensé en équipements moins la valeur restante (prix × vie restante) de ce qui est encore possédé
+  const residuel = Object.entries(ACHATS).filter(([k]) => s.possede[k]).reduce((t, [k, a]) => {
+    const age = Math.max(1, s.jour - (s.eco?.achats?.[k] ?? 0)) / 365;
+    return t + (s.prixPayes?.[k] ?? a.prix) * Math.max(0, 1 - age / a.vie);
+  }, 0);
+  const equip = Math.max(0, s.depenses.equipement - residuel);
   const vet = Object.values(s.vetements).reduce((t, v) => t + (v.possede ? v.prixPaye * Math.min(1, v.usure / 100) : 0), 0)
     + (s.depenses.vetements - Object.values(s.vetements).reduce((t, v) => t + (v.possede ? v.prixPaye : 0), 0));
   return { equip, vet };
 }
-const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport', 'banque'];
+const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport', 'banque', 'remplacements'];
 export function coutVariable(s) {
   const d = s.depenses;
   return POSTES.reduce((t, k) => t + (d[k] || 0), 0) + d.equipement + d.vetements - (d.reventes || 0);
 }
-export function coutBaseVariable(s) { const b = s.base; return b.gaz + b.elec + b.eau + b.produits + (b.nourriture || 0) + (b.services || 0) + (b.plaisirs || 0) + (b.transport || 0) + (b.banque || 0); }
+export function coutBaseVariable(s) { const b = s.base; return b.gaz + b.elec + b.eau + b.produits + (b.nourriture || 0) + (b.services || 0) + (b.plaisirs || 0) + (b.transport || 0) + (b.banque || 0) + (b.remplacements || 0); }
 export function moyennes(s) {
   const n = Math.max(1, s.nbJours), m = s.sommes;
   return { confort: m.confort / n, sante: m.sante / n, moral: m.volonte / n, hygiene: m.hygiene / n, bienetre: m.bienetre / n };
@@ -874,6 +908,7 @@ export function scoreFinal(s) {
     { nom: 'Imprévus (rechutes, maladie, pannes, achats impulsifs)', valeur: -d.imprevus },
     { nom: 'Reventes', valeur: d.reventes || 0 },
     { nom: 'Banque (agios, commissions)', valeur: (b.banque || 0) - (d.banque || 0) },
+    { nom: 'Remplacement des appareils (choix neuf, reconditionné ou réparation)', valeur: (b.remplacements || 0) - (d.remplacements || 0) },
     { nom: 'Épargne et placements (net, vs voisin au Livret A)', valeur: fin.net },
   ];
   const reste = economies - domaines.reduce((a, x) => a + x.valeur, 0);
@@ -888,13 +923,79 @@ export function scoreFinal(s) {
   const notes = [];
   const equilibre = moy.confort >= 70 && moy.sante >= 70 && moy.hygiene >= 60 && moy.bienetre >= 55 && moy.moral >= 40;
   if (rang >= 3 && !equilibre) { rang = 2; notes.push('Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40.'); }
+  const ans = Math.max(1, s.nbJours / 365);
   if (rang === 4 && (s.principes.length < 28 || habitudes < 8)) { rang = 3; notes.push('Le titre suprême demande 28 principes et 8 habitudes.'); }
-  if (rang >= 2 && (moy.hygiene < 45 || moy.bienetre < 40 || s.rechutes > 4)) { rang = 1; notes.push('Économies payées par ton hygiène, ton bien-être ou tes rechutes.'); }
+  if (rang === 4 && s.fin && (fin.net < 0 || s.fin.stats.joursHorsAutorisation > 10 * ans)) { rang = 3; notes.push('Le titre suprême demande aussi une épargne au moins aussi bien gérée que le Livret A du voisin, sans découvert hors autorisation répété.'); }
+  if (rang >= 2 && (moy.hygiene < 45 || moy.bienetre < 40 || s.rechutes > 4 * Math.sqrt(ans))) { rang = 1; notes.push('Économies payées par ton hygiène, ton bien-être ou tes rechutes.'); }
   if (moy.sante < 50 || moy.confort < 55 || moy.hygiene < 30 || moy.bienetre < 25) { rang = 0; notes.push('Une sobriété qui abîme : santé, confort, hygiène ou bien-être effondrés.'); }
   return { cout, base, economies, pct, moy, confortMoy: moy.confort, sante: s.sante, habitudes, principes: s.principes.length, titre: TITRES[rang], rang, note: notes.join(' '),
     domaines, invest, meilleure, tresorerie, fin,
-    patrimoine: s.fin ? s.argent + valeurLiquidation(s) : s.argent, patrimoineVoisin: s.fin ? ARGENT_DEPART - (s.coutVoisinCumul || 0) - (s.base.banque || 0) + s.fin.voisin.livret.solde + s.fin.voisin.livret.courus : null, amort: am, capital: capitalInvesti(s), abonnements: d.abonnements };
+    patrimoine: s.fin ? s.argent + valeurLiquidation(s) : s.argent, patrimoineVoisin: s.fin ? ARGENT_DEPART + (s.eco?.revenus || 0) - (s.coutVoisinCumul || 0) - (s.base.banque || 0) - (s.fin.voisin.transferts || 0) + s.fin.voisin.livret.solde + s.fin.voisin.livret.courus : null, annees: (s.nbJours / 365), amort: am, capital: capitalInvesti(s), abonnements: d.abonnements };
 }
+
+// ---------------------------------------------------------------- routines automatiques (v0.6)
+// Une fois le principe compris, le joueur peut confier les gestes répétitifs au « pilote automatique » :
+// lessive pleine à 30 °C, entretien des vêtements, garde-robe et gestes de saison, renouvellement des petits consommables.
+export const ROUTINES = {
+  lessive: { nom: 'Lessives pleines à 30 °C, séchage à l\'air (dehors l\'été)', principe: 'volume' },
+  entretien: { nom: 'Aérer, laver à la main et repriser les vêtements', principe: 'reparer' },
+  saisons: { nom: 'Garde-robe, volets, rideaux et bouillotte selon la saison', principe: 'inverse' },
+  renouveler: { nom: 'Racheter les petits consommables usés (≤ 60 €)', principe: 'finDeVie' },
+};
+export const routineDispo = (s, k) => s.principes.includes(ROUTINES[k].principe);
+function routines(s) {
+  const A = s.auto; if (!A) return;
+  const c = chapitreDuJour(s.jour), ete = c.saison === 'ete', hiver = c.saison === 'hiver';
+  if (A.saisons && routineDispo(s, 'saisons') && (c.index === 0 || s.jour === 0 || A.saisonVue !== c.saison)) {
+    A.saisonVue = c.saison;
+    const chauds = ['souscouche', 'sweat', 'polaire', 'pilou', 'plaid', 'chaussettes'];
+    for (const [id, v] of Object.entries(s.vetements)) if (v.possede) v.porte = ete ? id === 'tshirt' : hiver || c.saison === 'automne' && c.index > 45 ? (chauds.includes(id) || id === 'tshirt' && !s.vetements.souscouche.possede) : ['sweat', 'tshirt', 'chaussettes'].includes(id);
+    if (!Object.values(s.vetements).some(v => v.possede && v.porte)) s.vetements.tshirt.porte = true;
+    s.voletsJour = ete; s.ventNuit = ete; s.rideaux = hiver ? 'nuit' : 'ouverts'; s.utiliserBouillotte = hiver && !!s.possede.bouillotte;
+    if (s.possede.ventilateur) s.ventilateur = ete;
+    if (s.passif && (s.possede.chemineeDIY || s.possede.chemineePro)) s.passif.mode = ete ? 'purgeNuit' : hiver ? 'trombe' : s.passif.mode;
+  }
+  if (A.entretien && routineDispo(s, 'entretien')) {
+    for (const [id, v] of Object.entries(s.vetements)) {
+      if (!v.possede) continue;
+      if (v.salete >= 45 && !VETEMENTS[id].peau && v.salete < 90 && !v.aere) aererVetement(s, id);
+      if (v.usure >= 40 && s.possede.couture) repriser(s, id);
+      if (VETEMENTS[id].peau && v.salete >= 75 && tempsLibre(s) > 1) laverMain(s, id);
+    }
+  }
+  if (A.lessive && routineDispo(s, 'lessive') && !s.lessivePrevue) {
+    if (s.machine.enPanne) reparerMachine(s, 'diy');
+    if (linge(s).length && (remplissage(s) >= 0.75 || Object.values(s.vetements).some(v => v.possede && v.porte && v.salete >= 88)))
+      planifierLessive(s, { temp: 30, sechage: !hiver && s.possede.corde ? 'dehors' : 'air', hc: s.sys.tarif !== 'base' });
+  }
+}
+
+// ---------------------------------------------------------------- bilan annuel (v0.6)
+export function faireBilan(s) {
+  const r = scoreFinal(s), e = s.eco, prec = e.dernierBilan;
+  const an = anneeDuJour(s.jour - 1);
+  const dom = Object.fromEntries(r.domaines.map(d => [d.nom, d.valeur]));
+  const parDomaine = r.domaines.map(d => ({ nom: d.nom, valeur: d.valeur - (prec?.cumul?.[d.nom] || 0) })).filter(d => Math.abs(d.valeur) >= 1);
+  const n = s.nbJours - (prec?.nbJours || 0), sm = s.sommes, ps = prec?.sommes || { confort: 0, sante: 0, volonte: 0, hygiene: 0, bienetre: 0 };
+  const moy = Object.fromEntries(['confort', 'sante', 'volonte', 'hygiene', 'bienetre'].map(k => [k, n ? (sm[k] - ps[k]) / n : 0]));
+  const v = s.fin ? valeurs(s) : { livrets: 0, total: 0 };
+  const rav = resteAVivre(s);
+  const objectifs = [];
+  const precaution = v.livrets + Math.max(0, s.argent);
+  if (precaution < 3 * rav) objectifs.push(`Épargne de précaution : viser 3 mois de reste à vivre (${Math.round(3 * rav)} €) disponibles sur livret ; tu en as ${Math.round(precaution)} €.`);
+  if (s.argent > 2 * rav + e.mensualite) objectifs.push(`${Math.round(s.argent - rav)} € dorment sur le compte courant à 0 % : livrets d'abord (Livret A ${(e.taux.livretA * 100).toFixed(1).replace('.', ',')} %${PROFILS_LEP(s) ? ', LEP' : ''}), puis PEA ou assurance vie pour l'argent dont tu n'auras pas besoin avant 5-8 ans.`);
+  if (s.fin && !s.fin.pea && s.jour < (s.joursTotal || JOURS) - 365) objectifs.push('Ouvrir un PEA même avec peu : l\'horloge fiscale de 5 ans démarre à l\'ouverture.');
+  if (moy.volonte < 50) objectifs.push('Moral moyen sous 50 : moins de nouveaux gestes à la fois, garde un petit budget plaisir.');
+  if (moy.confort < 70 || moy.sante < 70) objectifs.push('Confort ou santé moyens sous 70 : remonte d\'un degré la pièce où tu vis, ou investis dans l\'isolation de toi-même (vêtements chauds, bouillotte).');
+  const chauf = parDomaine.find(d => d.nom.startsWith('Chauffage'));
+  if (!chauf || chauf.valeur < 100) objectifs.push('Chauffage : moins de 100 € gagnés cette année. Robinets thermostatiques, 1 °C de moins la nuit, rideaux fermés le soir.');
+  if (objectifs.length < 2) objectifs.push('Garder le cap : tes habitudes travaillent pour toi chaque jour sans effort.');
+  e.dernierBilan = { an, cumul: dom, sommes: { ...sm }, nbJours: s.nbJours, parDomaine, moy, economies: r.economies - (prec?.economiesCumul || 0), economiesCumul: r.economies,
+    patrimoine: r.patrimoine, patrimoineVoisin: r.patrimoineVoisin, placements: v.total, livrets: v.livrets, salaire: e.salaire, inflation: e.inflationAn, objectifs, gainFin: r.fin.net - (prec?.finCumul || 0), finCumul: r.fin.net };
+  e.bilans.push(e.dernierBilan);
+  debloquer(s, 'bilanAnnuel');
+}
+const PROFILS_LEP = (s) => s.fin && s.fin.profil === 'modeste';
 
 // Contexte d'actions pour les systèmes (eau, cuisine, budget…)
 export function actions(s) {
