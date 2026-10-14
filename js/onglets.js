@@ -180,13 +180,14 @@ export function rendreCombos(s) {
 export function rendreEncyclopedie(s) {
   const f = etatUI.filtrePrincipes;
   const doms = ['tous', ...Object.keys(DOMAINES_PRINCIPES)];
-  let h = `<div class="choix filtres">${doms.map(d => `<button data-filtre="${d}" class="${f === d ? 'actif' : ''}">${d === 'tous' ? 'Tous' : DOMAINES_PRINCIPES[d]}</button>`).join('')}</div>`;
-  h += Object.entries(PRINCIPES).filter(([, p]) => f === 'tous' || p.dom === f).map(([id, p]) => {
-    if (!s.principes.includes(id)) return `<div class="principe-item verrou">🔒 <b>???</b> <small>${DOMAINES_PRINCIPES[p.dom]}</small><br><small>Indice : ${p.indice}</small></div>`;
-    const ouvert = etatUI.principeOuvert === id;
-    return `<div class="principe-item ${p.transversal ? 'transversal' : ''}"><button class="lien" data-principe="${id}"><b>${p.transversal ? '🔁 ' : ''}${p.titre}</b> <small>${DOMAINES_PRINCIPES[p.dom]} ${ouvert ? '▲' : '▼'}</small></button><div>${p.texte}</div>
-      ${ouvert ? `<dl class="fiche"><dt>Quoi</dt><dd>${p.quoi}</dd><dt>Pourquoi ça marche</dt><dd>${p.pourquoi}</dd><dt>Dans le jeu</dt><dd>${p.comment}</dd><dt>Piège / limite</dt><dd>${p.piege}</dd><dt>Se transpose à</dt><dd>${p.transfert}</dd></dl>` : ''}</div>`;
-  }).join('');
+  let h = `<div class="choix filtres" role="group" aria-label="Filtrer par domaine">${doms.map(d => `<button data-filtre="${d}" class="${f === d ? 'actif' : ''}" aria-pressed="${f === d}">${d === 'tous' ? 'Tous' : DOMAINES_PRINCIPES[d]}</button>`).join('')}</div>`;
+  const liste = Object.entries(PRINCIPES).filter(([, p]) => f === 'tous' || p.dom === f);
+  const connus = liste.filter(([id]) => s.principes.includes(id)), caches = liste.filter(([id]) => !s.principes.includes(id));
+  h += connus.length ? '' : '<p class="aide">Aucun principe découvert ici pour l\'instant : joue, essaie, mesure.</p>';
+  // fiches repliables : le titre et une phrase, le détail sur demande
+  h += connus.map(([id, p]) => `<details class="principe-item repli ${p.transversal ? 'transversal' : ''}" ${etatUI.principeOuvert === id ? 'open' : ''}><summary data-principe-sum="${id}">${p.transversal ? '🔁 ' : ''}${p.titre} <small class="aide">· ${DOMAINES_PRINCIPES[p.dom]}</small></summary><p>${p.texte}</p>
+      <dl class="fiche"><dt>Quoi</dt><dd>${p.quoi}</dd><dt>Pourquoi ça marche</dt><dd>${p.pourquoi}</dd><dt>Dans le jeu</dt><dd>${p.comment}</dd><dt>Piège ou limite</dt><dd>${p.piege}</dd><dt>Se transpose à</dt><dd>${p.transfert}</dd></dl></details>`).join('');
+  if (caches.length) h += `<details class="a-decouvrir"><summary>🔒 ${caches.length} principe${caches.length > 1 ? 's' : ''} à découvrir (voir les indices)</summary>${caches.map(([, p]) => `<div class="principe-item verrou"><small>${DOMAINES_PRINCIPES[p.dom]}</small> · Indice : ${p.indice}</div>`).join('')}</details>`;
   return h;
 }
 

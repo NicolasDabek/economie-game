@@ -133,6 +133,17 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 - En avançant au mois ou jusqu'au prochain événement, une année demande environ 35 arrêts (choix, alertes, saisons, bilan). Cela fait environ 20 à 40 minutes par an une fois les routines activées, soit 2 à 3 h pour 5 ans.
 - La première année reste plus détaillée (pauses à chaque saison).
 
+## Interface (v0.8)
+- **Écran d'accueil** : durée de campagne, pitch, « Commencer le tutoriel » ou « Jouer directement ».
+- **Mise en page** : barre du haut (date, saison, année, argent, jauges colorées avec flèche de tendance et infobulle), maison au centre, panneau latéral contextuel, commandes du temps en bas.
+- **Maison interactive** : pièces cliquables (souris ou clavier) avec température et humidité ; un clic ouvre le réglage du chauffage.
+- **6 sections** (Maison, Vie quotidienne, Achats, Argent, Savoir, Bilan) avec sous-onglets ; le contenu verrouillé reste caché et un badge « nouveau » signale ce qui se débloque.
+- **Accompagnement** : tutoriel en 12 étapes (passable, rejouable via « ? »), 3 objectifs avec barres de progression, un conseiller qui donne un conseil à la fois, glossaire de 24 termes avec recherche, encyclopédie repliable.
+- **Retour immédiat** : notifications après chaque action (effet en €/jour et sur les jauges), aperçu avant les achats importants et lors des réglages du thermostat (≈ 7 % de chauffage par °C, ADEME).
+- **Système visuel** : variables CSS, échelle d'espacement, icônes SVG maison (`js/icones.js`, aucun CDN), thème clair ou sombre, micro-animations désactivées si « réduire les animations ».
+- **Accessibilité** : navigation au clavier, focus visible, libellés aria, contraste ; touche « j » = jour suivant, Échap ferme les fenêtres.
+- **Mobile** : mise en page en une colonne, sections collantes, commandes du temps toujours accessibles.
+
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.
 
@@ -147,6 +158,7 @@ Astuce : `?graine=1234` dans l'URL change la météo.
 node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations de sauvegarde v3/v4/v5/v6 → v7, cibles de moral et de santé
 node test/finance-test.mjs   # banque, marchés, projection, 4 stratégies d'arbitrage sur 5 ans, révision du Livret A, PEA 5 ans, temps de calcul 5 et 10 ans
 CHROME=/usr/bin/google-chrome node test/navigateur.cjs   # navigateur sans écran : campagne de 3 ans en avance rapide, bilans, migrations (playwright-core)
+CHROME=/usr/bin/google-chrome node test/captures.cjs after   # captures d'écran avant/après (bureau 1280×800, mobile 390×844) dans /workspace/ux-shots/
 node test/passif-test.mjs    # cheminée solaire et puits canadien : rentabilité, pièges, combos
 node outils/estimations.mjs  # régénère js/estimations.js (estimations avant achat)
 ```
@@ -217,6 +229,8 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - `js/ui-finance.js` : onglets Banque et Investissement (v0.5)
 - `js/principes.js` : encyclopédie des 99 principes
 - `js/onglets.js` : onglets par domaine
+- `js/guide.js` : sections, tutoriel, objectifs, conseiller, glossaire, aperçus (v0.8)
+- `js/icones.js` : icônes SVG intégrées (v0.8)
 - `js/ui.js` et `js/main.js` : interface
 - `docs/conception.md` : document de conception
 
@@ -228,7 +242,8 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - ✅ v0.5 : ventilation passive aux prix réels, banque (livrets, LEP, PEL, assurance vie, découvert), investissement (PEA, CTO, obligations, SCPI, marché stochastique, projection 10/20/30 ans), arbitrage équipement / placement, 99 principes
 - ✅ v0.7 : moral sur la durée (adaptation hédonique, blues de l'hiver, monotonie, stress financier, vacances, maîtrise du budget), santé qui coûte (consultations, arrêts avec jours de carence, dentiste, moisissures, augmentations manquées), « peignoir polaire »
 - ✅ v0.6 : campagne de 3, 5 ou 10 ans, quatre saisons par an, avance rapide et routines, salaire, inflation et prix qui évoluent, Livret A révisé par formule, pannes et remplacement des appareils, bilan annuel, 104 principes
+- ✅ v0.8 : refonte de l'interface (sections, maison interactive, tutoriel, objectifs, conseiller, glossaire, aperçus, thème sombre, accessibilité, mobile)
 1. Rendre l'automne plus spécifique.
 2. Effet rebond, et plus de fausses économies.
 3. Scénarios (étudiant, famille, retraité), voisinage et partage, défis (« Hiver à 200 € »).
-4. Sons, illustrations, version mobile.
+4. Sons et illustrations.

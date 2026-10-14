@@ -10,6 +10,7 @@ import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
 import { COMBOS, CAMPAGNE } from './data.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
 import { ROUTINES, routineDispo } from './simulation.js';
+import { rendreNavigation, rendreGuide } from './guide.js';
 import {
   isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, NOMS_JOURS, humiditeRelative,
   coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, evenementsAVenir, prixGaz, LAVAGE_MAIN,
@@ -26,6 +27,7 @@ function couleurTemp(t) {
   return `hsl(${220 - 220 * x}, 75%, 82%)`;
 }
 
+export const etatJauges = { prec: null, cur: null, jour: -1 };
 export function rendreJauges(s) {
   const libre = Math.max(0, tempsLibre(s)), budget = tempsBudget(s);
   const cap = capitalInvesti(s);
@@ -37,11 +39,29 @@ export function rendreJauges(s) {
     ['🧼 Hygiène', s.hygiene, 100, Math.round(s.hygiene) + ' %'],
     ['🌻 Bien-être', s.bienetre, 100, Math.round(s.bienetre) + ' %'],
     ['⏳ Temps libre', libre, budget, `${fmtH(libre)} / ${fmtH(budget)}`],
-    ['🏗️ Capital investi', cap, 400, eur(cap)],
+    ['🏗️ Équipements', cap, 400, eur(cap)],
   ];
-  $('jauges').innerHTML = j.map(([l, v, max, txt]) => `<div class="jauge"><div class="lib"><span>${l}</span><b>${txt}</b></div><div class="barre"><div style="width:${Math.max(0, Math.min(100, v / max * 100))}%"></div></div></div>`).join('');
-  const NOMS_M = { plaisirs: 'plaisirs (usés par la répétition)', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'assiette monotone', vacances: 'vacances', stress: 'stress (argent, pannes, maladie, marchés)', controle: 'budget maîtrisé' };
-  if (s.mor?.raisons?.length) $('jauges').insertAdjacentHTML('beforeend', `<div class="jauge" style="grid-column:1/-1"><small>💪 Moral, tendance ${Math.round(s.mor.base)} : ${s.mor.raisons.slice(0, 4).map(([k, x]) => `${NOMS_M[k] || k} ${x > 0 ? '+' : ''}${Math.round(x)}`).join(' · ')}</small></div>`);
+  const NOMS_M = { plaisirs: 'plaisirs (usés par la répétition)', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'assiette monotone', vacances: 'vacances', stress: 'stress (argent, pannes, maladie)', controle: 'budget maîtrisé' };
+  const raisonsM = s.mor?.raisons?.length ? ` En ce moment : ${s.mor.raisons.slice(0, 3).map(([k, x]) => `${NOMS_M[k] || k} ${x > 0 ? '+' : ''}${Math.round(x)}`).join(', ')}.` : '';
+  const TIPS = [
+    'Ton compte courant. Le salaire (loyer déduit) arrive le 1er du mois. Sous zéro : découvert et agios.',
+    'Comment tu te sens dans ta maison : chaleur ressentie, courants d\'air, humidité. Sous 55 en moyenne, la santé souffre.',
+    'Froid, chaleur, moisissures et alimentation l\'abîment. Sous 40, tu tombes malade : médecin et jours d\'arrêt non payés.',
+    'Ta volonté. Chaque nouveau geste en coûte jusqu\'à devenir une habitude. À zéro : rechute (dépenses impulsives).' + raisonsM,
+    'Douches, linge propre, vaisselle. Basse, elle isole et pèse sur ta carrière.',
+    'Plaisirs, repas, sommeil, lumière, vie sociale. Le carburant du moral.',
+    'Le temps qu\'il te reste aujourd\'hui après le travail et les gestes. Les chantiers et les nouveaux gestes en consomment.',
+    'Ce que tu as dépensé en équipements encore en service.',
+  ];
+  const prec = etatJauges.prec, mem = {};
+  $('jauges').innerHTML = j.map(([l, v, max, txt], i) => {
+    const pct = Math.max(0, Math.min(100, v / max * 100));
+    const niv = i === 7 ? 'ok' : pct >= 60 ? 'ok' : pct >= 40 ? 'warn' : 'mal';
+    mem[l] = v; const avant = prec?.[l];
+    const fl = avant === undefined || Math.abs(v - avant) < (i === 0 || i === 7 ? 1 : 0.5) ? '' : v > avant ? '<span class="fl" aria-label="en hausse">▲</span>' : '<span class="fl" aria-label="en baisse">▼</span>';
+    return `<div class="jauge niv-${niv}" role="listitem" tabindex="0" data-tip="${TIPS[i]}" aria-label="${l.replace(/^\S+ /, '')} : ${txt}. ${TIPS[i]}"><div class="lib"><span>${l}</span><b>${txt}${fl}</b></div><div class="barre"><div style="width:${pct}%"></div></div></div>`;
+  }).join('');
+  if (etatJauges.jour !== s.jour) { etatJauges.prec = etatJauges.cur; etatJauges.cur = mem; etatJauges.jour = s.jour; }
   const tot = s.joursTotal || 365, nAns = Math.round(tot / 365);
   const ch = chapitreDuJour(Math.min(s.jour, tot - 1));
   const dt = dateDuJour(Math.min(s.jour, tot - 1)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -59,24 +79,46 @@ export function rendreHorloge(h) {
   $('heure').textContent = `${h} h`;
 }
 
+const ROOMS = { salon: [50, 120, 262, 210], chambre: [318, 120, 232, 102], cuisine: [318, 228, 232, 102] };
+const SAISON_CIEL = { hiver: ['#bcd3f2', '#e8f0fb'], printemps: ['#a7d8f5', '#e6f6ec'], ete: ['#7cc6f7', '#fff3d6'], automne: ['#c9c1e8', '#f7e7d4'] };
 export function rendreMaison(s) {
   const d = s.dernierJour;
   const voit = s.possede.thermometre, hygro = s.possede.hygrometre;
   let pire = null;
   if (voit && d) pire = ORDRE_PIECES.reduce((a, b) => (d.eur[a] > d.eur[b] ? a : b));
-  $('maison').innerHTML = ORDRE_PIECES.map(id => {
-    const p = s.pieces[id];
-    const hr = humiditeRelative(p);
-    const contenu = voit
-      ? `<div class="temp">${deg(p.t)}</div><div class="info">Hier : ${d ? eur(d.eur[id]) : '—'}${hygro ? ` · 💧 ${Math.round(hr)} %` : ''}</div>`
-      : `<div class="temp">? °C</div><div class="info">${hygro ? `💧 ${Math.round(hr)} %` : 'Sans thermomètre, impossible de savoir'}</div>`;
+  const sa = chapitreDuJour(Math.min(s.jour, (s.joursTotal || 365) - 1)).saison, [c1, c2] = SAISON_CIEL[sa] || SAISON_CIEL.hiver;
+  const ext = s.meteo?.[Math.min(s.jour, s.meteo.length - 1)];
+  const pieces = ORDRE_PIECES.map(id => {
+    const p = s.pieces[id], [x, y, w, h] = ROOMS[id];
+    const hr = humiditeRelative(p), humide = hygro && hr > 70;
     const occ = id === 'salon' ? '🧑‍💻' : id === 'chambre' ? '🛏️' : '🍳';
-    return `<div class="piece ${id} ${voit ? '' : 'inconnu'} ${pire === id ? 'cher' : ''} ${hygro && hr > 70 ? 'humide' : ''}" style="${voit ? 'background:' + couleurTemp(p.t) : ''}">
-      <span class="occ">${occ}</span><div class="nom">${PIECES[id].nom}</div>${contenu}</div>`;
+    const temp = voit ? deg(p.t) : '? °C';
+    const info = voit ? `Hier : ${d ? eur(d.eur[id]) : '—'}${hygro ? ` · 💧 ${Math.round(hr)} %` : ''}` : (hygro ? `💧 ${Math.round(hr)} %` : 'Thermomètre requis');
+    const grand = id === 'salon';
+    return `<g class="piece-svg" tabindex="0" role="button" data-piece-clic="${id}" aria-label="${PIECES[id].nom} : ${voit ? temp : 'température inconnue'}${hygro ? `, humidité ${Math.round(hr)} %` : ''}. Régler son chauffage.">
+      <rect class="fondP" x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${voit ? couleurTemp(p.t) : 'url(#hachures)'}" stroke="${pire === id ? '#dc2626' : '#475569'}" stroke-width="${pire === id ? 4 : 2}"/>
+      <text x="${x + 12}" y="${y + 24}" font-size="15" font-weight="700" fill="#0f172a">${PIECES[id].nom}</text>
+      <text x="${x + w - 12}" y="${y + 26}" font-size="22" text-anchor="end">${occ}</text>
+      <text x="${x + 12}" y="${y + (grand ? 110 : 62)}" font-size="${grand ? 40 : 28}" font-weight="800" fill="#0f172a">${temp}</text>
+      <text x="${x + 12}" y="${y + h - 12}" font-size="12.5" fill="#1e293b">${info}</text>
+      ${humide ? `<text x="${x + w - 14}" y="${y + h - 10}" font-size="18" text-anchor="end">💧</text>` : ''}
+      ${pire === id ? `<text x="${x + w - 12}" y="${y + (grand ? 60 : 56)}" font-size="11.5" font-weight="700" fill="#b91c1c" text-anchor="end">la plus coûteuse</text>` : ''}
+    </g>`;
   }).join('');
+  const deco = sa === 'hiver' ? '<path d="M110 100 300 22 490 100" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".9"/>' : sa === 'ete' ? '<circle cx="545" cy="40" r="20" fill="#fbbf24"/>' : sa === 'automne' ? '<text x="520" y="50" font-size="22">🍂</text>' : '<text x="520" y="50" font-size="22">🌱</text>';
+  $('maison').innerHTML = `<svg viewBox="0 0 600 350" role="group" aria-label="Plan de la maison">
+    <defs><linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+      <pattern id="hachures" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="12" height="12" fill="#e5e7eb"/><rect width="6" height="12" fill="#f3f4f6"/></pattern></defs>
+    <rect width="600" height="350" fill="url(#ciel)"/>
+    <rect x="0" y="336" width="600" height="14" fill="${sa === 'hiver' ? '#e2e8f0' : '#86c58b'}"/>
+    <path d="M30 112 300 18 570 112z" fill="#7c4a3a"/>${deco}
+    <rect x="40" y="110" width="520" height="228" rx="6" fill="#f8fafc" stroke="#334155" stroke-width="4"/>
+    ${pieces}
+    ${ext ? `<g><rect x="12" y="12" width="128" height="30" rx="15" fill="rgba(255,255,255,.85)"/><text x="76" y="32" font-size="13" text-anchor="middle" fill="#0f172a">Dehors ${Math.round(ext.tMoy)} °C</text></g>` : ''}
+  </svg><div class="legende-temp" aria-hidden="true">10 °C <i></i> 24 °C ${voit ? '' : '· pièces hachurées : achète un thermomètre pour voir'}</div>`;
   const buee = !hygro && ORDRE_PIECES.some(id => humiditeRelative(s.pieces[id]) > 75) ? ' 💧 De la buée sur les vitres…' : '';
   $('aideMaison').innerHTML = (voit
-    ? (pire ? `🔴 Pièce la plus coûteuse hier : <b>${PIECES[pire].nom}</b>.` : 'Passe une journée pour voir les coûts par pièce.')
+    ? (pire ? `Pièce la plus coûteuse hier : <b>${PIECES[pire].nom}</b>.` : 'Passe une journée pour voir les coûts par pièce.')
     : 'Tu ne vois que la facture globale. Les thermomètres révèlent la pièce qui coûte le plus.') + buee
     + ` Gaz : ${num(prixGaz(s), 4)} €/kWh · électricité : ${num(PRIX.elecKwh, 4)} €/kWh.`;
 }
@@ -127,18 +169,18 @@ export function rendreGraphe(s) {
   $('legende').innerHTML = txt;
 }
 
-const sl = (attrs, v) => `<input type="range" min="8" max="23" step="1" value="${v}" ${attrs}><span class="val">${v <= 8 ? 'Arrêt' : v + ' °C'}</span>`;
+const sl = (attrs, v, lab = 'Consigne') => `<input type="range" min="8" max="23" step="1" value="${v}" ${attrs} data-depart="${v}" aria-label="${lab}" aria-valuetext="${v <= 8 ? 'Arrêt (hors-gel)' : v + ' degrés'}"><span class="val">${v <= 8 ? 'Arrêt' : v + ' °C'}</span>`;
 export function rendreChauffage(s) {
   let html = '';
   if (s.possede.robinets) {
     html += ORDRE_PIECES.map(id => {
       const p = s.pieces[id];
-      return `<div class="ligne"><label>${PIECES[id].nom}</label>☀️ ${sl(`data-piece="${id}" data-k="consigneJour"`, p.consigneJour)}</div>
-              <div class="ligne"><label></label>🌙 ${sl(`data-piece="${id}" data-k="consigneNuit"`, p.consigneNuit)}</div>`;
+      return `<div class="ligne"><label>${PIECES[id].nom}</label>☀️ ${sl(`data-piece="${id}" data-k="consigneJour"`, p.consigneJour, `${PIECES[id].nom}, consigne de jour`)}</div>
+              <div class="ligne"><label></label>🌙 ${sl(`data-piece="${id}" data-k="consigneNuit"`, p.consigneNuit, `${PIECES[id].nom}, consigne de nuit`)}</div>`;
     }).join('');
   } else {
-    html += `<div class="ligne"><label>Thermostat</label>☀️ ${sl('data-central="consigneJour"', s.central.consigneJour)}</div>
-             <div class="ligne"><label></label>🌙 ${sl('data-central="consigneNuit"', s.central.consigneNuit)}</div>
+    html += `<div class="ligne"><label>Thermostat</label>☀️ ${sl('data-central="consigneJour"', s.central.consigneJour, 'Thermostat, consigne de jour')}</div>
+             <div class="ligne"><label></label>🌙 ${sl('data-central="consigneNuit"', s.central.consigneNuit, 'Thermostat, consigne de nuit')}</div>
              <p class="aide">Un seul thermostat, dans le salon : tous les radiateurs chauffent en même temps. Des robinets thermostatiques permettent une consigne par pièce.</p>`;
   }
   if (s.possede.appoint) {
@@ -220,12 +262,14 @@ export function rendreMeteo(s) {
 
 export function rendreBoutique(s) {
   const cats = {};
-  const filtre = ONGLETS.find(o => o[0] === etatUI.onglet)?.[2] || [];
+  const dom = etatUI.onglet.startsWith('b-') ? etatUI.onglet.slice(2) : etatUI.onglet;
+  const filtre = ONGLETS.find(o => o[0] === dom)?.[2] || [];
+  if ($('titreBoutique')) $('titreBoutique').textContent = `Boutique : ${(ONGLETS.find(o => o[0] === dom)?.[1] || '').replace(/^\S+ /, '')}`;
   for (const [id, a] of Object.entries(ACHATS)) if (filtre.includes(a.cat)) (cats[a.cat] ||= []).push([id, a]);
   if (!Object.keys(cats).length) { $('boutique').innerHTML = ['banque', 'invest'].includes(etatUI.onglet) ? '<p class="aide">La boutique de chaque domaine affiche le rendement annuel de chaque équipement, à comparer aux placements.</p>' : '<p class="aide">Rien à acheter pour ce domaine. Change d\'onglet pour voir d\'autres articles.</p>'; return; }
   $('boutique').innerHTML = Object.entries(cats).map(([cat, items]) => `<h3>${cat}</h3>` + items.map(([id, a]) => {
     const bloque = id === 'housse' && !s.possede.bouillotte;
-    const btn = s.possede[id] ? '<span class="tag habitude">acquis</span>' : `<div class="acts"><button class="btn" data-acheter="${id}" ${(s.argent < a.prix || bloque || tempsLibre(s) < (a.temps || 0)) ? 'disabled' : ''}>${eur(a.prix)}</button>${a.occasion ? `<button class="btn" data-acheter="${id}" data-occasion="1" title="Chercher d'occasion : 1 h de recherche" ${(s.argent < a.occasion || bloque || tempsLibre(s) < (a.temps || 0) + 1) ? 'disabled' : ''}>Occasion ${eur(a.occasion)}</button>` : ''}</div>`;
+    const btn = s.possede[id] ? '<span class="tag habitude">acquis</span>' : `<div class="acts"><button class="btn" data-acheter="${id}" aria-label="Acheter ${a.nom} neuf, ${eur(a.prix)}" ${(s.argent < a.prix || bloque || tempsLibre(s) < (a.temps || 0)) ? 'disabled' : ''}>${eur(a.prix)}</button>${a.occasion ? `<button class="btn" data-acheter="${id}" data-occasion="1" title="Chercher d'occasion : 1 h de recherche" ${(s.argent < a.occasion || bloque || tempsLibre(s) < (a.temps || 0) + 1) ? 'disabled' : ''}>Occasion ${eur(a.occasion)}</button>` : ''}</div>`;
     const est = !s.possede[id] && estimationAchat(id);
     const estTxt = est ? (est.mois === null ? (ROI_ITEMS[id]?.indirect ? `<div class="estim">📈 Gain indirect : ${ROI_ITEMS[id].indirect}</div>` : `<div class="estim">📈 Pas d'économie directe estimée (${eur(est.annuel)}/an)</div>`)
       : `<div class="estim">📈 Retour estimé : ~${dureeTxt(est.mois)} (${dureeTxt(est.min)} à ${dureeTxt(est.max)}) · ~${eur(est.annuel)}/an · rendement <b>~${tauxTxt(est.annuel / est.prix)}</b> vs Livret A ${num(BANQUE.livretA.taux * 100)} %${a.occasion ? ` · d'occasion ~${dureeTxt(estimationAchat(id, true).mois)}` : ''}</div>`) : '';
@@ -292,9 +336,11 @@ export function rendreFactures(s) {
     `</table>${voit ? '' : '<p class="aide">Détail du chauffage par pièce visible avec les thermomètres.</p>'}`;
 }
 
-export function toast(texte) {
-  const d = document.createElement('div'); d.className = 'toast'; d.textContent = texte;
-  const box = $('toasts'); box.appendChild(d); while (box.children.length > 3) box.firstChild.remove(); setTimeout(() => d.remove(), 6000);
+export function toast(texte, o = {}) {
+  const d = document.createElement('div'); d.className = 'toast ' + (o.type || ''); d.setAttribute('role', 'status');
+  d.textContent = texte;
+  if (o.effet) { const e = document.createElement('span'); e.className = 'eff'; e.textContent = o.effet; d.appendChild(e); }
+  const box = $('toasts'); box.appendChild(d); while (box.children.length > 3) box.firstChild.remove(); setTimeout(() => d.remove(), o.duree || 6000);
 }
 
 export function rendreDilemme(s) {
@@ -303,7 +349,9 @@ export function rendreDilemme(s) {
   const corps = s.dilemme === 'bilan' && s.eco?.dernierBilan ? rendreBilan(s.eco.dernierBilan) : `<p>${e.texte}</p>`;
   $('dilemmeContenu').innerHTML = `<h2>${e.titre}</h2>${corps}` + choixDilemme(s).map(o =>
     `<button class="btn choixDilemme" data-dilemme="${o.id}" ${o.possible === false ? 'disabled' : ''}><b>${o.texte}</b><br><small>${o.effet}</small></button>`).join('');
+  const dejaVisible = !$('dilemme').classList.contains('cache');
   $('dilemme').classList.remove('cache');
+  if (!dejaVisible) setTimeout(() => $('dilemmeContenu').querySelector('button:not([disabled])')?.focus(), 50);
 }
 
 function rendreBilan(b) {
@@ -321,7 +369,7 @@ export function rendreRoutines(s) {
   const el = $('routines'); if (!el) return;
   el.innerHTML = Object.entries(ROUTINES).map(([k, r]) => {
     const ok = routineDispo(s, k), on = !!s.auto?.[k];
-    return `<div class="ligne"><span>${r.nom}${ok ? '' : ` <small class="aide">(débloqué par le principe « ${PRINCIPES[r.principe]?.nom || r.principe} »)</small>`}</span><button class="btn" data-routine="${k}" ${ok ? '' : 'disabled'}>${on && ok ? '✅ Automatique' : '⬜ Manuel'}</button></div>`;
+    return `<div class="ligne"><span>${r.nom}${ok ? '' : ` <small class="aide">(débloqué par le principe « ${PRINCIPES[r.principe]?.titre || r.principe} »)</small>`}</span><button class="btn" data-routine="${k}" ${ok ? '' : 'disabled'}>${on && ok ? '✅ Automatique' : '⬜ Manuel'}</button></div>`;
   }).join('') + '<p class="aide">Une fois un principe compris, la routine se fait toute seule : utile pour avancer d\'un mois sans tout refaire à la main.</p>';
 }
 
@@ -365,15 +413,16 @@ export function rendreFin(s) {
 }
 
 export function rendreTout(s) {
-  rendreJauges(s); rendreMaison(s); rendreGraphe(s); rendreGrapheElec(s); rendreOnglets(s); rendreMeteo(s); rendreBoutique(s); rendreInvestissements(s); rendrePrincipes(s); rendreJournal(s); rendreFactures(s);
-  rendreDilemme(s); rendreRoutines(s);
+  rendreJauges(s); rendreMaison(s); rendreGraphe(s); rendreGrapheElec(s); rendreMeteo(s);
+  rendreOnglets(s); rendreBoutique(s); rendreInvestissements(s); rendrePrincipes(s); rendreJournal(s); rendreFactures(s);
+  rendreDilemme(s); rendreRoutines(s); rendreGuide(s);
   for (const id of ['btnJour', 'btnSemaine', 'btnMois', 'btnEvenement']) if ($(id)) $(id).disabled = s.fini;
 }
 
 export function rendreOnglets(s) {
-  const o = etatUI.onglet;
-  $('onglets').innerHTML = ONGLETS.map(([id, nom]) => `<button data-onglet="${id}" class="${id === o ? 'actif' : ''}">${nom}</button>`).join('');
-  document.querySelectorAll('.panneau').forEach(p => p.classList.toggle('cache', p.dataset.panneau !== o));
+  rendreNavigation(s);
+  const o = etatUI.onglet, panneau = o.startsWith('b-') ? 'boutique' : o;
+  document.querySelectorAll('.panneau').forEach(p => p.classList.toggle('cache', p.dataset.panneau !== panneau));
   if (o === 'maison') { rendreChauffage(s); rendreGestes(s); $('ete').innerHTML = rendreEte(s) + rendrePassif(s); }
   if (o === 'linge') rendreVetements(s);
   if (o === 'eau') $('pEau').innerHTML = rendreEau(s);

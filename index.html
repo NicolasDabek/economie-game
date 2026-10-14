@@ -2,79 +2,114 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>Économie Game : des années sobres</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❄️</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header id="ciel">
-  <div class="titre"><h1>Économie Game</h1><span class="sous">Gagner en dépensant moins · campagne de 3, 5 ou 10 ans, saison après saison</span></div>
-  <div class="menu"><button class="btn-ciel" id="btnSauver">💾 Sauvegarder</button><button class="btn-ciel" id="btnCharger">📂 Charger</button><button class="btn-ciel" id="btnNouvelle">🔄 Nouvelle partie</button></div>
-  <div class="horloge"><span id="astre">☀️</span> <span id="date">Semaine 1 · Jour 1</span> <span id="heure">7 h</span></div>
-  <div id="jauges"></div>
-  <div id="annonces" class="cache"></div>
+<a class="sauter" href="#scene">Aller au jeu</a>
+<header id="ciel" class="topbar">
+  <div class="tb-gauche">
+    <span class="logo" aria-hidden="true">🏠</span>
+    <div class="tb-date"><span id="astre" aria-hidden="true">☀️</span> <span id="date" aria-live="polite">—</span> <span id="heure" class="heure">7 h</span></div>
+  </div>
+  <div id="jauges" class="jauges" role="list" aria-label="Jauges"></div>
+  <div class="menu" role="toolbar" aria-label="Partie">
+    <button class="btn-icone" id="btnAide" aria-label="Rejouer le tutoriel" data-tip="Rejouer le tutoriel"></button>
+    <button class="btn-icone" id="btnTheme" aria-label="Thème clair ou sombre" data-tip="Thème clair / sombre"></button>
+    <button class="btn-icone" id="btnSauver" aria-label="Sauvegarder" data-tip="Sauvegarder"></button>
+    <button class="btn-icone" id="btnCharger" aria-label="Charger" data-tip="Charger la sauvegarde"></button>
+    <button class="btn-icone" id="btnNouvelle" aria-label="Nouvelle partie" data-tip="Nouvelle partie"></button>
+  </div>
 </header>
-<main>
-  <section class="col">
-    <div class="carte"><h2>🏠 La maison</h2><div id="maison"></div><p class="aide" id="aideMaison"></p></div>
-    <div class="carte"><h2>📈 Dernières 24 h</h2><canvas id="graphe" width="520" height="200"></canvas><p class="aide" id="legende"></p></div>
-    <div class="carte"><h2>⚡ Électricité heure par heure (hier)</h2><canvas id="grapheElec" width="520" height="150"></canvas><p class="aide" id="legendeElec"></p></div>
-    <div class="carte"><h2>📄 Factures (12 dernières semaines)</h2><div id="factures"></div></div>
-    <div class="carte"><h2>📈 Rentabilité des équipements</h2><div id="investissements"></div></div>
-  </section>
-  <section class="col">
-    <nav id="onglets" class="onglets"></nav>
-    <div class="panneau" data-panneau="maison">
-      <div class="carte"><h2>🔥 Chauffage</h2><div id="thermostats"></div></div>
-      <div class="carte"><h2>🪟 Gestes</h2><div id="gestes"></div><div id="ete"></div></div>
+<div id="annonces" class="annonces cache" role="status"></div>
+
+<main class="app">
+  <section class="centre" aria-label="La maison">
+    <div class="carte scene-carte">
+      <div class="carte-tete"><h2>La maison</h2><span class="aide">Clique sur une pièce pour régler son chauffage</span></div>
+      <div id="scene"><div id="maison"></div></div>
+      <p class="aide" id="aideMaison"></p>
     </div>
-    <div class="panneau cache" data-panneau="eau"><div class="carte"><h2>🚿 Eau chaude</h2><div id="pEau"></div></div></div>
-    <div class="panneau cache" data-panneau="cuisine"><div class="carte"><h2>🍳 Cuisine et nourriture</h2><div id="pCuisine"></div></div></div>
-    <div class="panneau cache" data-panneau="linge">
-      <div class="carte"><h2>👕 Garde-robe</h2><div id="vetements"></div></div>
-      <div class="carte"><h2>🧺 Linge</h2><div id="lessive"></div></div>
+    <div class="grille2">
+      <div class="carte" id="carteConseiller"><div class="carte-tete"><h2 id="titreConseiller">Conseiller</h2></div><div id="conseiller" aria-live="polite"></div></div>
+      <div class="carte" id="carteObjectifs"><div class="carte-tete"><h2>Objectifs</h2></div><div id="objectifs"></div></div>
     </div>
-    <div class="panneau cache" data-panneau="elec"><div class="carte"><h2>⚡ Électricité</h2><div id="pElec"></div></div></div>
-    <div class="panneau cache" data-panneau="transport"><div class="carte"><h2>🚲 Transport</h2><div id="pTransport"></div></div></div>
-    <div class="panneau cache" data-panneau="jardin"><div class="carte"><h2>🌱 Jardin</h2><div id="pJardin"></div></div></div>
-    <div class="panneau cache" data-panneau="budget"><div class="carte"><h2>💶 Budget, abonnements et tentations</h2><div id="pBudget"></div></div></div>
-    <div class="panneau cache" data-panneau="banque"><div class="carte"><h2>🏦 Banque et épargne</h2><div id="pBanque"></div></div></div>
-    <div class="panneau cache" data-panneau="invest"><div class="carte"><h2>📈 Investissement</h2><div id="pInvest"></div></div></div>
-    <div class="actions">
-      <button id="btnJour" class="primaire">Jour suivant ▶</button>
-      <button id="btnSemaine">Semaine ⏩</button>
-      <button id="btnMois">Mois ⏭️</button>
-      <button id="btnEvenement" title="Avance vite jusqu'au prochain choix, alerte ou changement de saison">Jusqu'au prochain événement ⏩⏩</button>
+    <div class="carte"><div class="carte-tete"><h2>Météo et prévisions</h2></div><div id="meteo" class="meteo"></div></div>
+  </section>
+
+  <aside class="lateral" aria-label="Actions">
+    <nav id="sections" class="sections" role="tablist" aria-label="Sections"></nav>
+    <nav id="onglets" class="sous-onglets" role="tablist" aria-label="Sous-sections"></nav>
+    <div class="panneaux">
+      <div class="panneau" data-panneau="maison">
+        <div class="carte"><h2>Chauffage</h2><div id="thermostats"></div><p class="apercu" id="apercuChauffage" aria-live="polite"></p></div>
+        <div class="carte"><h2>Gestes du quotidien</h2><div id="gestes"></div><div id="ete"></div></div>
+      </div>
+      <div class="panneau cache" data-panneau="linge"><div class="carte"><h2>Garde-robe</h2><div id="vetements"></div></div><div class="carte"><h2>Lessive</h2><div id="lessive"></div></div></div>
+      <div class="panneau cache" data-panneau="eau"><div class="carte"><h2>Eau chaude</h2><div id="pEau"></div></div></div>
+      <div class="panneau cache" data-panneau="elec"><div class="carte"><h2>Électricité</h2><div id="pElec"></div></div></div>
+      <div class="panneau cache" data-panneau="routines"><div class="carte"><h2>Routines automatiques</h2><div id="routines"></div></div></div>
+      <div class="panneau cache" data-panneau="cuisine"><div class="carte"><h2>Cuisine et nourriture</h2><div id="pCuisine"></div></div></div>
+      <div class="panneau cache" data-panneau="transport"><div class="carte"><h2>Transport</h2><div id="pTransport"></div></div></div>
+      <div class="panneau cache" data-panneau="jardin"><div class="carte"><h2>Jardin</h2><div id="pJardin"></div></div></div>
+      <div class="panneau cache" data-panneau="budget"><div class="carte"><h2>Budget, abonnements et tentations</h2><div id="pBudget"></div></div></div>
+      <div class="panneau cache" data-panneau="boutique"><div class="carte"><h2 id="titreBoutique">Boutique</h2><div id="boutique"></div></div></div>
+      <div class="panneau cache" data-panneau="rentab"><div class="carte"><h2>Rentabilité des équipements</h2><div id="investissements"></div></div></div>
+      <div class="panneau cache" data-panneau="banque"><div class="carte"><h2>Banque et épargne</h2><div id="pBanque"></div></div></div>
+      <div class="panneau cache" data-panneau="invest"><div class="carte"><h2>Investir</h2><div id="pInvest"></div></div></div>
+      <div class="panneau cache" data-panneau="principes"><div class="carte"><h2>Encyclopédie des principes (<span id="nbPrincipes">0</span>/<span id="totPrincipes">0</span>)</h2><div id="principes"></div></div></div>
+      <div class="panneau cache" data-panneau="combos"><div class="carte"><h2>Combos</h2><div id="combos"></div></div></div>
+      <div class="panneau cache" data-panneau="glossaire"><div class="carte"><h2>Glossaire</h2><div id="glossaire"></div></div></div>
+      <div class="panneau cache" data-panneau="journal"><div class="carte"><h2>Journal</h2><div id="journal"></div></div></div>
+      <div class="panneau cache" data-panneau="resume"><div class="carte"><h2>Où en es-tu ?</h2><div id="resume"></div></div></div>
+      <div class="panneau cache" data-panneau="factures"><div class="carte"><h2>Factures des 12 dernières semaines</h2><div id="factures"></div></div></div>
+      <div class="panneau cache" data-panneau="graphes">
+        <div class="carte"><h2>Les dernières 24 h</h2><canvas id="graphe" width="520" height="200" role="img" aria-label="Températures et coûts des dernières 24 heures"></canvas><p class="aide" id="legende"></p></div>
+        <div class="carte"><h2>Électricité heure par heure (hier)</h2><canvas id="grapheElec" width="520" height="150" role="img" aria-label="Consommation électrique heure par heure"></canvas><p class="aide" id="legendeElec"></p></div>
+      </div>
     </div>
-    <div class="carte"><h2>🤖 Routines automatiques</h2><div id="routines"></div></div>
-  </section>
-  <section class="col">
-    <div class="carte"><h2>🌤️ Météo et prévisions à 3 jours</h2><div id="meteo"></div></div>
-    <div class="carte"><h2>🛒 Boutique du domaine</h2><div id="boutique"></div></div>
-    <div class="carte"><h2>📚 Encyclopédie des principes (<span id="nbPrincipes">0</span>/<span id="totPrincipes">0</span>)</h2><div id="principes"></div></div>
-    <div class="carte"><h2>🔗 Combos</h2><div id="combos"></div></div>
-    <div class="carte"><h2>📓 Journal</h2><div id="journal"></div></div>
-  </section>
+  </aside>
 </main>
-<div id="toasts"></div>
-<div id="dilemme" class="modal cache"><div class="modal-contenu" id="dilemmeContenu"></div></div>
-<div id="fin" class="modal cache"><div class="modal-contenu" id="finContenu"></div></div>
-<div id="intro" class="modal"><div class="modal-contenu">
-  <h2>Bienvenue pour quelques années sobres ❄️🌱☀️🍂</h2>
-  <p>Tu emménages le 1er décembre 2026 dans une petite maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude électrique. Ton salaire tombe le 1er de chaque mois (loyer déduit), tu as 1 500 € sur le compte et 4 000 € sur le Livret A. Les saisons se suivent, année après année : les prix bougent avec l'inflation, le Livret A est révisé en février et en août, les appareils vieillissent et tombent en panne, le jardin et les habitudes mûrissent.</p>
-  <p>Ton voisin vit sans réfléchir. <b>Ton but : dépenser beaucoup moins que lui</b>, sans sacrifier ton <b>confort</b>, ta <b>santé</b>, ton <b>moral</b>, ton <b>hygiène</b> ni ton <b>bien-être</b>. Les prix sont ceux de 2026.</p>
-  <ul>
-    <li>Les onglets regroupent les domaines : maison, eau chaude, cuisine, linge, électricité, transport, jardin, budget. Tu vas au bureau 3 jours par semaine (9 km).</li>
-    <li>Le tableau de rentabilité mesure ce que chaque équipement fait vraiment gagner. Enchaîne les techniques pour découvrir des combos.</li>
-    <li>Chaque nouveau geste coûte du <b>moral</b> et du <b>temps</b>, jusqu'à devenir une <b>habitude</b>. Moral à zéro : rechute.</li>
-    <li>L'austérité totale (douche au seau, pâtes, zéro plaisir) ruine la santé et le moral… et finit par coûter cher : arrêts maladie avec jours de carence, dentiste, achats compulsifs, augmentations manquées. L'équilibre gagne.</li>
-    <li>Le moral s'use avec le temps : les plaisirs répétés lassent, l'hiver est sombre, les dettes stressent. Varie, sors, prends des vacances.</li>
-    <li>En été, tout s'inverse : volets fermés le jour, fenêtres ouvertes la nuit.</li>
-    <li>Ta partie est sauvegardée automatiquement dans ce navigateur. Chaque 1er décembre, un bilan annuel fait le point et propose des objectifs.</li>
+
+<footer class="temps" aria-label="Faire avancer le temps">
+  <div class="temps-int">
+    <button id="btnJour" class="primaire" aria-keyshortcuts="J"><span class="t-ico"></span><span>Jour suivant</span></button>
+    <button id="btnSemaine"><span class="t-ico"></span><span>Semaine</span></button>
+    <button id="btnMois"><span class="t-ico"></span><span>Mois</span></button>
+    <button id="btnEvenement" data-tip="Avance vite jusqu'au prochain choix, alerte ou changement de saison"><span class="t-ico"></span><span>Prochain événement</span></button>
+  </div>
+</footer>
+
+<div id="toasts" aria-live="polite" aria-atomic="false"></div>
+<div id="dilemme" class="modal cache" role="dialog" aria-modal="true" aria-labelledby="dilemmeContenu"><div class="modal-contenu" id="dilemmeContenu"></div></div>
+<div id="fin" class="modal cache" role="dialog" aria-modal="true"><div class="modal-contenu" id="finContenu"></div></div>
+<div id="confirmation" class="modal cache" role="dialog" aria-modal="true" aria-labelledby="confTitre"><div class="modal-contenu petit" id="confContenu"></div></div>
+<div id="coach" class="coach cache" role="dialog" aria-live="polite" aria-labelledby="coachTitre">
+  <div class="coach-voile"></div><div class="coach-halo"></div>
+  <div class="coach-bulle"><div class="coach-etape" id="coachEtape"></div><h3 id="coachTitre"></h3><p id="coachTexte"></p>
+    <div class="coach-actions"><button class="btn" id="coachPasser">Passer le tutoriel</button><span></span><button class="btn" id="coachPrec">Précédent</button><button class="btn primaire" id="coachSuiv">Suivant</button></div></div>
+</div>
+
+<div id="intro" class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTitre"><div class="modal-contenu">
+  <div class="intro-hero" aria-hidden="true">❄️ 🌱 ☀️ 🍂</div>
+  <h2 id="introTitre">Dépense moins que ton voisin, vis aussi bien que lui</h2>
+  <p class="pitch">Tu emménages le 1er décembre 2026 dans une petite maison ancienne de 45 m², chauffée au gaz. Ton voisin vit sans réfléchir. À toi de dépenser beaucoup moins que lui <b>sans sacrifier</b> ton confort, ta santé ni ton moral.</p>
+  <ul class="intro-points">
+    <li><b>Règle</b> le chauffage, les gestes, les achats : chaque choix se voit sur la facture.</li>
+    <li><b>Apprends</b> : chaque découverte devient un principe dans l'encyclopédie.</li>
+    <li><b>Garde l'équilibre</b> : l'austérité totale finit par coûter cher (santé, moral, arrêts maladie).</li>
   </ul>
-  <p><b>Durée de la campagne :</b> <button class="btn" data-duree="3">3 ans</button> <button class="btn actif-btn" data-duree="5">5 ans</button> <button class="btn" data-duree="10">10 ans</button> <small class="aide">Avec « Mois » et « Jusqu'au prochain événement », une année se joue en 20 à 40 minutes.</small></p>
-  <div class="actions"><button id="btnCommencer" class="primaire">Commencer</button><button id="btnReprendre" class="cache">Reprendre la partie sauvegardée</button></div>
+  <fieldset class="duree"><legend>Durée de la campagne</legend>
+    <button class="btn" data-duree="3">3 ans</button><button class="btn actif-btn" data-duree="5" aria-pressed="true">5 ans</button><button class="btn" data-duree="10">10 ans</button>
+    <small class="aide">Avec l'avance rapide, une année se joue en 20 à 40 minutes.</small></fieldset>
+  <div class="actions intro-actions">
+    <button id="btnTutoriel" class="primaire">Commencer le tutoriel</button>
+    <button id="btnJouer">Jouer directement</button>
+    <button id="btnReprendre" class="cache">Reprendre la partie sauvegardée</button>
+  </div>
 </div></div>
 <script type="module" src="js/main.js"></script>
 </body>
