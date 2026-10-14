@@ -49,8 +49,14 @@ export const LESSIVE = {
 };
 
 // ---------- Maison ----------
-export const JOURS = 56;              // 8 semaines, début décembre
-export const ARGENT_DEPART = 700;     // budget « énergie et équipement » de l'hiver
+// Trois chapitres enchaînés : hiver (8 semaines), printemps (4 semaines), été (6 semaines)
+export const CHAPITRES = [
+  { id: 'hiver', nom: 'Hiver', jours: 56, debut: '1er décembre', tEauFroide: 10, lumiere: [17, 8] },
+  { id: 'printemps', nom: 'Printemps', jours: 28, debut: '6 avril', tEauFroide: 13, lumiere: [20, 7] },
+  { id: 'ete', nom: 'Été', jours: 42, debut: '1er juillet', tEauFroide: 18, lumiere: [21.5, 6] },
+];
+export const JOURS = CHAPITRES.reduce((a, c) => a + c.jours, 0);
+export const ARGENT_DEPART = 3000;    // budget du foyer (une personne) pour les 18 semaines jouées, hors loyer
 // Maison ancienne de 45 m² (DPE F) : déperditions ~105 W/K au total.
 // Avec 21 °C partout, la facture de chauffage de décembre-janvier atteint ~400 € de gaz,
 // cohérent avec une consommation annuelle de ~8 000-9 000 kWh pour ce type de logement.
@@ -137,13 +143,62 @@ export const ACHATS = {
                   desc: 'Deux litres d\'eau chaude au lit (0,12 kWh). (6-12 € en pharmacie)' },
   housse:       { nom: 'Housse de bouillotte tricotée', prix: 8, temps: 0, invest: true, vie: 5, cat: 'Confort',
                   desc: 'Isoler pour prolonger : la bouillotte tient toute la nuit. (6-10 €)' },
+  // --- Eau chaude ---
+  pommeau:      { nom: 'Pommeau de douche économe', prix: 18, temps: 0.2, invest: true, vie: 10, cat: 'Eau chaude',
+                  desc: '7 l/min au lieu de 12, même sensation grâce à l\'air injecté. (12-25 €)' },
+  mousseurs:    { nom: 'Mousseurs de robinet (×2)', prix: 8, temps: 0.1, invest: true, vie: 10, cat: 'Eau chaude',
+                  desc: '−40 % de débit à l\'évier et au lavabo. (3-5 € pièce)' },
+  jaquette:     { nom: 'Jaquette isolante pour ballon', prix: 29, temps: 0.5, invest: true, vie: 10, cat: 'Eau chaude',
+                  desc: 'Isoler pour prolonger : −35 % de pertes du ballon. (20-40 €)' },
+  seau:         { nom: 'Seau et broc', prix: 6, temps: 0, invest: true, vie: 10, cat: 'Eau chaude',
+                  desc: 'Pour récupérer l\'eau froide du début de douche, ou se laver au seau.' },
+  // --- Cuisine ---
+  boites:       { nom: 'Boîtes de conservation en verre', prix: 25, temps: 0, invest: true, vie: 10, cat: 'Cuisine',
+                  desc: 'Indispensables pour cuisiner en grande quantité et garder les restes. (20-35 € le lot)' },
+  autocuiseur:  { nom: 'Autocuiseur 6 l', prix: 69, temps: 0, invest: true, vie: 15, cat: 'Cuisine', occasion: 30,
+                  desc: 'La pression cuit 2 à 3 fois plus vite : −35 % d\'énergie, −20 % de temps. (55-90 € neuf)' },
+  marmite:      { nom: 'Marmite norvégienne (fabrication maison)', prix: 12, temps: 1, invest: true, vie: 5, cat: 'Cuisine',
+                  desc: 'Une caisse isolée : on porte à ébullition, la cuisson finit seule. −20 % d\'énergie.' },
+  fresnel:      { nom: 'Lentille de Fresnel (A3)', prix: 39, temps: 0.5, invest: true, vie: 10, cat: 'Cuisine solaire',
+                  desc: 'Concentre le soleil : cuit vite par beau temps. Dangereuse sans lunettes (brûlures, yeux). (25-60 €)' },
+  lunettes:     { nom: 'Lunettes de protection teintées', prix: 12, temps: 0, invest: true, vie: 10, cat: 'Cuisine solaire',
+                  desc: 'Obligatoires avec une lentille de Fresnel. (10-20 €)' },
+  fourSolaire:  { nom: 'Four solaire (caisson)', prix: 129, temps: 0.5, invest: true, vie: 10, cat: 'Cuisine solaire', occasion: 60,
+                  desc: 'Cuit lentement et sans danger par temps clair, surtout au printemps et en été. (90-200 €)' },
+  sechoir:      { nom: 'Séchoir solaire (fabrication maison)', prix: 20, temps: 2, invest: true, vie: 5, cat: 'Cuisine solaire',
+                  desc: 'Sèche fruits, légumes et herbes en trop : moins de gaspillage.' },
+  pierre:       { nom: 'Pierres de masse thermique', prix: 15, temps: 0.3, invest: true, vie: 20, cat: 'Cuisine solaire',
+                  desc: 'Chauffées à la Fresnel le midi en hiver, elles rendent leur chaleur au salon le soir.' },
+  // --- Électricité ---
+  multiprise:   { nom: 'Multiprise à interrupteur', prix: 12, temps: 0.2, invest: true, vie: 10, cat: 'Électricité',
+                  desc: 'Coupe d\'un geste les veilles de la télé, de la console et des chargeurs. (8-15 €)' },
+  led:          { nom: 'Ampoules LED (×6)', prix: 24, temps: 0.3, invest: true, vie: 15, cat: 'Électricité',
+                  desc: '25 W au lieu de 150 W pour le même éclairage. (3-5 € pièce)' },
+  // --- Été ---
+  ventilateur:  { nom: 'Ventilateur sur pied', prix: 35, temps: 0, invest: true, vie: 8, cat: 'Été', occasion: 15,
+                  desc: '45 W : −2,5 °C ressentis, mais ne refroidit pas l\'air. (25-50 €)' },
+  clim:         { nom: 'Climatiseur mobile', prix: 349, temps: 0.5, invest: true, vie: 8, cat: 'Été', occasion: 170,
+                  desc: '1 000 W électriques pour 2,6 kW de froid. Efficace mais gourmand. (250-450 €)' },
+  moustiquaire: { nom: 'Moustiquaires de fenêtre', prix: 18, temps: 0.5, invest: true, vie: 5, cat: 'Été',
+                  desc: 'Permet d\'ouvrir grand la nuit sans se faire dévorer. (10-25 €)' },
+  corde:        { nom: 'Corde à linge et pinces', prix: 9, temps: 0.3, invest: true, vie: 10, cat: 'Été',
+                  desc: 'Sécher dehors au printemps et en été : gratuit, rapide, sans humidité dans la maison.' },
+  // --- Jardin ---
+  herbes:       { nom: 'Herbes aromatiques en pot', prix: 9, temps: 0.2, invest: true, vie: 2, cat: 'Jardin',
+                  desc: 'Basilic, persil, ciboulette sur le rebord : plus de bouquets à 1,50 €.' },
+  composteur:   { nom: 'Composteur 300 l', prix: 25, temps: 1, invest: true, vie: 10, cat: 'Jardin',
+                  desc: 'Souvent offert par la collectivité. Épluchures -> terreau : potager +30 %, poubelle moins odorante.' },
+  potager:      { nom: 'Petit potager (graines, plants, terreau)', prix: 28, temps: 2, invest: true, vie: 1, cat: 'Jardin',
+                  desc: 'Récoltes après 3 semaines au printemps et en été. 15 min d\'entretien par jour, bon pour le moral.' },
+  cuve:         { nom: 'Récupérateur d\'eau de pluie 300 l', prix: 69, temps: 1, invest: true, vie: 15, cat: 'Jardin',
+                  desc: 'Arroser avec l\'eau du ciel plutôt qu\'avec l\'eau du robinet à 4,89 €/m³. (50-90 €)' },
   couture:      { nom: 'Kit de couture', prix: KIT_COUTURE, temps: 0, invest: true, vie: 10, cat: 'Confort',
                   desc: 'Permet de repriser les vêtements usés au lieu de les racheter.' },
 };
 
 // ---------- Volonté, temps et habitudes ----------
-export const TEMPS_JOUR = 3;        // heures libres par jour de semaine
-export const TEMPS_WEEKEND = 6;     // heures libres le week-end
+export const TEMPS_JOUR = 4;        // heures disponibles par jour de semaine (repas, ménage et loisirs compris)
+export const TEMPS_WEEKEND = 7;     // heures disponibles le week-end
 export const JOURS_HABITUDE = 10;
 export const GESTES = {
   rideaux:   { nom: 'Fermer rideaux et volets le soir', cout: 3, temps: 0.05 },
@@ -152,6 +207,17 @@ export const GESTES = {
   couches:   { nom: 'S\'habiller chaudement',           cout: 3, temps: 0 },
   aerer:     { nom: 'Aérer 5 minutes, matin et soir',   cout: 2, temps: 0.1 },
   cuisson:   { nom: 'Récupérer la chaleur de la cuisson', cout: 2, temps: 0 },
+  couperEau: { nom: 'Couper l\'eau pendant le savonnage', cout: 2, temps: 0 },
+  recupEau:  { nom: 'Récupérer l\'eau froide de la douche', cout: 2, temps: 0.02 },
+  couvercle: { nom: 'Cuire avec couvercle', cout: 1, temps: 0 },
+  bouilloire:{ nom: 'Chauffer la quantité exacte d\'eau', cout: 1, temps: 0 },
+  frigo:     { nom: 'Ne rien mettre de chaud au frigo', cout: 1, temps: 0 },
+  multiprise:{ nom: 'Éteindre la multiprise', cout: 2, temps: 0 },
+  liste:     { nom: 'Liste de courses et menu des restes', cout: 2, temps: 0.1 },
+  prixKilo:  { nom: 'Comparer les prix au kilo', cout: 2, temps: 0.05 },
+  voletsJour:{ nom: 'Fermer les volets le jour (été)', cout: 2, temps: 0.03 },
+  ventNuit:  { nom: 'Ouvrir grand la nuit (été)', cout: 2, temps: 0.03 },
+  jardiner:  { nom: 'Jardiner un quart d\'heure', cout: 0, temps: 0.25 },
 };
 
 // ---------- Principes (dont cartes transversales) ----------
@@ -175,6 +241,28 @@ export const PRINCIPES = {
   coutUsage:  { titre: 'Coût par usage', texte: 'Le prix divisé par le nombre de jours portés : le durable est souvent moins cher à l\'usage.' },
   aererVet:   { titre: 'Aérer plutôt que laver', texte: 'Un pull qui n\'est pas sale a seulement besoin d\'air : pas d\'eau, pas d\'énergie, pas d\'usure.' },
   temps:      { titre: 'Le temps est une ressource', texte: 'Chaque économie prend du temps. Ce qui en reste devient du repos et de la volonté.' },
+  eauChaude:  { titre: 'L\'eau chaude, c\'est de l\'énergie', texte: 'Chaque litre chauffé de 10 à 38 °C coûte 0,03 kWh. Une douche de 10 min au vieux pommeau, c\'est 4 kWh.' },
+  legionelles:{ titre: 'Pas sous 55 °C', texte: 'Baisser le ballon réduit ses pertes, mais en dessous de 55 °C les légionelles prolifèrent. Le bon réglage : 55 °C.' },
+  tempo:      { titre: 'Effacer les jours rouges', texte: 'Un kWh en heure pleine de jour rouge coûte 0,73 €, presque 4 fois le prix normal : ce jour-là, on décale tout.' },
+  veilles:    { titre: 'La consommation fantôme', texte: 'Les veilles tournent 24 h sur 24 : 45 W, c\'est près de 400 kWh par an pour rien.' },
+  lumiere:    { titre: 'La bonne ampoule', texte: 'Une LED éclaire autant qu\'un halogène pour six fois moins d\'électricité.' },
+  frigo:      { titre: 'Un frigo bien traité', texte: '4 °C suffisent ; le givre isole l\'évaporateur et un plat chaud le fait tourner pour rien.' },
+  gaspillage: { titre: 'Le moins cher est ce qu\'on ne jette pas', texte: 'Près d\'un cinquième des courses finit à la poubelle. Liste, restes et grandes quantités réduisent la facture plus que les promos.' },
+  prixKilo:   { titre: 'Le prix au kilo ne ment pas', texte: 'Le grand format, la promo ou le vrac ne sont des économies que si le prix au kilo est plus bas… et qu\'on ne jette rien.' },
+  vrac:       { titre: 'Le vrac n\'est pas toujours moins cher', texte: 'Sans comparer le prix au kilo, le rayon vrac peut coûter plus cher que le paquet.' },
+  pression:   { titre: 'Cuire plus vite, cuire moins', texte: 'Couvercle, autocuiseur, marmite norvégienne : la même cuisson pour bien moins d\'énergie.' },
+  soleilCuit: { titre: 'Le soleil cuit', texte: 'Par temps clair, four solaire ou lentille de Fresnel remplacent les plaques. Mais pas de soleil, pas de repas solaire : il faut un plan B.' },
+  danger:     { titre: 'Concentrer le soleil, c\'est dangereux', texte: 'Une lentille de Fresnel brûle la peau et les yeux en une seconde : lunettes obligatoires.' },
+  inverse:    { titre: 'L\'été, tout s\'inverse', texte: 'Volets fermés le jour, fenêtres ouvertes la nuit, cuisson dehors : ce qui gardait la chaleur l\'hiver doit maintenant la repousser.' },
+  fraicheur:  { titre: 'Stocker la fraîcheur de la nuit', texte: 'La masse de la maison se refroidit la nuit fenêtres ouvertes et garde le frais le jour, volets fermés.' },
+  clim:       { titre: 'La clim, dernier recours', texte: 'Ventilateur, volets et nuits ouvertes d\'abord : la clim coûte 20 fois plus qu\'un ventilateur.' },
+  oublis:     { titre: 'Les petites fuites mensuelles', texte: 'Un relevé bancaire révèle les abonnements oubliés : quelques euros par mois, des centaines par an.' },
+  regle48:    { titre: 'La règle des 48 heures', texte: 'Attendre deux jours avant un achat non prévu : l\'envie passe souvent toute seule.' },
+  revendre:   { titre: 'Ce qui dort peut se vendre', texte: 'Un objet inutilisé est de l\'argent immobilisé.' },
+  occasion:   { titre: 'L\'occasion d\'abord', texte: 'Un appareil d\'occasion coûte souvent moitié prix pour le même service.' },
+  plaisir:    { titre: 'La sobriété doit rester heureuse', texte: 'Supprimer tous les plaisirs fait craquer. Un petit budget plaisir protège toutes les autres économies.' },
+  cycles:     { titre: 'Boucler les cycles', texte: 'Épluchures en compost, compost au potager, pluie au potager, légumes en cuisine : rien ne se perd.' },
+  hygiene:    { titre: 'Propre sans gaspiller', texte: 'Douche courte, sous-couche lavée à la main, bassine : l\'hygiène ne demande pas de gaspiller.' },
   // Cartes transversales (servent dans plusieurs domaines)
   volume:     { titre: 'Réduire le volume', texte: 'Machine pleine, basse température, sous-couche lavable : on lave moins de choses, moins souvent. Vaut aussi pour l\'eau, les courses, les déchets.', transversal: true },
   prolonger:  { titre: 'Isoler pour prolonger', texte: 'Housse de bouillotte, rideau thermique, marmite norvégienne : ralentir la perte, c\'est garder plus longtemps.', transversal: true },
@@ -188,4 +276,103 @@ export const EVENEMENTS = [
   { jour: 17, annonce: 0, id: 'promo',    titre: 'Tentation : promo flash', texte: 'Doudoune d\'intérieur premier prix à −50 % (12,50 €) en vitrine, aujourd\'hui seulement.' },
   { jour: 28, annonce: 7, id: 'hausse',   titre: 'Hausse du prix du gaz', texte: 'Le prix repère du gaz augmente de 12 % (+0,0175 €/kWh) jusqu\'à la fin de l\'hiver.' },
   { jour: 38, annonce: 0, id: 'panne',    titre: 'Panne du lave-linge', texte: 'La machine fait un bruit de ferraille puis s\'arrête : la pompe de vidange a lâché.' },
+  { jour: 45, annonce: 0, id: 'livraison', titre: 'Tentation : livraison offerte', texte: 'Notification : « Frais de livraison offerts ce soir sur ton burger préféré ! » (17 €)' },
+  { jour: 66, annonce: 0, id: 'robot',    titre: 'Tentation : robot cuiseur en promo', texte: 'Un robot cuiseur « qui fait tout » passe de 299 € à 199 € pendant 24 h.' },
+  { jour: 74, annonce: 0, id: 'promoPerissable', titre: 'Promo : 3 barquettes de viande pour le prix de 2', texte: 'Date limite dans 2 jours. 12 € les trois au lieu de 18 €.' },
+  { jour: 98, annonce: 3, id: 'canicule', titre: 'Vigilance canicule', texte: 'Jusqu\'à 36 °C l\'après-midi pendant une semaine, nuits à 22 °C.' },
+  { jour: 109, annonce: 2, id: 'barbecue', titre: 'Barbecue entre voisins', texte: 'Les voisins organisent un barbecue samedi soir. Chacun apporte quelque chose.' },
 ];
+
+
+// =====================================================================
+// v0.3 : TARIFS, EAU CHAUDE, CUISINE, ÉLECTRICITÉ, ÉTÉ, JARDIN, BUDGET
+// =====================================================================
+
+// ---------- Options tarifaires EDF Tarif Bleu 6 kVA (grille du 1er août 2026, € TTC) ----------
+export const TARIFS = {
+  base:  { nom: 'Base', aboMois: 15.86, prix: () => 0.2001 },
+  hphc:  { nom: 'Heures creuses', aboMois: 15.86, prix: (h) => (estHC(h) ? 0.1589 : 0.2142) },  // HP 0,2142 / HC 0,1589
+  tempo: { nom: 'Tempo', aboMois: 15.80, prix: (h, couleur) => TEMPO[couleur][estHC(h) ? 0 : 1] },
+};
+// Tempo : [HC, HP] par couleur (bleu 0,1356/0,1654 ; blanc 0,1536/0,1921 ; rouge 0,1615/0,7295)
+export const TEMPO = { bleu: [0.1356, 0.1654], blanc: [0.1536, 0.1921], rouge: [0.1615, 0.7295] };
+export const estHC = (h) => h >= 22 || h < 6;   // plage HC la plus courante : 22 h-6 h
+export const CHANGEMENT_TARIF = { delai: 14, temps: 0.3 }; // gratuit chez EDF, effet à la prochaine relève (~2 semaines)
+
+// ---------- Électricité domestique ----------
+export const ELEC = {
+  veilles: 45,          // W : box TV, chargeurs, console, micro-ondes… (ADEME : 50-100 W de veilles par foyer)
+  veillesCoupees: 12,   // W restants avec multiprise à interrupteur (box internet laissée allumée)
+  box: 10,              // W
+  ordinateur: 60,       // W pendant le télétravail (9 h-18 h en semaine)
+  eclairageVieux: 150,  // W : halogènes et ampoules anciennes allumés le soir
+  eclairageLED: 25,     // W : mêmes pièces en LED
+  frigoKwh: 0.85,       // kWh/jour : réfrigérateur-congélateur ancien (~310 kWh/an)
+};
+
+// ---------- Eau chaude sanitaire (ballon électrique 200 l, 2 400 W) ----------
+export const BALLON = {
+  litres: 200, puissance: 2400,
+  UA: 1.5,              // W/K : pertes ~1,6 kWh/jour à 65 °C (ballon ancien, mesures ADEME 1,5-2 kWh/j)
+  jaquette: 0.35,       // jaquette isolante : −35 % de pertes
+  legionelles: 55,      // sous 55 °C en continu, risque de légionelles
+};
+export const DOUCHE = {
+  debitVieux: 12, debitEco: 7,        // l/min : pommeau ancien / pommeau économe (classe A)
+  coupureSavon: 0.3,                  // −30 % en coupant l'eau au savonnage
+  seau: 12,                           // l à 38 °C pour une douche au seau
+  recupFroide: 4,                     // l d'eau froide récupérés en attendant l'eau chaude
+};
+export const VAISSELLE = {
+  courante:     { nom: 'À l\'eau courante', litresChauds: 30, kwh: 0, temps: 0.3 },
+  bassine:      { nom: 'À la bassine', litresChauds: 8, kwh: 0, temps: 0.25 },
+  lvQuotidien:  { nom: 'Lave-vaisselle chaque jour (normal)', litresFroids: 14, kwh: 1.3, temps: 0.1 },
+  lvPleinEco:   { nom: 'Lave-vaisselle plein, éco (1 jour sur 2)', litresFroids: 5, kwh: 0.45, temps: 0.08 },
+};
+
+// ---------- Alimentation (une personne, prix 2026 en grande surface) ----------
+// cout : €/jour de nourriture ; kwh : cuisson/jour ; temps : h/jour ; sante, hygiene (cuisine), bienetre : effets/jour
+export const REGIMES = {
+  livraison: { nom: 'Livraisons et plats préparés', cout: 15.5, kwh: 0.3, temps: 0.1, sante: -0.4, bienetre: 1.0, hygiene: 0 },
+  classique: { nom: 'Courses classiques, un peu de cuisine', cout: 8.5, kwh: 1.0, temps: 0.5, sante: 0, bienetre: 0.4, hygiene: 0 },
+  maison:    { nom: 'Cuisine maison au jour le jour', cout: 6.0, kwh: 1.5, temps: 1.0, sante: 0.3, bienetre: 0.6, hygiene: -0.5 },
+  batch:     { nom: 'Grandes quantités + restes', cout: 4.9, kwh: 1.0, temps: 0.5, sante: 0.3, bienetre: 0.5, hygiene: -0.3 },
+  austere:   { nom: 'Pâtes et riz uniquement', cout: 2.4, kwh: 0.8, temps: 0.3, sante: -0.5, bienetre: -2.0, hygiene: 0 },
+};
+export const CUISINE = {
+  gaspillageBase: 0.18,     // part des courses jetée (ADEME : ~20 % des aliments achetés finissent jetés)
+  livraisonPlaisir: 16,     // € : une livraison « plaisir » (rechute)
+  painBaguette: 1.1,        // €/jour : une baguette (prix moyen 2026 ~1,05-1,20 €)
+  painMaison: 0.35,         // €/jour : farine, levure, sel (~500 g de pain)
+  painMaisonKwh: 0.5,       // four 45 min, partagé si four plein
+};
+
+// ---------- Été ----------
+export const ETE = {
+  ventilateur: 45,    // W
+  climElec: 1000,     // W électriques, clim mobile (EER ~2,6)
+  climFroid: 2600,    // W de froid
+  ventNocturne: 70,   // W/K quand on ouvre grand la nuit
+  voletsJour: 0.85,   // part du soleil bloquée volets fermés le jour
+};
+
+// ---------- Abonnements (prix publics 2026) ----------
+export const ABONNEMENTS = {
+  streaming: { nom: 'Streaming vidéo', mois: 13.49, plaisir: 0.5, cache: false },   // offre standard sans pub
+  musique:   { nom: 'Musique en ligne', mois: 11.99, plaisir: 0.4, cache: false },
+  sport:     { nom: 'Salle de sport (jamais utilisée)', mois: 29.99, plaisir: 0, cache: false },
+  cloud:     { nom: 'Stockage en ligne oublié', mois: 2.99, plaisir: 0, cache: true },
+  assurance: { nom: 'Assurance mobile oubliée', mois: 9.99, plaisir: 0, cache: true },
+  appli:     { nom: 'Appli de méditation (essai gratuit devenu payant)', mois: 7.99, plaisir: 0, cache: true },
+  forfait:   { nom: 'Forfait mobile 100 Go', mois: 24.99, plaisir: 0, cache: false, renegocie: 9.99 },
+};
+export const MEDIATHEQUE = 20;   // €/an : abonnement à la médiathèque municipale (souvent gratuit)
+export const PLAISIRS = { 0: -1.6, 10: 0.4, 20: 1.0, 35: 1.4 };  // €/semaine -> bien-être/jour (rendements décroissants)
+
+// ---------- Grenier : objets à revendre (prix d'occasion constatés) ----------
+export const GRENIER = {
+  velo:    { nom: 'Vélo d\'appartement', prix: 60, temps: 1 },
+  console: { nom: 'Console de jeux inutilisée', prix: 110, temps: 1, bienetre: -3 },
+  livres:  { nom: 'Carton de livres', prix: 25, temps: 0.5 },
+  robot:   { nom: 'Robot pâtissier jamais sorti du carton', prix: 90, temps: 1 },
+};

@@ -2,6 +2,16 @@
 import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js';
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
+import { etatUI } from './onglets.js';
+import { actions } from './simulation.js';
+import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from './systemes.js';
+
+function regler(chemin, brut) {
+  const v = brut === 'true' ? true : brut === 'false' ? false : (brut !== '' && !isNaN(Number(brut)) ? Number(brut) : brut);
+  const k = chemin.split('.'); let o = s;
+  for (const p of k.slice(0, -1)) o = o[p];
+  o[k.at(-1)] = v;
+}
 
 const $ = (id) => document.getElementById(id);
 let s = nouvellePartie(Number(new URLSearchParams(location.search).get('graine')) || 2026);
@@ -56,9 +66,15 @@ document.addEventListener('click', (e) => {
       case 'appoint': s.appoint.actif = v === 'oui'; break;
       case 'ltemp': options.lessive.temp = Number(v); break;
       case 'lsechage': options.lessive.sechage = v; break;
-      case 'lmidi': options.lessive.midi = v === 'oui'; break;
+      case 'lheure': options.lessive.midi = v === 'midi'; options.lessive.hc = v === 'hc'; break;
     }
-  } else if (d.acheter) acheter(s, d.acheter);
+  } else if (d.onglet) etatUI.onglet = d.onglet;
+  else if (d.set) regler(d.set, d.v);
+  else if (d.action) {
+    const c = actions(s);
+    ({ tarif: () => changerTarif(s, d.v, c), releves: () => faireReleves(s, c), resilier: () => resilier(s, d.v, c), renegocier: () => renegocier(s, c),
+      revendre: () => revendre(s, d.v, c), degivrer: () => degivrer(s, c), mediatheque: () => prendreMediatheque(s, c) })[d.action]?.();
+  } else if (d.acheter) acheter(s, d.acheter, d.occasion === '1');
   else if (d.acheterVet) acheterVetement(s, d.acheterVet, d.q);
   else if (d.porter) { const v = s.vetements[d.porter]; v.porte = !v.porte; }
   else if (d.aererVet) aererVetement(s, d.aererVet);
@@ -70,17 +86,18 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnJour') return avancer(1);
   else if (b.id === 'btnSemaine') return avancer(7);
   else if (b.id === 'btnCommencer') { $('intro').classList.add('cache'); return; }
-  else if (b.id === 'btnReprendre') { const c = charger(); if (c) s = c; $('intro').classList.add('cache'); }
+  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') s = c; else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
   else if (b.id === 'btnSauver') { autoSauvegarde(); toast('💾 Partie sauvegardée dans ce navigateur.'); return; }
-  else if (b.id === 'btnCharger') { const c = charger(); if (c) { s = c; $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else toast('Aucune sauvegarde trouvée.'); }
+  else if (b.id === 'btnCharger') { const c = charger(); if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible avec cette version : elle a été effacée.'); else if (c) { s = c; $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else toast('Aucune sauvegarde trouvée.'); }
   else if (b.id === 'btnNouvelle' || b.id === 'btnRejouer') {
-    if (b.id === 'btnNouvelle' && !confirm('Commencer un nouvel hiver ? La partie en cours sera perdue si elle n\'est pas sauvegardée.')) return;
+    if (b.id === 'btnNouvelle' && !confirm('Commencer une nouvelle partie ? La partie en cours sera perdue si elle n\'est pas sauvegardée.')) return;
     s = nouvellePartie(Math.floor(Math.random() * 1e6)); $('fin').classList.add('cache'); autoSauvegarde();
   } else return;
   rafraichir(n);
 });
 
 if (aUneSauvegarde()) $('btnReprendre').classList.remove('cache');
+else { try { if (localStorage.getItem('economie-game-sauvegarde')) { charger(); toast('Ta sauvegarde d\'une ancienne version a été réinitialisée : le jeu couvre maintenant hiver, printemps et été.'); } } catch { /* stockage indisponible */ } }
 rendreHorloge(7);
 rendreTout(s);
 window.__jeu = () => s; // débogage

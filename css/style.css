@@ -86,3 +86,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .actif-btn{background:#dcfce7;border-color:#16a34a}
 .modal-contenu h3{margin:14px 0 6px;font-size:15px}
 #annonces span{display:block}
+/* v0.3 : onglets, Tempo */
+.onglets{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.onglets button{border:1px solid #d1d5db;background:#fff;border-radius:8px 8px 0 0;padding:6px 9px;cursor:pointer;font-size:13px}
+.onglets button.actif{background:#1e3a8a;color:#fff;border-color:#1e3a8a}
+.choix.col{display:flex;flex-direction:column;align-items:stretch}
+.tempo{font-size:11px;border-radius:6px;padding:1px 4px;margin-top:3px;color:#fff}
+.tempo.bleu{background:#2563eb}.tempo.blanc{background:#e5e7eb;color:#111}.tempo.rouge{background:#dc2626}
+.carte h3{font-size:14px;margin:10px 0 4px}
