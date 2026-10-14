@@ -2,6 +2,7 @@
 import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
 import { tableauROI } from '../js/roi.js';
+import { recommandations, appliquerConseil } from '../js/tableau.js';
 import { PRINCIPES } from '../js/data.js';
 import { chapitreDuJour } from '../js/meteo.js';
 import { deposer } from '../js/finance.js';
@@ -15,7 +16,7 @@ function jouer(s, chaqueJour, dilemmes = {}) {
     if (s.dilemme) {
       const voulu = dilemmes[s.dilemme];
       const opts = choixDilemme(s).filter(o => o.possible !== false);
-      resoudreDilemme(s, opts.find(o => o.id === voulu) ? voulu : opts.at(-1).id);
+      resoudreDilemme(s, opts.find(o => o.id === voulu) ? voulu : dilemmes.premier ? opts[0].id : opts.at(-1).id);
     }
     chaqueJour(s); if (HOOK) HOOK(s);
     jourSuivant(s);
@@ -119,6 +120,15 @@ ajoute('malin', () => {
   const s = maligne(); return s;
 });
 ajoute('maître', () => maitre());
+// v0.9 : le débutant ne connaît rien mais suit le tableau de bord : deux fois par semaine (tous les 3 jours), il clique « Faire » sur
+// la première recommandation applicable (lessive comprise). Il ne fait rien d'autre de lui-même ; aux choix, il prend le premier.
+export function debutant() {
+  const s = nouvellePartie(GRAINE);
+  return jouer(s, (s) => {
+    if (s.jour % 3 === 0) { let n = 0; for (const r of recommandations(s)) { if (n >= 1) break; if (appliquerConseil(s, r.action)) n++; } }
+  }, { premier: true });
+}
+ajoute('débutant guidé', debutant);
 // v0.8.1 : économiser en laissant une jauge vers 30 doit coûter plus cher que le malin
 ajoute('moral négligé', () => maligne());
 ajoute('bien-être négligé', () => maligne());
@@ -185,10 +195,10 @@ HOOKS['moral négligé'] = (s) => {
   s.sys.plaisirs = 10; s.transport.teletravail = 5; if (s.jour > 3) s.sys.regime = 'batch';
   if (s.jour === 5) { resilier(s, 'streaming', c); resilier(s, 'musique', c); }
 };
-// bien-être négligé : le malin, mais zéro plaisir et chambre à 15 °C la nuit (sommeil et loisirs sacrifiés)
+// bien-être négligé : le malin, mais zéro plaisir et chambre à 14 °C la nuit (sommeil et loisirs sacrifiés)
 HOOKS['bien-être négligé'] = (s) => {
   HOOKS.malin(s);
-  s.central.consigneNuit = Math.min(s.central.consigneNuit, 15); s.sys.plaisirs = 0;
+  s.central.consigneNuit = Math.min(s.central.consigneNuit, 14); s.sys.plaisirs = 0;
 };
 const _jouer = jouer;
 
@@ -211,7 +221,7 @@ for (const g of graines) {
   console.log(`\n=== graine ${g} ===`);
   for (const [nom, s, r] of lancer(g)) {
     const m = r.moy;
-    console.log(`${pad(nom, 16)} coût ${r.cout.toFixed(0)} € | voisin ${r.base.toFixed(0)} € | éco ${r.economies.toFixed(0)} € (${r.pct.toFixed(1)} %) | confort ${m.confort.toFixed(0)} santé ${m.sante.toFixed(0)} moral ${m.moral.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} | rechutes ${s.rechutes} hab ${r.habitudes} princ ${r.principes} | ${r.titre}${r.note ? ' (' + r.note + ')' : ''}`);
+    console.log(`${pad(nom, 16)} coût ${r.cout.toFixed(0)} € | voisin ${r.base.toFixed(0)} € | éco ${r.economies.toFixed(0)} € (${r.pct.toFixed(1)} %) | confort ${m.confort.toFixed(0)} santé ${m.sante.toFixed(0)} moral ${m.moral.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} | rechutes ${s.rechutes} hab ${r.habitudes} princ ${r.principes} | défis ${(s.eco?.defisReussis || []).map(d => d.fait ? '✓' : '✗').join('') || '-'} | ${r.titre}${r.note ? ' (' + r.note + ')' : ''}`);
     console.log(`   coûts v0.7 : santé ${Math.round(s.depenses.sante || 0)} € · moisissures ${Math.round(s.depenses.logement || 0)} € · revenus perdus ${Math.round(s.depenses.revenus || 0)} € · imprévus ${Math.round(s.depenses.imprevus || 0)} € · ${s.mor.episodes} épisodes, ${s.mor.joursArret} j d'arrêt, salaire ×${s.mor.facteurSalaire.toFixed(3)}`);
     (tous[nom] ||= []).push(r);
     if (g === 2026 && nom === 'maître') {
@@ -221,6 +231,13 @@ for (const g of graines) {
       if (Object.keys(s.combos).length < 3) { ok = false; console.log('✗ combos'); }
     }
   }
+}
+// v0.9 : rentabilité réalisée de chaque équipement, toutes stratégies confondues (graine 2026)
+if (process.env.ROI) {
+  GRAINE = 2026; const agg = {};
+  for (const [nom, s] of lancer(2026)) for (const x of tableauROI(s)) { const a = (agg[x.nom] ||= { n: 0, prix: 0, mes: 0, strats: [] }); a.n++; a.prix += x.prix; a.mes += x.mesure / (s.nbJours / 365); a.strats.push(nom.split(' ')[0]); }
+  console.log('\nROI réalisé (€/an mesurés / prix), graine 2026 :');
+  for (const [n, a] of Object.entries(agg).sort((x, y) => y[1].mes / y[1].prix - x[1].mes / x[1].prix)) console.log(`  ${n.slice(0, 40).padEnd(40)} ${String(a.n).padStart(2)} strat. · prix moy ${(a.prix / a.n).toFixed(0).padStart(4)} € · ${(a.mes / a.n).toFixed(0).padStart(5)} €/an · ROI ${(a.mes / a.prix * 100).toFixed(0).padStart(5)} %/an · ${a.strats.join(',')}`);
 }
 const R = (n) => tous[n];
 for (let i = 0; i < graines.length; i++) {
@@ -232,6 +249,11 @@ for (let i = 0; i < graines.length; i++) {
   ch(R('glacial')[i].rang <= 1, 'glacial perd');
   ch(R('naïf')[i].rang === 0, 'naïf perd');
   ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
+  // v0.9 : suivre le tableau de bord ne doit jamais punir
+  const d = R('débutant guidé')[i];
+  ch(d.rang >= 2 && d.rang <= 4, 'débutant guidé : Optimiseur à Autonome');
+  ch(d.economies > R('ne rien toucher')[i].economies + 10000, 'débutant guidé > défaut + 10 k€');
+  ch(d.moy.sante >= 70 && d.moy.hygiene >= 70 && d.moy.moral >= 45, 'débutant guidé en bonne santé');
   // v0.7 : l'austérité coûte aussi de l'argent (santé, arrêts, dents, moisissures, augmentations perdues)
   ch(R('maître')[i].economies > R('austère extrême')[i].economies && R('austère extrême')[i].economies <= 0.7 * R('maître')[i].economies && R('austère extrême')[i].rang < R('maître')[i].rang, 'le maître économise plus que l\'austère (≤ 70 %) et le bat au titre');
   ch(R('glacial')[i].economies < R('malin')[i].economies, 'le glacial perd de l\'argent face au malin');

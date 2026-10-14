@@ -7,7 +7,7 @@ import { valeurs } from './finance.js';
 import { icone } from './icones.js';
 import { etatUI } from './onglets.js';
 import { palierMoral, palierBE } from './paliers.js';
-import { rendreTableau } from './tableau.js';
+import { rendreTableau, rendreCourbes } from './tableau.js';
 import { etatJauges } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -29,7 +29,7 @@ export const SECTIONS = [
   ['achats', 'Achats', 'achats', [['b-maison', 'Maison', toujours], ['b-eau', 'Eau chaude', toujours], ['b-cuisine', 'Cuisine', toujours], ['b-elec', 'Électricité', (s) => s.jour >= 2],
     ['b-transport', 'Transport', (s) => s.jour >= 3], ['b-jardin', 'Jardin', (s) => s.jour >= 21], ['rentab', 'Rentabilité', (s) => Object.entries(s.possede).some(([k, v]) => v && ACHATS[k]?.prix > 5)]]],
   ['argent', 'Argent', 'argent', [['banque', 'Banque et épargne', toujours], ['invest', 'Investir', (s) => s.jour >= 14 || !!s.fin?.pea || !!s.fin?.av]]],
-  ['savoir', 'Savoir', 'savoir', [['principes', 'Encyclopédie', toujours], ['combos', 'Combos', (s) => Object.keys(s.combos || {}).length > 0 || s.jour >= 30], ['glossaire', 'Glossaire', toujours], ['journal', 'Journal', toujours]]],
+  ['savoir', 'Savoir', 'savoir', [['principes', 'Encyclopédie', toujours], ['combos', 'Combos', (s) => Object.keys(s.combos || {}).length > 0 || s.jour >= 30], ['glossaire', 'Glossaire', (s) => s.jour >= 5], ['journal', 'Journal', (s) => s.jour >= 1]]],
   ['bilan', 'Bilan', 'bilan', [['resume', 'Où en es-tu ?', toujours], ['factures', 'Factures', (s) => s.factures.length > 0], ['graphes', 'Graphiques', toujours]]],
 ];
 export const sectionDe = (onglet) => SECTIONS.find(x => x[3].some(y => y[0] === onglet))?.[0] || 'maison';
@@ -199,6 +199,7 @@ export function rendreGuide(s) {
     <div class="progres" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Math.max(0, Math.min(1, o.v / o.cible)) * 100)}" aria-label="${o.titre}"><div style="width:${Math.max(0, Math.min(1, o.v / o.cible)) * 100}%"></div></div></div>`).join('') || '<p>Tous les objectifs sont atteints. Bravo !</p>';
   if (etatUI.onglet === 'glossaire') rendreGlossaire();
   if (etatUI.onglet === 'resume') rendreResume(s, r);
+  if (etatUI.onglet === 'graphes') rendreCourbes(s);
   majCoach(s);
 }
 

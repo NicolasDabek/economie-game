@@ -23,6 +23,9 @@ const P = {
   haut: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   bas: '<path d="M12 5v14M6 13l6 6 6-6"/>',
   egal: '<path d="M5 12h14"/>',
+  annuler: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+  reglages: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+  clavier: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r=".6" fill="currentColor"/>',
 };
 export function icone(nom, taille = 20, cls = '') {

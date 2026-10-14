@@ -3,6 +3,7 @@ import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
 import { etatUI } from './onglets.js';
+import { recommandations, appliquerConseil, ACTIVATION } from './tableau.js';
 import { prefs, sauverPrefs, ouvrir, ouvrirSection, apercuAchat, effetAchat, apercuConsigne, demarrerTutoriel, arreterTutoriel, etapeSuivante, coachActif, majCoach, objectifsAtteints, filtrerGlossaire, choisirVue } from './guide.js';
 import { icone } from './icones.js';
 import { ACHATS } from './data.js';
@@ -34,7 +35,27 @@ function rafraichir(nbAvant) {
   for (const o of objectifsAtteints(s)) toast(`🎯 Objectif atteint : ${o}`, { type: 'ok' });
   rendreTout(s);
   if (s.fini) rendreFin(s);
+  majAnnuler();
 }
+// annuler (v0.9) : les réglages du jour peuvent être défaits (pas les achats ni le temps qui passe)
+const pile = [];
+const cliche = () => { const { meteo, ...r } = s; return JSON.stringify(r); };
+function empiler(avant, lib) { pile.push({ avant, lib, jour: s.jour }); if (pile.length > 15) pile.shift(); majAnnuler(); }
+function majAnnuler() { const b = $('btnAnnuler'); if (!b) return; while (pile.length && pile.at(-1).jour !== s.jour) pile.pop(); b.disabled = !pile.length; b.dataset.tip = pile.length ? `Annuler : ${pile.at(-1).lib} (Ctrl+Z)` : 'Rien à annuler aujourd\'hui'; }
+function annuler() {
+  majAnnuler(); const x = pile.pop(); if (!x) { toast('Rien à annuler : seuls les réglages d\'aujourd\'hui peuvent l\'être.'); return; }
+  const m = s.meteo; s = Object.assign(JSON.parse(x.avant), { meteo: m });
+  toast(`↩️ Annulé : ${x.lib}`, { type: 'ok' }); rafraichir(s.messages.length); autoSauvegarde(); majAnnuler();
+}
+// préférences d'affichage (v0.9)
+const VITESSES = { lente: 2, normale: 1, rapide: 0.3 };
+function appliquerPrefs() {
+  const h = document.documentElement;
+  h.dataset.anim = prefs.anim === 'non' ? 'non' : 'oui';
+  h.dataset.texte = prefs.texte || 'normal';
+  for (const b of document.querySelectorAll('[data-pref]')) { const on = (prefs[b.dataset.pref] || { vitesse: 'normale', anim: 'oui', texte: 'normal', pauses: 'toutes' }[b.dataset.pref]) === b.dataset.v; b.classList.toggle('actif', on); b.setAttribute('aria-pressed', String(on)); }
+}
+const ouvrirReglages = () => { appliquerPrefs(); $('reglages').classList.remove('cache'); setTimeout(() => $('reglagesFermer')?.focus(), 30); };
 function autoSauvegarde() { try { sauvegarder(s); } catch { /* stockage indisponible */ } }
 
 // Avance rapide : sans animation horaire, on s'arrête sur un choix, une alerte, un changement de saison ou un bilan.
@@ -42,12 +63,17 @@ async function avancerVite(nbJours, jusquEvenement) {
   if (occupe || s.fini) return;
   occupe = true;
   const n0 = s.messages.length, saison0 = chapitreDuJour(s.jour).saison;
+  const deja = new Set(s.messages.slice(0, 40).map(m => m.texte));
   for (let d = 0; d < nbJours && !s.fini && !s.dilemme; d++) {
-    const n = s.messages.length;
+    const tete = s.messages[0];
     jourSuivant(s);
-    const nouveaux = s.messages.slice(0, Math.max(0, s.messages.length - n));
-    if (nouveaux.some(m => m.type === 'alerte')) break;
-    if (jusquEvenement && (chapitreDuJour(s.jour).saison !== saison0 || nouveaux.some(m => ['annonce', 'principe', 'decouverte'].includes(m.type)))) break;
+    const k = tete ? s.messages.indexOf(tete) : s.messages.length;   // robuste au plafond de 150 messages
+    const nouveaux = s.messages.slice(0, k < 0 ? s.messages.length : k);
+    // v0.9 : une alerte déjà vue récemment (linge sale, ballon vide…) n'interrompt plus l'avance rapide
+    const neuf = (m) => !deja.has(m.texte);
+    if (nouveaux.some(m => m.type === 'alerte' && (!jusquEvenement || neuf(m)))) break;
+    if (jusquEvenement && (chapitreDuJour(s.jour).saison !== saison0 || nouveaux.some(m => neuf(m) && (prefs.pauses === 'importantes' ? ['annonce'] : ['annonce', 'principe', 'decouverte']).includes(m.type)))) break;
+    for (const m of nouveaux) deja.add(m.texte);
     if (d % 7 === 6) { rendreTout(s); await new Promise(r => setTimeout(r, 0)); }
   }
   rendreHorloge(7, s?.jour || 0);
@@ -61,7 +87,7 @@ async function avancer(nbJours) {
   occupe = true;
   for (let d = 0; d < nbJours && !s.fini && !s.dilemme; d++) {
     const pas = nbJours > 1 ? 4 : 2;
-    for (let k = 0; k < 24; k += pas) { rendreHorloge((7 + k) % 24, s.jour); await new Promise(r => setTimeout(r, nbJours > 1 ? 15 : 35)); }
+    for (let k = 0; k < 24; k += pas) { rendreHorloge((7 + k) % 24, s.jour); await new Promise(r => setTimeout(r, (nbJours > 1 ? 15 : 35) * (VITESSES[prefs.vitesse] ?? 1))); }
     const n = s.messages.length, v0 = s.coutVoisinCumul || 0;
     jourSuivant(s);
     if (nbJours === 1 && s.dernierJour) { const vj = (s.coutVoisinCumul || 0) - v0, mj = s.dernierJour.cout || 0; toast(`Journée terminée : ${eur(mj)} dépensés${vj > 0 ? ` (voisin : ${eur(vj)})` : ''}.`, { effet: vj > 0 ? (mj <= vj ? `Tu as économisé ${eur(vj - mj)} aujourd'hui.` : `Tu as dépensé ${eur(mj - vj)} de plus que lui.`) : '', duree: 4000 }); }
@@ -72,6 +98,10 @@ async function avancer(nbJours) {
   occupe = false;
 }
 
+let avantCurseur = null;
+document.addEventListener('pointerdown', (e) => { if (e.target.type === 'range') avantCurseur = cliche(); });
+document.addEventListener('focusin', (e) => { if (e.target.type === 'range') avantCurseur = cliche(); });
+document.addEventListener('change', (e) => { const t = e.target; if (t.type === 'range' && avantCurseur && avantCurseur !== cliche()) { empiler(avantCurseur, `${t.getAttribute('aria-label') || 'Curseur'} → ${t.value} °C`); avantCurseur = cliche(); } });
 document.addEventListener('input', (e) => {
   const t = e.target;
   const lab = (v) => (v <= 8 ? 'Arrêt' : v + ' °C');
@@ -90,6 +120,13 @@ document.addEventListener('click', (e) => {
   if (!b || b.disabled) return;
   const n = s.messages.length;
   const d = b.dataset;
+  const annulable = !!(d.choix || d.set || d.appliquer !== undefined || d.routine || d.porter);
+  const avant = annulable ? cliche() : null, libAnnul = (b.closest('.ligne')?.querySelector('label')?.textContent || '').trim() + (b.textContent.trim() ? ` → ${b.textContent.trim()}` : '');
+  if (annulable) queueMicrotask(() => { if (cliche() !== avant) empiler(avant, libAnnul.replace(/^ → /, '')); });
+  if (b.id === 'btnAnnuler') { annuler(); return; }
+  if (b.id === 'btnReglages') { ouvrirReglages(); return; }
+  if (b.id === 'reglagesFermer') { $('reglages').classList.add('cache'); return; }
+  if (d.pref) { prefs[d.pref] = d.v; sauverPrefs(); appliquerPrefs(); return; }
   if (d.choix) {
     const v = d.v;
     switch (d.choix) {
@@ -105,10 +142,15 @@ document.addEventListener('click', (e) => {
     }
   } else if (d.onglet) ouvrir(d.onglet);
   else if (d.section) ouvrirSection(s, d.section);
+  else if (d.appliquer !== undefined) {
+    const r = recommandations(s)[Number(d.appliquer)], t = r && appliquerConseil(s, r.action);
+    toast(t ? `✅ ${t}` : 'Rien à appliquer automatiquement : ouvre le réglage avec « Y aller ».', { type: t ? 'ok' : 'info' });
+    if (t) autoSauvegarde();
+  }
   else if (d.vue) { choisirVue(d.vue); rendreTout(s); }
   else if (d.aller) { ouvrir(d.aller); document.querySelector('.lateral')?.scrollIntoView({ block: 'start' }); }
   else if (d.conseilSuivant) etatUI.conseil = (etatUI.conseil || 0) + 1;
-  else if (d.confirmerAchat) { const occ = d.occasion === '1'; if (acheter(s, d.confirmerAchat, occ)) toast(`✅ ${ACHATS[d.confirmerAchat].nom} acheté`, { type: 'ok', effet: effetAchat(s, d.confirmerAchat, occ) }); $('confirmation').classList.add('cache'); autoSauvegarde(); }
+  else if (d.confirmerAchat) { const occ = d.occasion === '1'; if (acheter(s, d.confirmerAchat, occ)) toast(`✅ ${ACHATS[d.confirmerAchat].nom} acheté${ACTIVATION[d.confirmerAchat] ? ` · ${ACTIVATION[d.confirmerAchat].texte}` : ''}`, { type: 'ok', effet: effetAchat(s, d.confirmerAchat, occ), duree: ACTIVATION[d.confirmerAchat] ? 7000 : undefined }); $('confirmation').classList.add('cache'); autoSauvegarde(); }
   else if (b.id === 'confNon') { $('confirmation').classList.add('cache'); return; }
   else if (b.id === 'coachPasser') { arreterTutoriel(); return; }
   else if (b.id === 'coachSuiv') { etapeSuivante(s, 1); }
@@ -143,7 +185,7 @@ document.addEventListener('click', (e) => {
   } else if (d.acheter) {
     const occ = d.occasion === '1', a = ACHATS[d.acheter], prix = occ ? a.occasion : a.prix;
     if (prix >= 50 || a.temps || occ) { $('confContenu').innerHTML = apercuAchat(s, d.acheter, occ); $('confirmation').classList.remove('cache'); setTimeout(() => $('confOui')?.focus(), 30); return; }
-    if (acheter(s, d.acheter, occ)) toast(`✅ ${a.nom} acheté`, { type: 'ok', effet: effetAchat(s, d.acheter, occ) });
+    if (acheter(s, d.acheter, occ)) toast(`✅ ${a.nom} acheté${ACTIVATION[d.acheter] ? ` · ${ACTIVATION[d.acheter].texte}` : ''}`, { type: 'ok', effet: effetAchat(s, d.acheter, occ), duree: ACTIVATION[d.acheter] ? 7000 : undefined });
   }
   else if (d.acheterVet) acheterVetement(s, d.acheterVet, d.q);
   else if (d.porter) { const v = s.vetements[d.porter]; v.porte = !v.porte; }
@@ -179,15 +221,23 @@ if (aUneSauvegarde()) $('btnReprendre').classList.remove('cache');
 else { try { if (localStorage.getItem('economie-game-sauvegarde')) { charger(); toast('Ta sauvegarde d\'une ancienne version a été réinitialisée : le jeu couvre maintenant hiver, printemps et été.'); } } catch { /* stockage indisponible */ } }
 // thème, icônes, clavier
 document.documentElement.dataset.theme = prefs.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair');
-for (const [id, ic] of [['btnAide', 'aide'], ['btnTheme', 'theme'], ['btnSauver', 'sauver'], ['btnCharger', 'charger'], ['btnNouvelle', 'nouvelle']]) $(id).innerHTML = icone(ic, 18);
+for (const [id, ic] of [['btnAnnuler', 'annuler'], ['btnReglages', 'reglages'], ['btnAide', 'aide'], ['btnTheme', 'theme'], ['btnSauver', 'sauver'], ['btnCharger', 'charger'], ['btnNouvelle', 'nouvelle']]) $(id).innerHTML = icone(ic, 18);
 for (const [id, ic] of [['btnJour', 'jour'], ['btnSemaine', 'semaine'], ['btnMois', 'mois'], ['btnEvenement', 'evenement']]) $(id).querySelector('.t-ico').innerHTML = icone(ic, 18);
 document.addEventListener('guide-rendre', () => rendreTout(s));
 document.addEventListener('keydown', (e) => {
   const g = e.target.closest?.('[data-piece-clic]');
   if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); return; }
-  if (e.key === 'Escape') { if (!$('confirmation').classList.contains('cache')) $('confirmation').classList.add('cache'); else if (coachActif()) arreterTutoriel(); return; }
-  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
-  if ((e.key === 'j' || e.key === 'J') && $('intro').classList.contains('cache') && !s.dilemme) avancer(1);
+  if (e.key === 'Escape') { if (!$('reglages').classList.contains('cache')) $('reglages').classList.add('cache'); else if (!$('confirmation').classList.contains('cache')) $('confirmation').classList.add('cache'); else if (coachActif()) arreterTutoriel(); return; }
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); annuler(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const libre = $('intro').classList.contains('cache') && !s.dilemme && $('reglages').classList.contains('cache') && $('confirmation').classList.contains('cache');
+  if (e.key === '?') { ouvrirReglages(); return; }
+  if (!libre) return;
+  const k = e.key.toLowerCase();
+  if (k === 'j') avancer(1); else if (k === 's') avancer(7); else if (k === 'm') avancerVite(30, false); else if (k === 'e') avancerVite(400, true);
+  else if (k === 't') { choisirVue(prefs.vue === 'maison' ? 'tableau' : 'maison'); rendreTout(s); }
+  else if ('123456'.includes(k) && k) { ouvrirSection(s, ['maison', 'vie', 'achats', 'argent', 'savoir', 'bilan'][Number(k) - 1]); rendreTout(s); }
 });
 document.addEventListener('click', (e) => {
   const g = e.target.closest?.('[data-piece-clic]'); if (!g) return;
@@ -197,6 +247,7 @@ document.addEventListener('click', (e) => {
   if (!cible) toast('Un seul thermostat pour toute la maison : des robinets thermostatiques (Achats) permettent de régler chaque pièce.');
 });
 addEventListener('resize', () => majCoach(s));
+appliquerPrefs();
 rendreHorloge(7, s?.jour || 0);
 rendreTout(s);
 window.__jeu = () => s; // débogage

@@ -80,6 +80,7 @@ export function debutJourCampagne(s, ctx) {
     ctx.msg(`🎆 ${x.getUTCFullYear()} : inflation ${pct(t.inflation)} · gaz ${pct(t.gaz)} · alimentation ${pct(t.alim)} · carburant ${pct(t.carburant)} · ton salaire ${pct(t.salaire)} (${eur0(e.salaire)} net) · loyer ${pct(t.loyer)} (IRL). Reste à vivre : ${eur0(resteAVivre(s))}/mois.`, 'alerte');
     ctx.debloquer('inflation');
     if (t.salaire < t.inflation) ctx.debloquer('inflationReelle');
+    defiAnnuel(s, ctx, x.getUTCFullYear());
   }
   // 1er février et 1er août : tarif réglementé de l'électricité et Livret A (formule : moyenne inflation / €STR, au 0,1 pt, plancher 0,5 %)
   if ((m === 1 || m === 7) && j === 1 && s.jour > 0) {
@@ -134,6 +135,34 @@ export function debutJourCampagne(s, ctx) {
   // une canicule s'annonce (J−2)
   if (!dilemme && s.meteo[s.jour + 2]?.canicule && !s.meteo[s.jour + 1]?.canicule && !s.meteo[s.jour]?.canicule) dilemme = 'canicule';
   return dilemme;
+}
+
+// v0.9 : à partir de la 2e année, un défi par an sur un poste (−5 % de consommation par rapport à l'an passé, hausse des prix comprise).
+// L'année 1 reste une année d'apprentissage ; ensuite les postes déjà optimisés deviennent plus durs à réduire.
+export const DEFIS = [
+  { poste: 'gaz', nom: 'Un hiver plus sobre', texte: 'consommer 5 % de gaz en moins que l\'an dernier' },
+  { poste: 'nourriture', nom: 'Le panier malin', texte: 'réduire de 5 % le budget nourriture (hors inflation)' },
+  { poste: 'elec', nom: 'La chasse aux watts', texte: 'consommer 5 % d\'électricité en moins' },
+  { poste: 'transport', nom: 'Bouger autrement', texte: 'réduire de 5 % le budget transport (hors hausse du carburant)' },
+];
+function defiAnnuel(s, ctx, an) {
+  const e = s.eco, D = s.depenses;
+  if (e.defi) {   // bilan du défi précédent
+    const f = e.defi, fait = (D[f.poste] - f.debut) <= f.cible;
+    (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait });
+    if (fait) { s.volonte = Math.min(100, s.volonte + 8); ctx.msg(`🏅 Défi ${f.an} réussi : « ${f.nom} ». Moral +8.`, 'alerte'); }
+    else ctx.msg(`🎯 Défi ${f.an} manqué de ${eur0(D[f.poste] - f.debut - f.cible)} : « ${f.nom} ».`, 'info');
+    e.defi = null;
+  }
+  const prec = e.depJan, idxPrec = e.idxJan; e.depJan = { ...D }; e.idxJan = { ...e.idx };
+  if (!prec) return;    // première année : apprentissage
+  const d = DEFIS[(an - 2027) % DEFIS.length], dernier = D[d.poste] - (prec[d.poste] || 0);
+  if (dernier < 50) return;
+  // cible corrigée de la hausse des prix : on demande de consommer 5 % de moins, pas de battre l'inflation
+  const k = { gaz: 'gaz', nourriture: 'alim', elec: 'elec', transport: 'carburant' }[d.poste];
+  const hausse = idxPrec && e.idx[k] ? e.idx[k] / idxPrec[k] : 1;
+  e.defi = { ...d, an, jour: s.jour, debut: D[d.poste], cible: Math.round(dernier * 0.95 * hausse) };
+  ctx.msg(`🎯 Défi ${an} : « ${d.nom} » — ${d.texte} (moins de ${eur0(e.defi.cible)} sur l'année). Récompense : moral +8.`, 'alerte');
 }
 
 /** Facture d'énergie du jour : comptée en dépense comme avant, mais payée par mensualités (trésorerie). */

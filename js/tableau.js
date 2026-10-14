@@ -2,7 +2,10 @@
 // (dépenses par poste au 1er du mois) pris par la simulation pour comparer « ce mois-ci » et « le mois dernier ».
 import { ACHATS, BANQUE } from './data.js';
 import { dateDuJour, prevision } from './meteo.js';
-import { scoreFinal, evenementsAVenir, tempsLibre, eur } from './simulation.js';
+import { scoreFinal, evenementsAVenir, tempsLibre, eur, acheter, actions, acheterVetement, gestesActifs, planifierLessive, laverMain, linge, remplissage, ROUTINES, routineDispo } from './simulation.js';
+import { chapitreDuJour } from './meteo.js';
+import { faireReleves, resilier, reabonner } from './systemes.js';
+import { deposer } from './finance.js';
 import { valeurs } from './finance.js';
 import { tableauROI, estimationAchat } from './roi.js';
 import { palierMoral, palierBE } from './paliers.js';
@@ -33,31 +36,179 @@ export function instantaneMois(s) {
   if (!s.tab) { s.tab = { mois: m, debut: v, prec: null }; return; }
   if (s.tab.mois === m) return;
   s.tab.prec = Object.fromEntries(Object.entries(v).map(([k, [a, b]]) => [k, [a - (s.tab.debut[k]?.[0] || 0), b - (s.tab.debut[k]?.[1] || 0)]]));
+  // historique mensuel (v0.9) : dépenses du mois écoulé et patrimoine, pour les courbes
+  const tot = (o) => Object.values(o).reduce((t, x) => t + x, 0);
+  const moi = tot(Object.fromEntries(Object.entries(s.tab.prec).map(([k, x]) => [k, x[0]]))), vz = tot(Object.fromEntries(Object.entries(s.tab.prec).map(([k, x]) => [k, x[1]])));
+  const r = scoreFinal(s);
+  (s.tab.hist ||= []).push({ jour: s.jour, moi, voisin: vz, pat: r.patrimoine, patV: r.patrimoineVoisin ?? null });
   s.tab.mois = m; s.tab.debut = v;
+}
+
+// courbes SVG simples (deux séries, axes, légende) ; état vide explicite
+export function courbe(points, series, { unite = ' €', hauteur = 180, vide = 'Pas encore assez de données.' } = {}) {
+  if (!points || points.length < 2) return `<p class="vide">📈 ${vide}</p>`;
+  const W = 560, H = hauteur, g = 46, b = 24, xs = (i) => g + i * (W - g - 8) / (points.length - 1);
+  const vals = points.flatMap(p => series.map(se => p[se.cle]).filter(x => x != null));
+  let mn = Math.min(0, ...vals), mx = Math.max(...vals); if (mx - mn < 1) mx = mn + 1;
+  const ys = (v) => H - b - (v - mn) / (mx - mn) * (H - b - 10);
+  const fmt = (v) => Math.abs(v) >= 1000 ? `${(v / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} k${unite.trim()}` : `${Math.round(v)}${unite}`;
+  const grad = [0, 0.5, 1].map(f => mn + f * (mx - mn));
+  const date = (j) => dateDuJour(j).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  const pas = Math.max(1, Math.ceil(points.length / 6));
+  return `<svg viewBox="0 0 ${W} ${H}" class="courbe" role="img" aria-label="${series.map(se => se.nom).join(' et ')}, de ${date(points[0].jour)} à ${date(points.at(-1).jour)}">
+    ${grad.map(v => `<line x1="${g}" x2="${W - 8}" y1="${ys(v)}" y2="${ys(v)}" class="grille"/><text x="${g - 4}" y="${ys(v) + 4}" text-anchor="end">${fmt(v)}</text>`).join('')}
+    ${points.map((p, i) => i % pas === 0 ? `<text x="${xs(i)}" y="${H - 6}" text-anchor="middle">${date(p.jour)}</text>` : '').join('')}
+    ${series.map(se => `<polyline fill="none" stroke="${se.couleur}" stroke-width="2.5" ${se.tirets ? 'stroke-dasharray="5 4"' : ''} points="${points.map((p, i) => p[se.cle] == null ? '' : `${xs(i)},${ys(p[se.cle])}`).join(' ')}"/>`).join('')}
+  </svg><div class="tb-legende">${series.map(se => `<span style="color:${se.couleur}">${se.nom}</span>`).join('')}</div>`;
+}
+export function rendreCourbes(s) {
+  const h = s.tab?.hist || [];
+  const d = document.getElementById('courbeDepenses'), p = document.getElementById('courbePatrimoine');
+  if (d) d.innerHTML = courbe(h, [{ cle: 'moi', nom: 'Toi', couleur: 'var(--accent)' }, { cle: 'voisin', nom: 'Le voisin', couleur: '#9aa4b2', tirets: true }], { vide: 'La courbe apparaît après deux mois complets.' })
+    + (h.length >= 2 ? `<p class="aide">Énergie, eau, courses, abonnements, plaisirs, transport, linge et imprévus (hors loyer).</p>` : '');
+  if (p) p.innerHTML = courbe(h, [{ cle: 'pat', nom: 'Ton patrimoine', couleur: 'var(--ok)' }, { cle: 'patV', nom: 'Patrimoine du voisin', couleur: '#9aa4b2', tirets: true }], { vide: 'La courbe apparaît après deux mois complets.' })
+    + (h.length >= 2 ? '<p class="aide">Compte courant et placements, nets de frais et d\'impôts s\'ils étaient vendus aujourd\'hui.</p>' : '');
 }
 export function moisCourant(s) {
   if (!s.tab) instantaneMois(s);
   return postes(s).map(p => ({ ...p, mois: p.moi - (s.tab.debut[p.id]?.[0] || 0), moisVoisin: p.voisin - (s.tab.debut[p.id]?.[1] || 0), prec: s.tab.prec?.[p.id]?.[0] ?? null }));
 }
 
+// une action concrète par poste en dérapage (le joueur sait quoi faire en arrivant)
+export const GESTE_POSTE = {
+  chauffage: { titre: 'Baisser le chauffage d\'1 °C (≈ −7 % de gaz)' },
+  eauChaude: { titre: 'Douche de 7 min et ballon à 55 °C' },
+  eau: { titre: 'Douches plus courtes, vaisselle à la bassine' },
+  alim: { titre: 'Cuisiner maison plutôt qu\'acheter tout prêt' },
+  elec: { titre: 'Éteindre les veilles et passer aux LED' },
+  clim: { titre: 'Volets fermés le jour, fenêtres ouvertes la nuit' },
+  services: { titre: 'Éplucher tes relevés et résilier l\'inutile' },
+  plaisirs: { titre: 'Ramener les plaisirs à 20 €/semaine' },
+  transport: { titre: 'Essayer les transports en commun ou le vélo' },
+  linge: { titre: 'Lessives pleines à 30 °C, séchage à l\'air' },
+};
+// gestes conseillés : économie mesurée en simulant un an de « ne rien toucher » avec le seul geste en plus (graine 2026)
+export const GESTES_RECO = [
+  { id: 'gamelle', titre: 'Emporter sa gamelle le midi', an: 1700, aller: 'transport', fait: (s) => s.transport.repas === 'emporte', faire: (s) => { s.transport.repas = 'emporte'; }, dispo: (s) => s.jour >= 3 },
+  { id: 'prixKilo', titre: 'Comparer les prix au kilo', an: 275, aller: 'cuisine', fait: (s) => !!s.sys.prixKiloGeste, faire: (s) => { s.sys.prixKiloGeste = true; } },
+  { id: 'liste', titre: 'Faire une liste de courses et un menu des restes', an: 200, aller: 'cuisine', fait: (s) => !!s.sys.liste, faire: (s) => { s.sys.liste = true; } },
+  { id: 'aerer', titre: 'Aérer 5 min matin et soir (fini la fenêtre entrouverte)', an: 145, aller: 'maison', fait: (s) => s.aeration !== 'entrouverte', faire: (s) => { s.aeration = 'breve'; }, hiver: true },
+  { id: 'couperEau', titre: 'Couper l\'eau pendant le savonnage', an: 140, aller: 'eau', fait: (s) => !!s.sys.douche.couperEau, faire: (s) => { s.sys.douche.couperEau = true; } },
+  { id: 'rideaux', titre: 'Fermer rideaux et volets la nuit', an: 70, aller: 'maison', fait: (s) => s.rideaux !== 'ouverts', faire: (s) => { s.rideaux = 'nuit'; }, hiver: true },
+];
+const saisonFroide = (s) => ['hiver', 'automne'].includes(chapitreDuJour(s.jour).saison);
+const enApprentissage = (s) => Object.entries(gestesActifs(s)).some(([g, on]) => on && !s.gestes[g]?.habitude);
+// se couvrir : pull et pantalon polaire (deux couches chaudes), achetés si besoin
+function seCouvrir(s) {
+  if (gestesActifs(s).couches) return null;
+  for (const id of ['sweat', 'polaire']) { const v = s.vetements[id]; if (!v.possede && !acheterVetement(s, id, 'eco')) return null; s.vetements[id].porte = true; }
+  return 'Pull et pantalon polaire enfilés : deux couches chaudes.';
+}
+// achats qui ne rapportent rien sans un réglage : on l'active (conseil) ou on le rappelle (achat manuel)
+export const ACTIVATION = {
+  seau: { texte: 'Active « récupérer l\'eau froide du début » dans Eau chaude.', aller: 'eau', faire: (s) => { s.sys.douche.recupEau = true; } },
+  fourSolaire: { texte: 'Active la cuisine solaire dans Cuisine.', aller: 'cuisine', faire: (s) => { s.sys.cuisineSolaire = true; } },
+  fresnel: { texte: 'Active la cuisine solaire dans Cuisine.', aller: 'cuisine', faire: (s) => { s.sys.cuisineSolaire = true; } },
+  marmite: { texte: 'Elle ne sert qu\'en cuisinant maison : choisis « maison » ou « batch » dans Cuisine.', aller: 'cuisine', faire: (s) => { if (!['maison', 'batch', 'austere'].includes(s.sys.regime)) s.sys.regime = 'maison'; } },
+  multiprise: { texte: 'Pense à l\'éteindre le soir (Électricité).', aller: 'elec', faire: (s) => { s.sys.multipriseGeste = true; } },
+  bouillotte: { texte: 'Active la bouillotte du soir dans Maison › Gestes.', aller: 'maison', faire: (s) => { s.utiliserBouillotte = true; } },
+  velo: { texte: 'Choisis le vélo pour aller au travail (Transport).', aller: 'transport', faire: (s) => { if (s.transport.mode === 'voiture') s.transport.mode = 'velo'; } },
+  vae: { texte: 'Choisis le vélo électrique pour aller au travail (Transport).', aller: 'transport', faire: (s) => { if (s.transport.mode === 'voiture') s.transport.mode = 'vae'; } },
+  corde: { texte: 'Choisis « dehors » pour le séchage quand il fait beau.', aller: 'linge', faire: () => {} },
+  robinets: { texte: 'Règle maintenant chaque pièce : chambre plus fraîche, cuisine au minimum.', aller: 'maison', faire: () => {} },
+};
+// essai à blanc : ne proposer « Faire » que si l'action change vraiment quelque chose
+function faisable(s, action) {
+  const { meteo, messages, ...reste } = s;
+  const t = { ...structuredClone(reste), meteo, messages: [] };
+  try { return !!appliquerConseil(t, action); } catch { return false; }
+}
+/** Applique une recommandation en un clic (et sert de « débutant qui suit les conseils » dans les tests). Renvoie un texte ou null. */
+export function appliquerConseil(s, a) {
+  const y = s.sys, c = actions(s);
+  if (!a) return null;
+  if (a.type === 'achat') {
+    if (!acheter(s, a.id)) return null;
+    ACTIVATION[a.id]?.faire(s);
+    return `Acheté et mis en service : ${ACHATS[a.id].nom}.`;
+  }
+  if (a.type === 'placer') return deposer(s, 'livretA', Math.floor(a.montant), c).ok ? `${eur(Math.floor(a.montant))} placés sur le Livret A.` : null;
+  if (a.type === 'geste') { const g = GESTES_RECO.find(x => x.id === a.id); if (!g || g.fait(s)) return null; g.faire(s); return `Nouveau geste : ${g.titre.toLowerCase()}.`; }
+  if (a.type === 'couvrir') return seCouvrir(s);
+  if (a.type === 'lessive') { if (s.lessivePrevue || !linge(s).length) return null; return planifierLessive(s, s.sys.lessiveConseil || { temp: 30, sechage: 'air' }) ? 'Lessive lancée (30 °C, séchage à l\'air) : elle tourne cette nuit.' : null; }
+  if (a.type === 'laverMain') { const ids = Object.entries(s.vetements).filter(([id, v]) => v.porte && v.salete >= 40 && laverMain(s, id)).map(([id]) => id); return ids.length ? `Lavé à la main (${ids.length} pièce${ids.length > 1 ? 's' : ''}) : propre pour demain.` : null; }
+  if (a.type === 'routine') { s.auto ??= {}; if (s.auto[a.id]) return null; s.auto[a.id] = true; return `Routine activée : ${ROUTINES[a.id].nom.toLowerCase()}.`; }
+  if (a.type === 'alleger') { let n = 0; for (const [id, v] of Object.entries(s.vetements)) if (v.porte && id !== 'tshirt' && id !== 'chaussettes') { v.porte = false; n++; } s.vetements.tshirt.porte = true; return n ? 'Vêtements chauds rangés jusqu\'à l\'automne.' : null; }
+  if (a.type === 'sante') { if (!saisonFroide(s)) return null; const t = seCouvrir(s); if (t) return t; const C = s.central; if (s.possede.robinets) { for (const p of Object.values(s.pieces)) { p.consigneJour = Math.min(20, p.consigneJour + 1); p.consigneNuit = Math.min(18, p.consigneNuit + 1); } return 'Chauffage remonté d\'1 °C dans chaque pièce.'; } if (C.consigneJour >= 20 && C.consigneNuit >= 18) return null; C.consigneJour = Math.min(20, C.consigneJour + 1); C.consigneNuit = Math.min(18, C.consigneNuit + 1); return `Thermostat remonté : ${C.consigneJour} °C / ${C.consigneNuit} °C.`; }
+  if (a.type === 'jauge') {
+    if (y.plaisirs < 20) { y.plaisirs = 20; return 'Plaisirs remontés à 20 €/semaine.'; }
+    if (y.plaisirs < 35) { y.plaisirs = 35; return 'Plaisirs à 35 €/semaine le temps de remonter.'; }
+    for (const k of ['streaming', 'musique']) if (!y.abonnements[k].actif && reabonner(s, k, c)) return `Réabonné : ${k === 'streaming' ? 'streaming vidéo' : 'musique en ligne'}.`;
+    if (!s.sys.mediatheque && s.argent > 50) { s.argent -= 20; s.depenses.services += 20; s.sys.mediatheque = true; return 'Carte de médiathèque prise (20 €/an) : livres et films à volonté.'; }
+    return null;
+  }
+  const P = {
+    chauffage: () => {
+      if (saisonFroide(s) && !gestesActifs(s).couches) return seCouvrir(s);
+      if (s.sante < 70) return null;   // pas de froid supplémentaire quand la santé flanche
+      if (s.possede.robinets) { let ok = false; for (const p of Object.values(s.pieces)) { if (p.consigneJour > 17) { p.consigneJour--; ok = true; } if (p.consigneNuit > 15) { p.consigneNuit--; ok = true; } } return ok && 'Chaque pièce baissée d\'1 °C.'; }
+      const C = s.central; if (C.consigneJour <= 18 && C.consigneNuit <= 15) return null;
+      C.consigneJour = Math.max(18, C.consigneJour - 1); C.consigneNuit = Math.max(15, C.consigneNuit - 1); return `Thermostat : ${C.consigneJour} °C le jour, ${C.consigneNuit} °C la nuit.`;
+    },
+    eauChaude: () => { if (y.douche.minutes <= 7 && y.ballon.consigne <= 55) return null; y.douche.minutes = Math.min(7, y.douche.minutes); y.ballon.consigne = Math.min(55, y.ballon.consigne); return 'Douche de 7 min, ballon à 55 °C.'; },
+    eau: () => { if (y.douche.minutes <= 7 && y.vaisselle === 'bassine') return null; y.douche.minutes = Math.min(7, y.douche.minutes); y.vaisselle = 'bassine'; return 'Douche de 7 min, vaisselle à la bassine.'; },
+    alim: () => { if (y.regime === 'maison' || y.regime === 'batch') return null; y.regime = 'maison'; return 'Cuisine maison.'; },
+    elec: () => { if (!s.possede.multiprise) return acheter(s, 'multiprise') ? 'Multiprise à interrupteur achetée.' : null; if (y.multipriseGeste) return null; y.multipriseGeste = true; return 'Multiprise éteinte le soir.'; },
+    clim: () => { if (s.voletsJour && s.ventNuit) return null; s.voletsJour = true; s.ventNuit = true; return 'Volets fermés le jour, fenêtres ouvertes la nuit.'; },
+    services: () => { const r = y.relevesFaits || faireReleves(s, c); if (!r) return null; let n = 0; for (const k of ['cloud', 'appli', 'assurance', 'sport']) if (resilier(s, k, c)) n++; return n ? `${n} abonnement(s) inutile(s) résilié(s).` : null; },
+    plaisirs: () => { if (y.plaisirs <= 20) return null; y.plaisirs = 20; return 'Plaisirs à 20 €/semaine.'; },
+    transport: () => { const t = s.transport; if (t.mode === 'commun' || t.mode === 'velo' || t.mode === 'vae') return null; if (s.possede.velo || s.possede.vae) { t.mode = s.possede.vae ? 'vae' : 'velo'; return 'Au travail à vélo.'; } t.mode = 'commun'; t.abonnementTC = true; return 'Transports en commun avec abonnement (50 % remboursés).'; },
+    linge: () => { if (s.sys.lessiveConseil) return null; s.sys.lessiveConseil = { temp: 30, sechage: 'air' }; return 'Prochaines lessives : pleines, 30 °C, séchage à l\'air.'; },
+  };
+  return P[a.id]?.() || null;
+}
 // actions recommandées, classées par impact en €/an
 export function recommandations(s, r = scoreFinal(s)) {
   const L = [], jours = Math.max(7, s.nbJours || s.jour || 7);
   for (const [id, a] of Object.entries(ACHATS)) {
     if (s.possede[id] || a.prix > s.argent - 100 || (a.temps || 0) > Math.max(0, tempsLibre(s))) continue;
-    const e = estimationAchat(id); if (!e || e.mois === null || !(e.annuel > 5)) continue;
+    const e = estimationAchat(id); if (!e || e.mois === null || !(e.annuel > 5) || e.mois > 24) continue;
+    if ((id === 'vae' && s.possede.velo) || (id === 'velo' && s.possede.vae)) continue;   // un vélo suffit
     const dom = { Instruments: 'maison', Isolation: 'maison', Chauffage: 'maison', Confort: 'maison', 'Été': 'maison', 'Ventilation passive': 'maison', 'Eau chaude': 'eau', Cuisine: 'cuisine', 'Cuisine solaire': 'cuisine', 'Électricité': 'elec', Production: 'elec', Transport: 'transport', Jardin: 'jardin' }[a.cat] || 'maison';
     if ((dom === 'transport' && s.jour < 3) || (dom === 'jardin' && s.jour < 21) || (dom === 'elec' && s.jour < 2)) continue;   // sous-onglet pas encore débloqué
-    L.push({ titre: `Acheter : ${a.nom}`, an: e.annuel, roi: e.annuel / a.prix * 100, jauge: a.temps ? `−${a.temps} h de temps libre` : null, aller: 'b-' + dom });
+    L.push({ titre: `Acheter : ${a.nom}`, an: e.annuel, roi: e.annuel / a.prix * 100, jauge: a.temps ? `−${a.temps} h de temps libre` : null, aller: 'b-' + dom, action: { type: 'achat', id } });
   }
   for (const p of postes(s)) {
     const fuite = (p.moi - p.voisin) / jours * 365;
-    if (p.id !== 'imprevus' && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: 'tu dépenses plus que le voisin', aller: p.aller, fuite: true });
+    if (p.id !== 'imprevus' && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: GESTE_POSTE[p.id]?.titre || `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: `${p.nom} : ${eur(fuite)}/an de plus que le voisin`, aller: p.aller, fuite: true, action: { type: 'poste', id: p.id } });
   }
-  if (s.fin && s.argent > 3000) { const m = s.argent - 1500; L.push({ titre: `Placer ${eur(m)} sur le Livret A`, an: m * BANQUE.livretA.taux, roi: BANQUE.livretA.taux * 100, jauge: 'disponible à tout moment', aller: 'banque' }); }
+  // gestes : un seul à la fois (la volonté s'use quand on en apprend plusieurs)
+  if (!enApprentissage(s)) for (const g of GESTES_RECO) if (!g.fait(s) && (g.dispo?.(s) ?? true) && (!g.hiver || saisonFroide(s))) { L.push({ titre: g.titre, an: g.an, roi: null, jauge: 'nouveau geste : un peu de volonté pendant 10 jours', aller: g.aller, action: { type: 'geste', id: g.id } }); break; }
+  // chauffage : baisser d'1 °C si on est couvert (≈ 7 %/°C, ADEME)
+  const C = s.central, haut = s.possede.robinets ? Object.values(s.pieces).some(p => p.consigneJour > 18) : C.consigneJour > 18 || C.consigneNuit > 16;
+  if (saisonFroide(s) && haut && s.sante >= 70 && s.jour >= 3) {
+    const gazAn = (s.base.gaz || 0) / Math.max(7, s.jour) * 365 * 0.6;
+    L.push(gestesActifs(s).couches ? { titre: GESTE_POSTE.chauffage.titre, an: gazAn * 0.07, roi: null, jauge: 'confort −3 environ', aller: 'maison', action: { type: 'poste', id: 'chauffage' } }
+      : { titre: 'Mettre une couche de plus (pull + polaire)', an: gazAn * 0.07, roi: null, jauge: 'confort + : permet ensuite de baisser le chauffage', aller: 'linge', action: { type: 'couvrir' } });
+  }
+  // hygiène : lessive (souvent la vraie cause d'une santé qui baisse hors hiver)
+  const sale = Object.values(s.vetements).some(v => v.possede && v.porte && v.salete >= 80);
+  const peauSale = Object.entries(s.vetements).some(([id, v]) => v.porte && v.salete >= 40 && ['tshirt', 'souscouche', 'chaussettes'].includes(id));
+  if (peauSale && remplissage(s) < 0.5 && !s.auto?.entretien)
+    L.push({ titre: 'Laver ton t-shirt à la main (10 min)', an: 0, roi: null, jauge: 'un seul haut porté tous les jours se salit en 3 jours', aller: 'linge', urgent: s.hygiene < 70 || sale, action: { type: 'laverMain' } });
+  if (routineDispo(s, 'entretien') && !s.auto?.entretien) L.push({ titre: 'Activer la routine d\'entretien des vêtements', an: 30, roi: null, jauge: 'aérer et laver à la main sans y penser', aller: 'routines', action: { type: 'routine', id: 'entretien' } });
+  if (!s.lessivePrevue && linge(s).length && (s.hygiene < 50 || remplissage(s) >= 0.5))
+    L.push({ titre: 'Lancer une lessive', an: 0, roi: null, jauge: `hygiène ${Math.round(s.hygiene)} %${sale ? ' · vêtements sales sur toi' : ''}`, aller: 'linge', urgent: s.hygiene < 50 || sale, action: { type: 'lessive' } });
+  if (routineDispo(s, 'lessive') && !s.auto?.lessive) L.push({ titre: 'Confier la lessive au pilote automatique', an: 50, roi: null, jauge: 'plus jamais de linge oublié', aller: 'routines', action: { type: 'routine', id: 'lessive' } });
+  const chaudSaison = ['ete'].includes(chapitreDuJour(s.jour).saison) || (chapitreDuJour(s.jour).saison === 'printemps' && chapitreDuJour(s.jour).index > 45);
+  if (chaudSaison && gestesActifs(s).couches) L.push({ titre: 'Ranger les vêtements chauds', an: 0, roi: null, jauge: 'confort + : il fait doux', aller: 'linge', urgent: true, action: { type: 'alleger' } });
+  if (s.sante < 60 && saisonFroide(s) && s.hygiene >= 50) L.push({ titre: s.sante < 45 ? 'Te réchauffer : santé en danger' : 'Te réchauffer avant de tomber malade', an: 500, roi: null, jauge: `santé ${Math.round(s.sante)} % : sous 40, maladie et jours de carence`, aller: gestesActifs(s).couches ? 'maison' : 'linge', urgent: true, action: { type: 'sante' } });
+  if (s.fin && s.argent > 3000) { const m = s.argent - 1500; L.push({ titre: `Placer ${eur(m)} sur le Livret A`, an: m * BANQUE.livretA.taux, roi: BANQUE.livretA.taux * 100, jauge: 'disponible à tout moment', aller: 'banque', action: { type: 'placer', montant: m } }); }
   const pm = palierMoral(s.volonte), pb = palierBE(s.bienetre);
-  if (s.volonte < 40 || s.bienetre < 50) L.push({ titre: `Remonter ${s.volonte < 40 ? 'le moral' : 'le bien-être'} (${s.volonte < 40 ? pm.nom : pb.nom})`, an: 600, roi: null, jauge: s.volonte < 40 ? pm.conseil : pb.conseil, aller: 'budget', urgent: true });
-  return L.sort((a, b) => (b.urgent ? 1e9 : b.an) - (a.urgent ? 1e9 : a.an)).slice(0, 3);
+  if (s.volonte < 40 || s.bienetre < 50) L.push({ titre: `Remonter ${s.volonte < 40 ? 'le moral' : 'le bien-être'} (${s.volonte < 40 ? pm.nom : pb.nom})`, an: 0, roi: null, jauge: s.volonte < 40 ? pm.conseil : pb.conseil, aller: 'budget', urgent: true, action: { type: 'jauge', id: s.volonte < 40 ? 'moral' : 'bienetre' } });
+  for (const x of L) if (x.action && x.fuite && !faisable(s, x.action)) delete x.action;   // la fuite reste signalée, sans bouton « Faire » inopérant
+  const ok = L.filter(x => !x.action || x.fuite || faisable(s, x.action));
+  return ok.sort((a, b) => (b.urgent ? 1e9 : b.an) - (a.urgent ? 1e9 : a.an)).slice(0, 3);
 }
 
 export function alertes(s) {
@@ -91,7 +242,10 @@ export function rendreTableau(s, etat = {}) {
   const salaire = s.eco ? s.eco.salaire * (s.mor?.facteurSalaire || 1) : 0, loyer = s.eco?.loyer || 0;
   const mc = moisCourant(s), depMois = mc.reduce((t, p) => t + p.mois, 0);
   const jm = dateDuJour(s.jour).getUTCDate(), jdm = new Date(Date.UTC(dateDuJour(s.jour).getUTCFullYear(), dateDuJour(s.jour).getUTCMonth() + 1, 0)).getUTCDate();
-  const projMois = depMois / Math.max(1, jm - 1 || 1) * jdm;
+  // en début de mois, les prélèvements mensuels faussent l'extrapolation : on prend le mois dernier
+  const depPrec = mc.some(p => p.prec !== null) ? mc.reduce((t, p) => t + (p.prec || 0), 0) : null;
+  const projMois = jm < 8 && depPrec !== null ? depPrec : depMois / Math.max(7, jm - 1) * jdm;
+  const projLib = jm < 8 && depPrec !== null ? 'Dépenses (mois dernier)' : 'Dépenses du mois (projection)';
   const pct = (x) => `${Math.round(x)} %`;
 
   // 1. situation
@@ -100,7 +254,7 @@ export function rendreTableau(s, etat = {}) {
     <div><span>Patrimoine (placements compris)</span><b>${eur(r.patrimoine)}</b><small>voisin ${eur(r.patrimoineVoisin ?? 0)}</small></div>
     <div><span>Économisé vs voisin</span><b class="${r.economies >= 0 ? 'plus' : 'moins'}">${eur(r.economies)}</b></div></div>
     <div class="tb-prec"><span>Épargne de précaution : ${eur(prec)} / ${eur(cible)} (3 mois de reste à vivre)</span><div class="progres" role="progressbar" aria-valuenow="${Math.round(pPrec)}" aria-valuemin="0" aria-valuemax="100" aria-label="Épargne de précaution"><div style="width:${pPrec}%"></div></div><small>${pPrec >= 100 ? '✓ Constituée : une panne ne te mettra pas à découvert.' : 'À constituer avant d\'investir à risque.'}</small></div>
-    ${s.eco ? `<div class="tb-budget"><div>Entrées / mois<b class="plus">+${eur(salaire)}</b></div><div>Loyer<b class="moins">−${eur(loyer)}</b></div><div>Dépenses du mois (projection)<b class="moins">−${eur(projMois)}</b></div><div>Solde estimé<b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${eur(salaire - loyer - projMois)}</b></div></div>` : ''}</div>`;
+    ${s.eco ? `<div class="tb-budget"><div>Entrées / mois<b class="plus">+${eur(salaire)}</b></div><div>Loyer<b class="moins">−${eur(loyer)}</b></div><div>${projLib}<b class="moins">−${eur(projMois)}</b></div><div>Solde estimé<b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${eur(salaire - loyer - projMois)}</b></div></div>` : ''}</div>`;
 
   // 2. jauges
   const ej = etat.prec || {};
@@ -126,7 +280,9 @@ export function rendreTableau(s, etat = {}) {
 
   // 4. recommandations
   const reco = recommandations(s, r);
-  const recos = `<div class="tb-carte"><h3>Que faire maintenant ?</h3><ol class="tb-reco">${reco.map(x => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : `~${eur(x.an)}/an`}${x.roi ? ` · rendement ${Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><button class="btn primaire" data-aller="${x.aller}">Y aller</button></li>`).join('') || '<li>Rien d\'urgent : avance dans le temps.</li>'}</ol></div>`;
+  const df = s.eco?.defi, dfFait = df ? s.depenses[df.poste] - df.debut : 0, dfP = df ? Math.min(100, dfFait / df.cible * 100) : 0;
+  const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — ${eur(dfFait)} / ${eur(df.cible)}</span><div class="progres ${dfP > 100 * (s.jour - df.jour + 1) / 365 ? 'alerte' : ''}" role="progressbar" aria-valuenow="${Math.round(dfP)}" aria-valuemin="0" aria-valuemax="100" aria-label="Budget du défi consommé"><div style="width:${dfP}%"></div></div></div>` : '';
+  const recos = `<div class="tb-carte"><h3>Que faire maintenant ?</h3>${defiH}<ol class="tb-reco">${reco.map((x, i) => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : x.an > 0 ? `~${eur(x.an)}/an` : ''}${x.roi ? ` · rendement ${Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><span class="tb-acts">${x.action && x.action.type !== 'poste' || (x.action?.type === 'poste' && x.action.id !== 'linge') ? `<button class="btn primaire" data-appliquer="${i}" aria-label="Faire : ${x.titre}">Faire</button>` : ''}<button class="btn" data-aller="${x.aller}" aria-label="Y aller : ${x.titre}">Y aller</button></span></li>`).join('') || '<li class="vide">Rien d\'urgent : avance dans le temps.</li>'}</ol></div>`;
 
   // 5. alertes
   const al = alertes(s);

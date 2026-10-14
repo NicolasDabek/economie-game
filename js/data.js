@@ -379,7 +379,7 @@ export const REABONNEMENT = {
   forfait:   { frais: 10, engagementMois: 0, note: 'carte SIM 10 €, prix catalogue (la remise négociée est perdue)' },
 };
 export const MEDIATHEQUE = 20;   // €/an : abonnement à la médiathèque municipale (souvent gratuit)
-export const PLAISIRS = { 0: -1.6, 10: 0.4, 20: 1.0, 35: 1.4 };
+export const PLAISIRS = { 0: -1.95, 10: 0.4, 20: 1.0, 35: 1.4 };
 export const PLAISIRS_MORAL = { 0: -0.3, 10: 0.15, 20: 0.2, 35: 0.22 };  // moral/jour : un petit plaisir régulier recharge la volonté  // €/semaine -> bien-être/jour (rendements décroissants)
 
 // ---------- Grenier : objets à revendre (prix d'occasion constatés) ----------

@@ -17,6 +17,8 @@
   </div>
   <div id="jauges" class="jauges" role="list" aria-label="Jauges"></div>
   <div class="menu" role="toolbar" aria-label="Partie">
+    <button class="btn-icone" id="btnAnnuler" aria-label="Annuler le dernier réglage (Ctrl+Z)" data-tip="Annuler le dernier réglage (Ctrl+Z)" disabled></button>
+    <button class="btn-icone" id="btnReglages" aria-label="Réglages et raccourcis" data-tip="Réglages et raccourcis"></button>
     <button class="btn-icone" id="btnAide" aria-label="Rejouer le tutoriel" data-tip="Rejouer le tutoriel"></button>
     <button class="btn-icone" id="btnTheme" aria-label="Thème clair ou sombre" data-tip="Thème clair / sombre"></button>
     <button class="btn-icone" id="btnSauver" aria-label="Sauvegarder" data-tip="Sauvegarder"></button>
@@ -74,6 +76,8 @@
       <div class="panneau cache" data-panneau="resume"><div class="carte"><h2>Où en es-tu ?</h2><div id="resume"></div></div></div>
       <div class="panneau cache" data-panneau="factures"><div class="carte"><h2>Factures des 12 dernières semaines</h2><div id="factures"></div></div></div>
       <div class="panneau cache" data-panneau="graphes">
+        <div class="carte"><h2>Dépenses mois par mois</h2><div id="courbeDepenses"></div></div>
+        <div class="carte"><h2>Patrimoine</h2><div id="courbePatrimoine"></div></div>
         <div class="carte"><h2>Les dernières 24 h</h2><canvas id="graphe" width="520" height="200" role="img" aria-label="Températures et coûts des dernières 24 heures"></canvas><p class="aide" id="legende"></p></div>
         <div class="carte"><h2>Électricité heure par heure (hier)</h2><canvas id="grapheElec" width="520" height="150" role="img" aria-label="Consommation électrique heure par heure"></canvas><p class="aide" id="legendeElec"></p></div>
       </div>
@@ -93,6 +97,20 @@
 <div id="toasts" aria-live="polite" aria-atomic="false"></div>
 <div id="dilemme" class="modal cache" role="dialog" aria-modal="true" aria-labelledby="dilemmeContenu"><div class="modal-contenu" id="dilemmeContenu"></div></div>
 <div id="fin" class="modal cache" role="dialog" aria-modal="true"><div class="modal-contenu" id="finContenu"></div></div>
+<div id="reglages" class="modal cache" role="dialog" aria-modal="true" aria-labelledby="reglagesTitre"><div class="modal-contenu petit">
+  <h2 id="reglagesTitre">Réglages</h2>
+  <div class="ligne"><label>Vitesse du temps</label><span class="choix" role="group" aria-label="Vitesse du temps"><button data-pref="vitesse" data-v="lente">Lente</button><button data-pref="vitesse" data-v="normale">Normale</button><button data-pref="vitesse" data-v="rapide">Rapide</button></span></div>
+  <div class="ligne"><label>Animations</label><span class="choix" role="group" aria-label="Animations"><button data-pref="anim" data-v="oui">Activées</button><button data-pref="anim" data-v="non">Réduites</button></span></div>
+  <div class="ligne"><label>Taille du texte</label><span class="choix" role="group" aria-label="Taille du texte"><button data-pref="texte" data-v="normal">Normale</button><button data-pref="texte" data-v="grand">Grande</button><button data-pref="texte" data-v="tresgrand">Très grande</button></span></div>
+  <div class="ligne"><label>Pauses en avance rapide</label><span class="choix" role="group" aria-label="Pauses en avance rapide"><button data-pref="pauses" data-v="toutes">Toutes les découvertes</button><button data-pref="pauses" data-v="importantes">Seulement l'important</button></span></div>
+  <h3>Raccourcis clavier</h3>
+  <dl class="raccourcis">
+    <dt><kbd>J</kbd></dt><dd>Jour suivant</dd><dt><kbd>S</kbd></dt><dd>Une semaine</dd><dt><kbd>M</kbd></dt><dd>Un mois</dd><dt><kbd>E</kbd></dt><dd>Jusqu'au prochain événement</dd>
+    <dt><kbd>T</kbd></dt><dd>Tableau de bord / maison</dd><dt><kbd>1</kbd>…<kbd>6</kbd></dt><dd>Sections Maison… Bilan</dd><dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>Annuler le dernier réglage du jour</dd>
+    <dt><kbd>?</kbd></dt><dd>Ces réglages et raccourcis</dd><dt><kbd>Échap</kbd></dt><dd>Fermer une fenêtre</dd>
+  </dl>
+  <div class="acts"><button class="btn primaire" id="reglagesFermer">Fermer</button></div>
+</div></div>
 <div id="confirmation" class="modal cache" role="dialog" aria-modal="true" aria-labelledby="confTitre"><div class="modal-contenu petit" id="confContenu"></div></div>
 <div id="coach" class="coach cache" role="dialog" aria-live="polite" aria-labelledby="coachTitre">
   <div class="coach-voile"></div><div class="coach-halo"></div>

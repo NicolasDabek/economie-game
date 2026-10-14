@@ -72,7 +72,7 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
       if (txt.includes('Bilan de l')) { bilans++; if (bilans === 1) await p.screenshot({ path: '/tmp/shotBilan.png' }); }
       if (dil === 1) await p.screenshot({ path: '/tmp/shot3.png' });
       await p.click('.choixDilemme:not([disabled]) >> nth=-1');
-    } else { clics++; await p.click(i % 3 ? '#btnEvenement' : '#btnMois'); await p.waitForFunction(() => !document.getElementById('btnMois').matches(':disabled') && true, null, { timeout: 20000 }); await p.waitForTimeout(150); }
+    } else { clics++; await p.click(i % 3 ? '#btnEvenement' : '#btnMois'); await p.waitForFunction(() => !document.getElementById('btnMois').matches(':disabled') || window.__jeu().fini, null, { timeout: 30000 }); await p.waitForTimeout(150); }
     if (i >= 12 && !shot4 && !(await p.isVisible('#dilemme'))) { shot4 = true; await go('maison'); await p.screenshot({ path: '/tmp/shot4.png', fullPage: true }); }
   }
   console.log('avance rapide', clics, 'clics', ((Date.now() - t0) / 1000).toFixed(1), 's', 'bilans', bilans, 'date', await p.textContent('#date'));

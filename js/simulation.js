@@ -679,7 +679,7 @@ export function jourSuivant(s) {
   if (palier > (s.palier || 0)) { s.palier = palier; s.volonte = Math.min(100, s.volonte + 3); msg(s, `🎯 Palier atteint : ${palier * 250} € économisés par rapport au voisin. Fierté (+3 moral) !`, 'habitude'); debloquer(s, 'progres'); }
   suivreROI(s);
   if (sommeilScore > 85 && hiver && (s.possede.robinets ? s.pieces.chambre.consigneNuit : s.central.consigneNuit) <= 17) debloquer(s, 'sommeilFrais');
-  if (globalThis.TRACE) globalThis.TRACE(s, { froid, chaud, confortJour, sommeilScore, dSante });
+  if (globalThis.TRACE) globalThis.TRACE(s, { froid, chaud, confortJour, sommeilScore, dSante, sale, dctx: ctx.d.sante, pbe });
   const sm = s.sommes;
   sm.confort += confortJour; sm.sante += s.sante; sm.volonte += s.volonte; sm.hygiene += s.hygiene; sm.bienetre += s.bienetre;
 

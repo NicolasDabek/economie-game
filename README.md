@@ -161,6 +161,16 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 | bien-être négligé (zéro plaisir, chambre à 15 °C) | 14,8k / 19,4k / 24,1k € | 18-20 | 36-37 |
 | austère extrême | −8,9k / −6,4k / −0,7k € | 1 | 1 |
 
+## v0.9 : équilibrage et expérience joueur
+
+- **Conseils qui agissent** : chaque recommandation du tableau de bord a un bouton « Faire » (achat + réglage qui le rend rentable, geste, placement, lessive, lavage à la main, routine, ranger les vêtements chauds…). Une recommandation sans effet possible n'est plus proposée (essai à blanc). Le diagnostic santé distingue linge sale et froid.
+- **Débutant guidé** : suivre uniquement le tableau de bord (une action tous les 3 jours) mène à Optimiseur / Autonome, en bonne santé (testé sur 3 graines).
+- **Défis annuels** dès la 2e année (gaz, nourriture, électricité, transport : −5 % de consommation, hausse des prix comprise), récompense moral +8. L'année 1 reste une année d'apprentissage.
+- **Courbes** : dépenses mois par mois et patrimoine, toi contre le voisin (onglet Bilan › Graphiques), avec état vide explicite.
+- **Annuler** (Ctrl+Z ou bouton) les réglages du jour ; **Réglages** (?) : vitesse, animations, taille du texte, pauses de l'avance rapide, aide des raccourcis clavier (J, S, M, E, T, 1–6, Échap).
+- « Prochain événement » ne s'arrête plus sur une alerte déjà vue récemment.
+- Bien-être négligé ramené vers 33 (zéro plaisir : −1,95/jour au lieu de −1,6).
+
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.
 
@@ -171,6 +181,8 @@ Les modules ES ne se chargent pas toujours en `file://` : un petit serveur stati
 Astuce : `?graine=1234` dans l'URL change la météo.
 
 ## Tests
+
+- `CHROME=/usr/bin/google-chrome node test/playtest.cjs [années]` : quatre profils de joueurs (débutant, pressé, curieux, mobile) ; liste les frictions. `CAPTURES=1` écrit les captures v09_*. `ROI=1 node test/sim-test.mjs` affiche la rentabilité réalisée de chaque équipement.
 ```bash
 node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations de sauvegarde v3/v4/v5/v6 → v7, cibles de moral et de santé
 node test/finance-test.mjs   # banque, marchés, projection, 4 stratégies d'arbitrage sur 5 ans, révision du Livret A, PEA 5 ans, temps de calcul 5 et 10 ans
