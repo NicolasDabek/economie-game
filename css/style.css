@@ -329,3 +329,4 @@ kbd{display:inline-block;min-width:1.6em;text-align:center;padding:1px 6px;borde
 .tb-reco .btn{float:none}
 .tb-reco li.vide{list-style:none;margin-left:-1.2em}
 .btn.discret{background:transparent;border-color:transparent;color:var(--texte-2,#555);text-decoration:underline}
+.tb-conseiller{font-size:.8125rem;color:var(--texte-2,#555);margin:0 0 .5rem}

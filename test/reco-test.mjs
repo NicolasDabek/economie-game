@@ -4,8 +4,8 @@
 // contradictoires sur le même levier le même jour.
 import { nouvellePartie } from '../js/state.js';
 import { jourSuivant, choixDilemme, resoudreDilemme, scoreFinal } from '../js/simulation.js';
-import { recommandations, appliquerConseil } from '../js/tableau.js';
-import { leviers, difference, evaluer, jaugeMenacee } from '../js/arbitre.js';
+import { recommandations, appliquerConseil, suivreConseil, conseillerDispo, CORVEES } from '../js/tableau.js';
+import { leviers, difference, evaluer, jaugeMenacee, ignorer, cleConseil } from '../js/arbitre.js';
 
 let ok = true;
 const ko = (t) => { ok = false; console.log('✗', t); };
@@ -22,7 +22,7 @@ for (const graine of [2026, 7]) {
     for (const r of R) for (const k of Object.keys(r.eval?.leviers || {})) { if (vus.has(k)) { conflits++; ko(`${graine} j${s.jour} deux conseils sur ${k}`); } vus.add(k); }
     if (R[0]?.action) {
       const avant = leviers(s); clics++;
-      if (appliquerConseil(s, R[0].action)) faits++;
+      if (suivreConseil(s, R[0])) faits++;
       for (const [k, [de, a]] of Object.entries(difference(avant, leviers(s)))) {
         const h = (hist[k] ||= []);
         const retour = h.find(e => e.a === de && e.de === a && s.jour - e.jour < 14);
@@ -57,5 +57,22 @@ for (const graine of [2026, 7]) {
   console.log('déprime :', R.map(r => r.titre).join(' | '));
   if (baisse.length) ko('déprime : une économie sur les plaisirs/abonnements est proposée : ' + baisse.map(r => r.titre).join(', '));
   if (surPlaisirs.length > 1) ko('déprime : plusieurs conseils sur les plaisirs');
+}
+// v0.9.2 : quota du conseiller et bouton « Ignorer »
+{
+  const s = nouvellePartie(2026, 1);
+  for (let i = 0; i < 20; i++) { if (s.dilemme) resoudreDilemme(s, choixDilemme(s).filter(o => o.possible !== false)[0].id); jourSuivant(s); }
+  let n = 0;
+  for (let k = 0; k < 10; k++) { const r = recommandations(s).find(r => r.action && !CORVEES.has(r.action.type)); if (r && suivreConseil(s, r)) n++; }
+  if (n > 3) ko(`quota : ${n} conseils suivis le même jour (max 3)`);
+  if (conseillerDispo(s).reste !== 0) ko('quota : le conseiller devrait être épuisé');
+  const R = recommandations(s), cible = R[0];
+  if (!cible) ko('ignorer : aucun conseil à ignorer');
+  else {
+    ignorer(s, cible);
+    const cle = cleConseil(cible);
+    for (let j = 0; j < 29; j++) { if (recommandations(s).some(r => cleConseil(r) === cle)) { ko(`ignorer : « ${cible.titre} » revient au bout de ${j} j`); break; } if (s.dilemme) resoudreDilemme(s, choixDilemme(s).filter(o => o.possible !== false)[0].id); jourSuivant(s); }
+    console.log('ignorer :', cible.titre, '→ masqué 30 j');
+  }
 }
 console.log(ok ? 'OK' : 'ÉCHEC'); process.exit(ok ? 0 : 1);

@@ -17,8 +17,18 @@ const ANNEES = Number(process.argv[2] || 1);
   // 1. débutant : « Faire » sur la première recommandation, puis une semaine
   { const [ctx, p] = await page({ width: 1280, height: 800 }); await clic(p, '[data-duree="3"]'); await clic(p, '#btnJouer');
     let clics = 2, faits = 0, vains = 0, dil = 0;
+    let ignoreTeste = false;
     while (!(await fin(p))) {
       dil += await dilemmes(p);
+      // v0.9.2 : « Ignorer » masque le conseil
+      if (!ignoreTeste && await p.isVisible('[data-ignorer="0"]')) {
+        ignoreTeste = true;
+        const titre = await p.evaluate(() => document.querySelector('[data-ignorer="0"]').closest('li').querySelector('b').textContent);
+        await clic(p, '[data-ignorer="0"]'); await p.waitForTimeout(200);
+        const encore = await p.evaluate((t) => [...document.querySelectorAll('.tb-reco b')].some(b => b.textContent === t), titre);
+        console.log('ignorer', titre, encore ? '→ ENCORE VISIBLE' : '→ masqué');
+        if (encore) friction.push(`débutant : « Ignorer » n'a pas masqué « ${titre} »`);
+      }
       if (await p.isVisible('[data-appliquer="0"]')) { await clic(p, '[data-appliquer="0"]'); clics++; const t = await p.evaluate(() => [...document.querySelectorAll('.toast')].at(-1)?.textContent || ''); const tt = await p.evaluate(() => [...document.querySelectorAll('.toast')].map(x => x.textContent).join('|')); if (tt.includes('✅')) faits++; else { vains++; (globalThis.VAINS ||= []).push(t.slice(0, 60)); } }
       await clic(p, '#btnSemaine'); clics++; await p.waitForFunction(() => !document.getElementById('btnSemaine').disabled, null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(250);
     }

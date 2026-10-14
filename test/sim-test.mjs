@@ -2,7 +2,7 @@
 import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
 import { tableauROI } from '../js/roi.js';
-import { recommandations, appliquerConseil } from '../js/tableau.js';
+import { recommandations, appliquerConseil, suivreConseil, CORVEES } from '../js/tableau.js';
 import { PRINCIPES } from '../js/data.js';
 import { chapitreDuJour } from '../js/meteo.js';
 import { deposer } from '../js/finance.js';
@@ -125,7 +125,7 @@ ajoute('maître', () => maitre());
 export function debutant() {
   const s = nouvellePartie(GRAINE);
   return jouer(s, (s) => {
-    if (s.jour % 3 === 0) { let n = 0; for (const r of recommandations(s)) { if (n >= 1) break; if (appliquerConseil(s, r.action)) n++; } }
+    if (s.jour % 3 === 0) { let n = 0; for (const r of recommandations(s)) { if (n >= 1) break; if (suivreConseil(s, r) && !CORVEES.has(r.action.type)) n++; } }
   }, { premier: true });
 }
 ajoute('débutant guidé', debutant);
@@ -251,7 +251,10 @@ for (let i = 0; i < graines.length; i++) {
   ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
   // v0.9 : suivre le tableau de bord ne doit jamais punir
   const d = R('débutant guidé')[i];
-  ch(d.rang >= 2 && d.rang <= 4, 'débutant guidé : Optimiseur à Autonome');
+  ch(d.rang === 2, `débutant guidé : Optimiseur (obtenu ${d.titre})`);
+  // v0.9.2 : le conseiller aide à débuter, il ne remplace pas le joueur
+  ch(d.economies < R('malin')[i].economies, 'débutant guidé < malin');
+  ch(d.pct >= 18 && d.pct <= 32, `débutant guidé ${d.pct.toFixed(1)} % dans [18, 32]`);
   ch(d.economies > R('ne rien toucher')[i].economies + 10000, 'débutant guidé > défaut + 10 k€');
   ch(d.moy.sante >= 70 && d.moy.hygiene >= 70 && d.moy.moral >= 45, 'débutant guidé en bonne santé');
   // v0.7 : l'austérité coûte aussi de l'argent (santé, arrêts, dents, moisissures, augmentations perdues)

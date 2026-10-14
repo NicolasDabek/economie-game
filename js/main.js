@@ -4,7 +4,7 @@ import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
 import { etatUI } from './onglets.js';
-import { recommandations, appliquerConseil, ACTIVATION } from './tableau.js';
+import { recommandations, appliquerConseil, suivreConseil, conseillerDispo, ACTIVATION } from './tableau.js';
 import { prefs, sauverPrefs, ouvrir, ouvrirSection, apercuAchat, effetAchat, apercuConsigne, demarrerTutoriel, arreterTutoriel, etapeSuivante, coachActif, majCoach, objectifsAtteints, filtrerGlossaire, choisirVue } from './guide.js';
 import { icone } from './icones.js';
 import { ACHATS } from './data.js';
@@ -148,8 +148,8 @@ document.addEventListener('click', (e) => {
     if (r) { ignorer(s, r); toast(`Conseil masqué 30 jours : ${r.titre}`); rafraichir(s.messages.length); }
   }
   else if (d.appliquer !== undefined) {
-    const r = recommandations(s)[Number(d.appliquer)], t = r && appliquerConseil(s, r.action);
-    toast(t ? `✅ ${t}` : 'Rien à appliquer automatiquement : ouvre le réglage avec « Y aller ».', { type: t ? 'ok' : 'info' });
+    const r = recommandations(s)[Number(d.appliquer)], t = r && suivreConseil(s, r);
+    toast(t ? `✅ ${t}` : conseillerDispo(s).reste ? 'Rien à appliquer automatiquement : ouvre le réglage avec « Y aller ».' : `Le conseiller revient dans ${conseillerDispo(s).retour} j (3 conseils par semaine).`, { type: t ? 'ok' : 'info' });
     if (t) autoSauvegarde();
   }
   else if (d.vue) { choisirVue(d.vue); rendreTout(s); }

@@ -68,14 +68,14 @@ function derouler(t, H) {
 /** Coût d'investissement amorti sur l'horizon (achat d'équipement ou de vêtements). */
 function amorti(s, t, H) {
   let x = 0;
-  for (const [id, v] of Object.entries(t.possede)) if (v && !s.possede[id] && ACHATS[id]) x += ACHATS[id].prix / Math.max(1, ACHATS[id].vie || 5) / 365 * H;
+  for (const [id, v] of Object.entries(t.possede)) if (v && !s.possede[id] && ACHATS[id]) x += ACHATS[id].prix / Math.min(2, Math.max(1, ACHATS[id].vie || 5)) / 365 * H   /* le conseiller ne voit pas plus loin que 2 ans */;
   x += ((t.depenses.vetements || 0) - (s.depenses.vetements || 0)) / 365 * H;
   return x;
 }
 
 let cache = { cle: null, base: null, res: new Map() };
 export function evaluer(s, action, appliquer, H = HORIZON) {
-  const cle = `${s.seed}|${s.jour}|${Math.round(s.argent)}|${JSON.stringify(s.reco?.snap ?? '')}`;
+  const cle = `${H}|${s.seed}|${s.jour}|${Math.round(s.argent)}|${JSON.stringify(s.reco?.snap ?? '')}`;
   if (cache.cle !== cle) cache = { cle, base: derouler(cloner(s), H), res: new Map() };
   const ka = JSON.stringify(action);
   if (cache.res.has(ka)) return cache.res.get(ka);
@@ -120,13 +120,13 @@ export function ignorer(s, x) { majLeviers(s).ignores[cleConseil(x)] = s.jour; }
  * Évalue, filtre et classe les candidats. Chaque candidat : { titre, action, urgent?, an? }.
  * Renvoie les candidats retenus, triés par valeur décroissante, avec x.eval.
  */
-export function arbitrer(s, L, appliquer) {
+export function arbitrer(s, L, appliquer, H = HORIZON) {
   const R = majLeviers(s);
   const garde = [];
   for (const x of L) {
     if ((R.ignores[cleConseil(x)] ?? -1e9) > s.jour - IGNORE) continue;
     if (!x.action) { garde.push({ ...x, eval: { valeur: x.an || 0, leviers: {} } }); continue; }
-    const ev = evaluer(s, x.action, appliquer);
+    const ev = evaluer(s, x.action, appliquer, H);
     if (!ev) continue;                                     // sans effet possible
     if (!urgence(s, ev) && (jaugeMenacee(ev, s) || retourArriere(s, ev))) continue;
     if (ev.valeur <= 0 && !x.urgent) continue;             // ne rapporte rien, tout compris

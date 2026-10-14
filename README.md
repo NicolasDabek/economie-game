@@ -179,6 +179,14 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 - Hystérésis : pas de retour en arrière sur un levier changé (par toi ou un conseil) depuis moins de 21 jours, sauf jauge critique (<25) que l'action remonte. Bouton « Ignorer » : conseil masqué 30 jours.
 - Test `node test/reco-test.mjs` : débutant qui suit le 1er conseil chaque jour pendant 2 ans, sans oscillation A→B→A en 14 jours, jauges saines.
 
+## v0.9.2 : le conseiller, une aide pour débuter
+
+- Il ne connaît que les bases (chauffage, eau, cuisine, linge, budget) et les domaines dont tu as découvert un principe.
+- Il raisonne poste par poste sur 10 jours (achats amortis sur 2 ans au plus, retour ≤ 15 mois) : les gros investissements sont sous-estimés.
+- Il ne propose ni solaire, ni ventilation passive, ni combos, ni Tempo, ni placements autres que le Livret A.
+- 3 conseils par semaine (les rappels d'entretien ne comptent pas) ; estimations affichées en fourchette (±30 %).
+- Débutant guidé : 23 / 23 / 30 % d'économies (Optimiseur), toujours sous le malin (33 / 36 / 40 %).
+
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.
 

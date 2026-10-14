@@ -1,6 +1,6 @@
 // Tableau de bord (v0.8.1) : vue d'ensemble pour décider. Lecture seule de l'état, sauf l'instantané mensuel
 // (dépenses par poste au 1er du mois) pris par la simulation pour comparer « ce mois-ci » et « le mois dernier ».
-import { ACHATS, BANQUE } from './data.js';
+import { ACHATS, BANQUE, PRINCIPES } from './data.js';
 import { dateDuJour, prevision } from './meteo.js';
 import { scoreFinal, evenementsAVenir, tempsLibre, eur, acheter, actions, acheterVetement, gestesActifs, planifierLessive, laverMain, linge, remplissage, ROUTINES, routineDispo } from './simulation.js';
 import { chapitreDuJour } from './meteo.js';
@@ -173,11 +173,35 @@ export function appliquerConseil(s, a) {
   return P[a.id]?.() || null;
 }
 // actions recommandées, classées par impact en €/an
+// v0.9.2 : le conseiller est une aide pour débuter. Il ne connaît que les principes que TU as découverts,
+// raisonne domaine par domaine sur une semaine (il sous-estime les investissements longs), ne planifie ni combos,
+// ni solaire, ni Tempo, ni placements, et n'est disponible que 3 fois par semaine.
+// les rappels d'entretien (lessive, lavage à la main, ranger les pulls) ne comptent pas dans le quota
+export const CORVEES = new Set(['lessive', 'laverMain', 'alleger']);
+export const CONSEILLER = { parSemaine: 3, horizon: 10, retourMax: 15 };
+const DOM_CAT = { Instruments: 'chauffage', Isolation: 'chauffage', Chauffage: 'chauffage', Confort: 'chauffage', 'Eau chaude': 'eau', Cuisine: 'cuisine', 'Électricité': 'elec', Transport: 'transport', Jardin: 'jardin', 'Été': 'ete' };
+const DOM_ALLER = { maison: 'chauffage', eau: 'eau', cuisine: 'cuisine', elec: 'elec', transport: 'transport', linge: 'linge', budget: 'budget', jardin: 'jardin' };
+const PRINCIPE_GESTE = { gamelle: 'gamelle', prixKilo: 'prixKilo', liste: 'gaspillage', aerer: 'aeration', couperEau: 'eauChaude', rideaux: 'rideau' };
+// les bases (chauffage, eau, cuisine, linge, budget) sont connues d'emblée ; le reste se débloque avec tes découvertes
+const BASES = new Set(['chauffage', 'eau', 'cuisine', 'linge', 'budget']);
+export const domaineConnu = (s, dom) => BASES.has(dom) || s.principes.some(p => PRINCIPES[p]?.domaine === dom);
+export function conseillerDispo(s) {
+  const f = (s.reco?.faits || []).filter(j => j > s.jour - 7);
+  return { reste: Math.max(0, CONSEILLER.parSemaine - f.length), retour: f.length ? Math.min(...f) + 7 - s.jour : 0 };
+}
+/** Suivre un conseil depuis le tableau de bord : compte dans le quota hebdomadaire. */
+export function suivreConseil(s, r) {
+  if (!r?.action || (!CORVEES.has(r.action.type) && conseillerDispo(s).reste <= 0)) return null;
+  const t = appliquerConseil(s, r.action);
+  if (t && !CORVEES.has(r.action.type)) { s.reco ??= { snap: null, chg: {}, ignores: {} }; (s.reco.faits ??= []).push(s.jour); s.reco.faits = s.reco.faits.filter(j => j > s.jour - 14); }
+  return t;
+}
 export function recommandations(s, r = scoreFinal(s)) {
   const L = [], jours = Math.max(7, s.nbJours || s.jour || 7);
   for (const [id, a] of Object.entries(ACHATS)) {
     if (s.possede[id] || a.prix > s.argent - 100 || (a.temps || 0) > Math.max(0, tempsLibre(s))) continue;
-    const e = estimationAchat(id); if (!e || e.mois === null || !(e.annuel > 5) || e.mois > 24) continue;
+    if (!DOM_CAT[a.cat] || !domaineConnu(s, DOM_CAT[a.cat])) continue;   // ni solaire, ni ventilation passive, ni domaine inconnu
+    const e = estimationAchat(id); if (!e || e.mois === null || !(e.annuel > 5) || e.mois > CONSEILLER.retourMax) continue;
     if ((id === 'vae' && s.possede.velo) || (id === 'velo' && s.possede.vae)) continue;   // un vélo suffit
     const dom = { Instruments: 'maison', Isolation: 'maison', Chauffage: 'maison', Confort: 'maison', 'Été': 'maison', 'Ventilation passive': 'maison', 'Eau chaude': 'eau', Cuisine: 'cuisine', 'Cuisine solaire': 'cuisine', 'Électricité': 'elec', Production: 'elec', Transport: 'transport', Jardin: 'jardin' }[a.cat] || 'maison';
     if ((dom === 'transport' && s.jour < 3) || (dom === 'jardin' && s.jour < 21) || (dom === 'elec' && s.jour < 2)) continue;   // sous-onglet pas encore débloqué
@@ -185,13 +209,13 @@ export function recommandations(s, r = scoreFinal(s)) {
   }
   for (const p of postes(s)) {
     const fuite = (p.moi - p.voisin) / jours * 365;
-    if (p.id !== 'imprevus' && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: GESTE_POSTE[p.id]?.titre || `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: `${p.nom} : ${eur(fuite)}/an de plus que le voisin`, aller: p.aller, fuite: true, poste: p.id, action: { type: 'poste', id: p.id } });
+    if (p.id !== 'imprevus' && domaineConnu(s, DOM_ALLER[p.aller] || p.aller) && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: GESTE_POSTE[p.id]?.titre || `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: `${p.nom} : ${eur(fuite)}/an de plus que le voisin`, aller: p.aller, fuite: true, poste: p.id, action: { type: 'poste', id: p.id } });
   }
   // gestes : un seul à la fois (la volonté s'use quand on en apprend plusieurs)
-  if (!enApprentissage(s)) for (const g of GESTES_RECO) if (!g.fait(s) && (g.dispo?.(s) ?? true) && (!g.hiver || saisonFroide(s))) { L.push({ titre: g.titre, an: g.an, roi: null, jauge: 'nouveau geste : un peu de volonté pendant 10 jours', aller: g.aller, action: { type: 'geste', id: g.id } }); break; }
+  if (!enApprentissage(s)) for (const g of GESTES_RECO) if ((s.principes.includes(PRINCIPE_GESTE[g.id]) || domaineConnu(s, g.id === 'gamelle' ? 'cuisine' : DOM_ALLER[g.aller])) && !g.fait(s) && (g.dispo?.(s) ?? true) && (!g.hiver || saisonFroide(s))) { L.push({ titre: g.titre, an: g.an, roi: null, jauge: 'nouveau geste : un peu de volonté pendant 10 jours', aller: g.aller, action: { type: 'geste', id: g.id } }); break; }
   // chauffage : baisser d'1 °C si on est couvert (≈ 7 %/°C, ADEME)
   const C = s.central, haut = s.possede.robinets ? Object.values(s.pieces).some(p => p.consigneJour > 18) : C.consigneJour > 18 || C.consigneNuit > 16;
-  if (saisonFroide(s) && haut && s.sante >= 70 && s.jour >= 3) {
+  if (saisonFroide(s) && haut && s.sante >= 70 && s.jour >= 3 && domaineConnu(s, 'chauffage')) {
     const gazAn = (s.base.gaz || 0) / Math.max(7, s.jour) * 365 * 0.6;
     L.push(gestesActifs(s).couches ? { titre: GESTE_POSTE.chauffage.titre, an: gazAn * 0.07, roi: null, jauge: 'confort −3 environ', aller: 'maison', action: { type: 'poste', id: 'chauffage' } }
       : { titre: 'Mettre une couche de plus (pull + polaire)', an: gazAn * 0.07, roi: null, jauge: 'confort + : permet ensuite de baisser le chauffage', aller: 'linge', action: { type: 'couvrir' } });
@@ -208,6 +232,7 @@ export function recommandations(s, r = scoreFinal(s)) {
   const chaudSaison = ['ete'].includes(chapitreDuJour(s.jour).saison) || (chapitreDuJour(s.jour).saison === 'printemps' && chapitreDuJour(s.jour).index > 45);
   if (chaudSaison && gestesActifs(s).couches) L.push({ titre: 'Ranger les vêtements chauds', an: 0, roi: null, jauge: 'confort + : il fait doux', aller: 'linge', urgent: true, action: { type: 'alleger' } });
   if (s.sante < 60 && saisonFroide(s) && s.hygiene >= 50) L.push({ titre: s.sante < 45 ? 'Te réchauffer : santé en danger' : 'Te réchauffer avant de tomber malade', an: 500, roi: null, jauge: `santé ${Math.round(s.sante)} % : sous 40, maladie et jours de carence`, aller: gestesActifs(s).couches ? 'maison' : 'linge', urgent: true, action: { type: 'sante' } });
+  // épargne de précaution sur Livret A : oui ; PEA, assurance-vie, LEP… : hors du champ du conseiller (ton métier d'investisseur)
   if (s.fin && s.argent > 3000) { const m = s.argent - 1500; L.push({ titre: `Placer ${eur(m)} sur le Livret A`, an: m * BANQUE.livretA.taux, roi: BANQUE.livretA.taux * 100, jauge: 'disponible à tout moment', aller: 'banque', action: { type: 'placer', montant: m } }); }
   const pm = palierMoral(s.volonte), pb = palierBE(s.bienetre);
   if (s.volonte < 40 || s.bienetre < 50) L.push({ titre: `Remonter ${s.volonte < 40 ? 'le moral' : 'le bien-être'} (${s.volonte < 40 ? pm.nom : pb.nom})`, an: 0, roi: null, jauge: s.volonte < 40 ? pm.conseil : pb.conseil, aller: 'budget', urgent: true, action: { type: 'jauge', id: s.volonte < 40 ? 'moral' : 'bienetre' } });
@@ -215,7 +240,7 @@ export function recommandations(s, r = scoreFinal(s)) {
   const ok = L.filter(x => !x.fuite || (faisable(s, x.action) && !sourceDeJaugeBasse(s, x.poste)));
   // préfiltre bon marché (les 8 meilleurs a priori), puis arbitrage par simulation à blanc
   const pre = ok.sort((a, b) => (b.urgent ? 1e9 : b.an) - (a.urgent ? 1e9 : a.an)).slice(0, 8);
-  return arbitrer(s, pre, appliquerConseil).slice(0, 3);
+  return arbitrer(s, pre, appliquerConseil, CONSEILLER.horizon).slice(0, 3);
 }
 
 export function alertes(s) {
@@ -289,7 +314,11 @@ export function rendreTableau(s, etat = {}) {
   const reco = recommandations(s, r);
   const df = s.eco?.defi, dfFait = df ? s.depenses[df.poste] - df.debut : 0, dfP = df ? Math.min(100, dfFait / df.cible * 100) : 0;
   const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — ${eur(dfFait)} / ${eur(df.cible)}</span><div class="progres ${dfP > 100 * (s.jour - df.jour + 1) / 365 ? 'alerte' : ''}" role="progressbar" aria-valuenow="${Math.round(dfP)}" aria-valuemin="0" aria-valuemax="100" aria-label="Budget du défi consommé"><div style="width:${dfP}%"></div></div></div>` : '';
-  const recos = `<div class="tb-carte"><h3>Que faire maintenant ?</h3>${defiH}<ol class="tb-reco">${reco.map((x, i) => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : x.an > 0 ? `~${eur(x.an)}/an` : ''}${x.roi ? ` · rendement ${Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><span class="tb-acts">${x.action && x.action.type !== 'poste' || (x.action?.type === 'poste' && x.action.id !== 'linge') ? `<button class="btn primaire" data-appliquer="${i}" aria-label="Faire : ${x.titre}">Faire</button>` : ''}<button class="btn" data-aller="${x.aller}" aria-label="Y aller : ${x.titre}">Y aller</button><button class="btn discret" data-ignorer="${i}" aria-label="Ignorer pendant 30 jours : ${x.titre}" title="Ne plus proposer pendant 30 jours">Ignorer</button></span></li>`).join('') || '<li class="vide">Rien d\'urgent : avance dans le temps.</li>'}</ol></div>`;
+  const dispo = conseillerDispo(s), arrondi = (v) => Math.max(5, Math.round(v / 5) * 5);
+  const fourchette = (v) => `${eur(arrondi(v * 0.7)).replace(',00', '')} à ${eur(arrondi(v * 1.3)).replace(',00', '')}/an`;
+  const conseillerH = `<p class="tb-conseiller">🧑‍🏫 <b>Le conseiller</b> est une aide pour débuter : il ne connaît que les principes que tu as découverts, raisonne poste par poste sur une dizaine de jours et ne planifie ni combos, ni solaire, ni Tempo, ni placements — ça, c'est ton talent. ${dispo.reste ? `Disponible encore <b>${dispo.reste} fois</b> cette semaine.` : `<b>Il revient dans ${dispo.retour} j</b> (3 conseils par semaine) ; les rappels d'entretien restent possibles.`}</p>`;
+  const peutFaire = (x) => dispo.reste > 0 || CORVEES.has(x.action?.type);
+  const recos = `<div class="tb-carte"><h3>Que faire maintenant ?</h3>${conseillerH}${defiH}<ol class="tb-reco">${reco.map((x, i) => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : x.an > 0 ? `estimation : ${fourchette(x.an)}` : ''}${x.roi ? ` · rendement ~${Math.round(x.roi / 10) * 10 || Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><span class="tb-acts">${x.action && x.action.type !== 'poste' || (x.action?.type === 'poste' && x.action.id !== 'linge') ? `<button class="btn primaire" data-appliquer="${i}" aria-label="Faire : ${x.titre}"${peutFaire(x) ? '' : ' disabled title="Le conseiller revient la semaine prochaine"'}>Faire</button>` : ''}<button class="btn" data-aller="${x.aller}" aria-label="Y aller : ${x.titre}">Y aller</button><button class="btn discret" data-ignorer="${i}" aria-label="Ignorer pendant 30 jours : ${x.titre}" title="Ne plus proposer pendant 30 jours">Ignorer</button></span></li>`).join('') || '<li class="vide">Rien d\'urgent : avance dans le temps.</li>'}</ol></div>`;
 
   // 5. alertes
   const al = alertes(s);
