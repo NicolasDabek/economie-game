@@ -2,6 +2,27 @@
 
 Jeu de gestion dans le navigateur où l'on **gagne en dépensant moins**. Depuis la v0.6, la partie est une **campagne de 3, 5 ou 10 ans** (5 par défaut). Chaque année a ses quatre saisons. On la vit dans une petite maison mal isolée de 3 pièces. Le but est de dépenser bien moins que le voisin qui vit sans réfléchir, sans sacrifier son confort, sa santé, son moral, son hygiène ni son bien-être.
 
+**Version 1.0.0** · [Jouer en ligne](https://nicolasdabek.github.io/economie-game/) · [Journal des versions](CHANGELOG.md)
+
+![Tableau de bord](docs/img/tableau.png)
+
+## Comment jouer
+1. **Choisis la durée** (3, 5 ou 10 ans). Pour débuter, lance le **tutoriel** : 13 étapes, environ 5 minutes.
+2. **Fais avancer le temps** avec Jour, Semaine, Mois ou « Prochain événement ». Quand un choix se présente, la partie s'arrête.
+3. **Regarde le tableau de bord**. Il montre ce que tu as économisé face au voisin, les dépenses du mois par poste, les alertes et un conseil.
+4. **Agis** :
+   - baisse les consignes de chauffage, une pièce à la fois ;
+   - habille-toi chaudement ;
+   - achète d'abord ce qui se rentabilise vite (thermomètres, joints, pommeau) ;
+   - transforme les gestes en habitudes.
+5. **Surveille tes jauges** (confort, santé, moral, hygiène, bien-être). Une sobriété qui t'abîme coûte cher : médecin, arrêts de travail, rechutes.
+
+En jeu, l'onglet **Savoir › Aide** reprend ces étapes, explique le conseiller et liste les raccourcis clavier (`?`).
+
+| Accueil | Mobile | Thème sombre |
+|---|---|---|
+| ![Accueil](docs/img/accueil.png) | ![Mobile](docs/img/mobile.png) | ![Sombre](docs/img/sombre.png) |
+
 ## Concept
 Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude électrique de 200 L, en télétravail. La partie commence le 1er décembre 2026. On part avec 1 500 € sur le compte et 4 000 € sur le Livret A, et le salaire arrive chaque mois (loyer déduit). Les prix sont réalistes pour la France en 2026 (détail dans [docs/prix.md](docs/prix.md)).
 
@@ -187,6 +208,25 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 - 3 conseils par semaine (les rappels d'entretien ne comptent pas) ; estimations affichées en fourchette (±30 %).
 - Débutant guidé : 23 / 23 / 30 % d'économies (Optimiseur), toujours sous le malin (33 / 36 / 40 %).
 
+## v1.0.0 : version stable
+- Audit complet du code, des chiffres, des textes et de l'interface (détail dans [CHANGELOG.md](CHANGELOG.md)).
+- Page **Aide** (« Comment jouer », jauges, conseiller, raccourcis, à propos et sources).
+- Icône du jeu et balises de partage.
+- Sauvegarde version 8, migrée automatiquement depuis toutes les versions depuis la v0.3. Une sauvegarde abîmée est mise de côté sans bloquer le jeu.
+- Résultats sur 5 ans (graines 2026 / 7 / 1789, économies face au voisin) :
+
+| Stratégie | Économies | Titre |
+|---|---|---|
+| Ne rien toucher | −1,5 / −0,6 / +2,7 % | Dépensier |
+| Naïf (tout chauffé) | −46,7 / −48,6 / −43,7 % | Dépensier |
+| Glacial | −33,5 / −29,4 / −23,7 % | Dépensier |
+| Austère extrême | −11,6 / −8,8 / −0,8 % | Dépensier |
+| Bien-être négligé | 12,0 / 10,9 / 16,6 % | Malin |
+| Débutant guidé par le conseiller | 23,0 / 23,0 / 28,7 % | Optimiseur |
+| Moral négligé | 28,1 / 33,8 / 37,3 % | Optimiseur |
+| Malin | 32,9 / 36,4 / 39,5 % | Autonome |
+| Maître | 60,5 / 65,6 / 68,0 % | Maître de la sobriété |
+
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.
 
@@ -197,10 +237,18 @@ Les modules ES ne se chargent pas toujours en `file://` : un petit serveur stati
 Astuce : `?graine=1234` dans l'URL change la météo.
 
 ## Tests
+```bash
+npm test                       # tous les tests Node (aucune dépendance)
+CHROME=/usr/bin/google-chrome npm run test:navigateur   # tests navigateur (playwright-core + Chrome)
+node test/sauvegarde-test.mjs  # v1.0 : migrations 3 → 8, sauvegardes abîmées, champs manquants
+node test/coherence-test.mjs   # v1.0 : factures = consommations × tarifs, domaines = total, tableau de bord, dates, prix = docs/prix.md
+node test/reco-test.mjs        # v0.9.1 : arbitre des conseils, pas d'oscillation sur 2 ans
+CHROME=/usr/bin/google-chrome node test/audit.cjs   # v1.0 : bureau, mobile 390 px, thème sombre, clavier seul, contraste, débordements (CAPTURES=1 : captures v1_*)
+```
 
 - `CHROME=/usr/bin/google-chrome node test/playtest.cjs [années]` : quatre profils de joueurs (débutant, pressé, curieux, mobile) ; liste les frictions. `CAPTURES=1` écrit les captures v09_*. `ROI=1 node test/sim-test.mjs` affiche la rentabilité réalisée de chaque équipement.
 ```bash
-node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations de sauvegarde v3/v4/v5/v6 → v7, cibles de moral et de santé
+node test/sim-test.mjs       # 6 stratégies × 3 graines sur 5 ans, migrations de sauvegarde v3/v4/v5/v6 → v8, cibles de moral et de santé
 node test/finance-test.mjs   # banque, marchés, projection, 4 stratégies d'arbitrage sur 5 ans, révision du Livret A, PEA 5 ans, temps de calcul 5 et 10 ans
 CHROME=/usr/bin/google-chrome node test/navigateur.cjs   # navigateur sans écran : campagne de 3 ans en avance rapide, bilans, migrations (playwright-core)
 CHROME=/usr/bin/google-chrome node test/captures.cjs after   # captures d'écran avant/après (bureau 1280×800, mobile 390×844) dans /workspace/ux-shots/
@@ -281,7 +329,11 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - `js/icones.js` : icônes SVG intégrées (v0.8)
 - `js/tableau.js` : tableau de bord (v0.8.1)
 - `js/paliers.js` : paliers de moral et de bien-être (v0.8.1)
+- `js/arbitre.js` : arbitre des recommandations (v0.9.1)
+- `js/version.js` : numéro de version affiché (v1.0)
 - `js/ui.js` et `js/main.js` : interface
+- `assets/` : icône du jeu (SVG et PNG)
+- `docs/img/` : captures d'écran
 - `docs/conception.md` : document de conception
 
 ## Feuille de route
@@ -294,6 +346,10 @@ Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la chemin
 - ✅ v0.6 : campagne de 3, 5 ou 10 ans, quatre saisons par an, avance rapide et routines, salaire, inflation et prix qui évoluent, Livret A révisé par formule, pannes et remplacement des appareils, bilan annuel, 104 principes
 - ✅ v0.8 : refonte de l'interface (sections, maison interactive, tutoriel, objectifs, conseiller, glossaire, aperçus, thème sombre, accessibilité, mobile)
 - ✅ v0.8.1 : tableau de bord, paliers de moral et de bien-être, réabonnement, habitudes qui s'oublient, corrections d'affichage
+- ✅ v0.9 à v0.9.2 : conseils actionnables, arbitre des recommandations, conseiller pour débuter
+- ✅ v1.0.0 : version stable (audit, aide, icône, sauvegarde v8)
+
+Pistes pour la suite :
 1. Rendre l'automne plus spécifique.
 2. Effet rebond, et plus de fausses économies.
 3. Scénarios (étudiant, famille, retraité), voisinage et partage, défis (« Hiver à 200 € »).
