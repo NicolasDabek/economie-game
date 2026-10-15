@@ -7,6 +7,8 @@ import { genererMeteo } from './meteo.js';
 import { nouvelEtatSystemes } from './systemes.js';
 import { nouvelEtatTransport } from './transport.js';
 import { nouvelEtatFinance } from './finance.js';
+// Format de sauvegarde : 3 (v0.3) … 7 (v0.7) ; 8 = v1.0 (champs ajoutés en v0.8–v0.9 complétés par défaut)
+export const VERSION_SAUVEGARDE = 8;
 // ancien calendrier (v0.5 : 3 chapitres de 56, 28 et 42 jours) -> jour calendaire depuis le 1er décembre 2026
 const calV5 = (j) => (j < 56 ? j : j < 84 ? 126 + (j - 56) : 212 + (j - 84));
 
@@ -18,7 +20,7 @@ export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut) {
   const gestes = {};
   for (const id of Object.keys(GESTES)) gestes[id] = { pratique: 0, habitude: false };
   const s = {
-    version: 7, seed, jour: 0, mor: nouvelEtatMoral(), fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
+    version: VERSION_SAUVEGARDE, seed, jour: 0, mor: nouvelEtatMoral(), fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
     eco: nouvelleEconomie(seed, annees), auto: { lessive: false, entretien: false, saisons: false, renouveler: false },
     meteo: genererMeteo(seed, annees),
     argent: ARGENT_DEPART,
@@ -71,24 +73,56 @@ export function sauvegarder(s, stockage = globalThis.localStorage) {
   const { meteo, ...reste } = s;
   stockage.setItem(CLE, JSON.stringify(reste));
 }
+/** Complète récursivement les champs absents d'après une partie neuve (tableaux et valeurs existantes conservés). */
+export function completer(cible, modele) {
+  for (const [k, v] of Object.entries(modele)) {
+    if (k === 'meteo') continue;
+    if (cible[k] === undefined || cible[k] === null && v !== null) cible[k] = structuredClone(v);
+    else if (v && typeof v === 'object' && !Array.isArray(v) && cible[k] && typeof cible[k] === 'object' && !Array.isArray(cible[k])) completer(cible[k], v);
+  }
+  return cible;
+}
+const fini = (x) => typeof x === 'number' && Number.isFinite(x);
+/**
+ * Charge la sauvegarde. Renvoie l'état, null (rien), 'ancienne' (v0.2, effacée) ou 'corrompue'
+ * (illisible : mise de côté sous une autre clé, jamais écrasée sans le dire).
+ */
 export function charger(stockage = globalThis.localStorage) {
-  const txt = stockage.getItem(CLE);
+  let txt = null;
+  try { txt = stockage.getItem(CLE); } catch { return null; }
   if (!txt) return null;
-  const s = JSON.parse(txt);
-  if (s.version === 3) migrerV3(s);
-  if (s.version === 4) migrerV4(s);
-  if (s.version === 5) migrerV5(s);
-  if (s.version === 6) migrerV6(s);
-  if (s.version !== 7) { stockage.removeItem?.(CLE); return 'ancienne'; }
-  s.meteo = genererMeteo(s.seed, s.annees);
-  appliquerIndices(s);
-  return s;
+  let s;
+  try { s = JSON.parse(txt); } catch { s = null; }
+  if (!s || typeof s !== 'object' || !fini(s.version)) return mettreDeCote(stockage, txt);
+  if (s.version < 3) { stockage.removeItem?.(CLE); return 'ancienne'; }
+  try {
+    if (s.version === 3) migrerV3(s);
+    if (s.version === 4) migrerV4(s);
+    if (s.version === 5) migrerV5(s);
+    if (s.version === 6) migrerV6(s);
+    if (s.version === 7) migrerV7(s);
+    if (s.version !== VERSION_SAUVEGARDE || !fini(s.seed) || !fini(s.jour) || !fini(s.argent)) return mettreDeCote(stockage, txt);
+    completer(s, nouvellePartie(s.seed, s.annees || CAMPAGNE.anneesDefaut));
+    s.meteo = genererMeteo(s.seed, s.annees);
+    appliquerIndices(s);
+    return s;
+  } catch { return mettreDeCote(stockage, txt); }
+}
+function mettreDeCote(stockage, txt) {
+  try { stockage.setItem(CLE + '-corrompue', txt); stockage.removeItem(CLE); } catch { /* stockage plein ou indisponible */ }
+  return 'corrompue';
 }
 export function aUneSauvegarde(stockage = globalThis.localStorage) {
-  const t = stockage.getItem(CLE);
-  if (!t) return false;
-  try { const v = JSON.parse(t).version; return v >= 3 && v <= 7; } catch { return false; }
+  try { const t = stockage.getItem(CLE); if (!t) return false; const v = JSON.parse(t).version; return v >= 3 && v <= VERSION_SAUVEGARDE; } catch { return false; }
 }
+// messages affichés après une migration (s.migre = version d'origine)
+export const MESSAGES_MIGRATION = {
+  3: 'Sauvegarde v0.3 mise à jour : le transport, la rentabilité et la banque démarrent aujourd\'hui.',
+  4: 'Sauvegarde v0.4 mise à jour : ta banque démarre aujourd\'hui (profil médian, 4 000 € sur le Livret A).',
+  5: 'Sauvegarde v0.5 mise à jour : ta partie continue en campagne de 5 ans (salaire, inflation, pannes, bilans annuels).',
+  6: 'Sauvegarde v0.6 mise à jour : le moral évolue maintenant sur la durée et la santé a un coût.',
+  7: 'Sauvegarde v0.7–v0.9 mise à jour pour la v1.0 : tableau de bord, défis annuels et conseiller sont actifs.',
+};
 
 // v0.3 -> v0.4 : on garde la partie, on ajoute le transport (compté à partir d'aujourd'hui pour toi et le voisin)
 export function migrerV3(s) {
@@ -127,4 +161,9 @@ export function migrerV5(s) {
 export function migrerV6(s) {
   s.mor = nouvelEtatMoral();
   s.version = 7; s.migre ??= 6;
+}
+
+// v0.7–v0.9 -> v1.0 : les champs ajoutés depuis (tableau de bord, conseiller, défis…) sont complétés par charger()
+export function migrerV7(s) {
+  s.version = 8; s.migre ??= 7;
 }

@@ -1,5 +1,5 @@
 // Rendu de l'interface (DOM uniquement, aucune règle de jeu ici)
-import { PIECES, ORDRE_PIECES, VETEMENTS, ACHATS, GESTES, JOURS_HABITUDE, PRINCIPES, PRIX, LESSIVE, SEUIL_ENCOMBREMENT, EVENEMENTS, ARGENT_DEPART } from './data.js';
+import { PIECES, ORDRE_PIECES, VETEMENTS, ACHATS, PRINCIPES, PRIX, LESSIVE, SEUIL_ENCOMBREMENT, ARGENT_DEPART } from './data.js';
 import { prevision, chapitreDuJour } from './meteo.js';
 import { ONGLETS, etatUI, rendreEte, rendrePassif, rendreEau, rendreCuisine, rendreElec, rendreJardin, rendreBudget, rendreTransport, rendreEncyclopedie, rendreCombos, tagGeste } from './onglets.js';
 import { tableauROI, estimationAchat } from './roi.js';
@@ -7,15 +7,12 @@ import { rendreBanque, rendreInvest, tauxTxt } from './ui-finance.js';
 import { projection } from './finance.js';
 import { BANQUE } from './data.js';
 import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
-import { COMBOS, CAMPAGNE } from './data.js';
+import { COMBOS } from './data.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
 import { ROUTINES, routineDispo } from './simulation.js';
 import { palierMoral, palierBE } from './paliers.js';
 import { rendreNavigation, rendreGuide } from './guide.js';
-import {
-  isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, NOMS_JOURS, humiditeRelative,
-  coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, evenementsAVenir, prixGaz, LAVAGE_MAIN,
-} from './simulation.js';
+import { isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, humiditeRelative, coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, evenementsAVenir, prixGaz, LAVAGE_MAIN } from './simulation.js';
 
 const $ = (id) => document.getElementById(id);
 const deg = (t) => `${t.toFixed(1).replace('.', ',')} °C`;
@@ -46,9 +43,9 @@ export function rendreJauges(s) {
   const raisonsM = s.mor?.raisons?.length ? ` En ce moment : ${s.mor.raisons.slice(0, 3).map(([k, x]) => `${NOMS_M[k] || k} ${x > 0 ? '+' : ''}${Math.round(x)}`).join(', ')}.` : '';
   const TIPS = [
     'Ton compte courant. Le salaire (loyer déduit) arrive le 1er du mois. Sous zéro : découvert et agios.',
-    'Comment tu te sens dans ta maison : chaleur ressentie, courants d\'air, humidité. Sous 55 en moyenne, la santé souffre.',
-    'Froid, chaleur, moisissures et alimentation l\'abîment. Sous 40, tu tombes malade : médecin et jours d\'arrêt non payés.',
-    'Ta volonté. Chaque nouveau geste en coûte jusqu\'à devenir une habitude. À zéro : rechute (dépenses impulsives).' + raisonsM,
+    'Comment tu te sens dans ta maison : chaleur ressentie, courants d\'air, humidité. Le froid abîme la santé ; sous 55 de moyenne sur la partie, aucun titre de sobriété.',
+    'Froid, chaleur, moisissures et alimentation l\'abîment. Sous 40, tu tombes malade : médecin, pharmacie et jours de carence non payés.',
+    'Ton moral, le carburant de ta volonté. Chaque nouveau geste en coûte jusqu\'à devenir une habitude. À zéro : rechute (dépenses impulsives).' + raisonsM,
     'Douches, linge propre, vaisselle. Basse, elle isole et pèse sur ta carrière.',
     'Plaisirs, repas, sommeil, lumière, vie sociale. Le carburant du moral.',
     'Le temps qu\'il te reste aujourd\'hui après le travail et les gestes. Les chantiers et les nouveaux gestes en consomment.',
@@ -155,7 +152,7 @@ export function rendreGrapheElec(s) {
   });
   const perdu = d.reduce((a, e) => a + (e?.surplus || 0), 0) / 1000;
   const st = s.dernierJour.stockage;
-  $('legendeElec').innerHTML = `<span style="color:#3b82f6">■ consommation</span> · <span style="color:#ca8a04">■ production solaire</span> · <span style="color:#dc2626">■ surplus perdu</span>${s.possede.solaire ? ` · surplus perdu hier : <b>${num(perdu, 2)} kWh</b>${st?.solaire ? `, eau chauffée au soleil ${num(st.solaire, 2)} kWh` : ''}${st?.routed ? `, routé vers le ballon ${num(st.routed, 2)} kWh` : ''}` : ' · (pas de panneau solaire)'}`;
+  $('legendeElec').innerHTML = `<span><span style="color:#3b82f6" aria-hidden="true">■</span> consommation</span> · <span><span style="color:#ca8a04" aria-hidden="true">■</span> production solaire</span> · <span><span style="color:#dc2626" aria-hidden="true">■</span> surplus perdu</span>${s.possede.solaire ? ` · surplus perdu hier : <b>${num(perdu, 2)} kWh</b>${st?.solaire ? `, eau chauffée au soleil ${num(st.solaire, 2)} kWh` : ''}${st?.routed ? `, routé vers le ballon ${num(st.routed, 2)} kWh` : ''}` : ' · (pas de panneau solaire)'}`;
 }
 
 export function rendreGraphe(s) {
@@ -172,10 +169,10 @@ export function rendreGraphe(s) {
   d.heures.forEach((hh, k) => { if (k % 3 === 0) g.fillText(hh.h + 'h', x(k) - 6, H - 6); });
   const tracer = (f, col, larg = 2, dash = []) => { g.strokeStyle = col; g.lineWidth = larg; g.setLineDash(dash); g.beginPath(); d.heures.forEach((hh, k) => (k ? g.lineTo(x(k), y(f(hh))) : g.moveTo(x(k), y(f(hh))))); g.stroke(); g.setLineDash([]); g.lineWidth = 1; };
   tracer(hh => hh.te, '#64748b', 2, [4, 3]);
-  const leg = ['<span style="color:#64748b">┅ extérieur</span>', '<span style="color:#f59e0b">━ ton ressenti</span>'];
+  const leg = ['<span><span style="color:#64748b" aria-hidden="true">┅</span> extérieur</span>', '<span><span style="color:#f59e0b" aria-hidden="true">━</span> ton ressenti</span>'];
   if (s.possede.thermometre) {
     const cols = { salon: '#ef4444', chambre: '#8b5cf6', cuisine: '#10b981' };
-    for (const p of ORDRE_PIECES) { tracer(hh => hh.t[p], cols[p], 1.5); leg.push(`<span style="color:${cols[p]}">━ ${PIECES[p].nom.toLowerCase()}</span>`); }
+    for (const p of ORDRE_PIECES) { tracer(hh => hh.t[p], cols[p], 1.5); leg.push(`<span><span style="color:${cols[p]}" aria-hidden="true">━</span> ${PIECES[p].nom.toLowerCase()}</span>`); }
   }
   tracer(hh => hh.ressenti, '#f59e0b', 3);
   let txt = leg.join(' · ') + (s.possede.thermometre ? '' : ' · (températures des pièces : thermomètres requis)');
@@ -238,7 +235,7 @@ export function rendreVetements(s) {
     }
     const cpu = coutParUsage(s, id);
     const etat = e.possede
-      ? `<span>saleté ${minibarre(e.salete, e.salete >= 100 ? '#b91c1c' : '#a16207')}</span><span>usure ${minibarre(e.usure, '#6b7280')}</span>${cpu !== null && e.prixPaye ? `<span>${eur(cpu)}/jour porté</span>` : ''}`
+      ? `<span>saleté ${minibarre(e.salete, e.salete >= 100 ? 'var(--mal)' : '#a16207')}</span><span>usure ${minibarre(e.usure, '#6b7280')}</span>${cpu !== null && e.prixPaye ? `<span>${eur(cpu)}/jour porté</span>` : ''}`
       : `<span>usure/jour : ${num(V.eco.usure)} %${V.durable ? ` (durable ${num(V.durable.usure, 2)} %)` : ''}</span>`;
     const tags = `<span class="tag">+${num(V.iso)} °C</span>${V.enc ? ` <span class="tag">encombrement ${num(V.enc)}</span>` : ''}${V.assis ? ' <span class="tag">assis, au salon</span>' : ''}${V.protege ? ' <span class="tag">protège les couches du dessus</span>' : ''}${e.possede && e.qualite === 'durable' ? ' <span class="tag habitude">durable</span>' : ''}${e.porte && e.possede ? ' <span class="tag porte">porté</span>' : ''}`;
     return `<div class="vet"><span class="ico">${V.icone}</span><div><b>${V.nom}</b> ${tags}<div class="mini">${etat}</div></div><div class="acts">${actions}</div></div>`;
@@ -307,7 +304,7 @@ export function rendreInvestissements(s) {
     const retour = r.atteint !== null ? `✅ jour ${r.atteint + 1}` : r.payback !== null ? `~${dureeTxt(r.payback)} (±${Math.round(r.incertitude * 100)} %)` : (ROI_ITEMS[r.id].indirect ? 'indirect' : '∞');
     return `<tr><td><b>${r.nom}</b>${r.occasion ? ' <span class="tag">occasion</span>' : ''}<br><small>€/jour : ${sais}${r.note ? ' · ' + r.note : ''}${ROI_ITEMS[r.id].indirect ? ' · ' + ROI_ITEMS[r.id].indirect : ''}${r.climEvitee ? ` · clim mobile évitée ${eur(r.climEvitee)}/an (${r.climEviteeFourchette.map(x => Math.round(x)).join('-')} €/an : amortissement + électricité)` : ''}${ACHATS[r.id].fourchette ? ` · prix réel ${ACHATS[r.id].fourchette.join('-')} €` : ''}</small><br>${sparkline(r)}</td>
       <td>${eur(r.prix)}</td><td>${eur(r.mesure)}<br><small>${r.jours} j</small></td><td>${eur(r.annuel)}</td><td>${eur(r.entretienAn)}</td><td>${retour}</td><td>${eur(r.residuelAuj)}<br><small>vie ${num(r.vieAns, 0)} ans, −${Math.round(r.degr * 100)} %/an</small></td>
-      <td style="color:${r.net5 >= 0 ? '#16a34a' : '#b91c1c'}">${eur(r.net5)}</td><td>${num(r.ratio, 2)}</td></tr>`;
+      <td style="color:${r.net5 >= 0 ? 'var(--ok)' : 'var(--mal)'}">${eur(r.net5)}</td><td>${num(r.ratio, 2)}</td></tr>`;
   };
   const head = COLS.map(([c, l]) => `<th><button class="lien" data-tri="${c}">${l}${k === c ? (sens > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('');
   // batterie contre ballon
@@ -362,8 +359,8 @@ export function rendreDilemme(s) {
 }
 
 function rendreBilan(b) {
-  const c = (v) => `color:${v >= 0 ? '#16a34a' : '#b91c1c'}`;
-  const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? '#16a34a' : v >= 40 ? '#b45309' : '#b91c1c'}">${Math.round(v)} %</b></div>`;
+  const c = (v) => `color:${v >= 0 ? 'var(--ok)' : 'var(--mal)'}`;
+  const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? 'var(--ok)' : v >= 40 ? 'var(--warn)' : 'var(--mal)'}">${Math.round(v)} %</b></div>`;
   const dom = [...b.parDomaine].sort((x, y) => y.valeur - x.valeur).map(d => `<tr><td>${d.nom}</td><td style="${c(d.valeur)}">${eur(d.valeur)}</td></tr>`).join('');
   return `<div class="stats"><div>Économies de l'année<b style="${c(b.economies)}">${eur(b.economies)}</b></div><div>Cumul depuis le début<b style="${c(b.economiesCumul)}">${eur(b.economiesCumul)}</b></div>
     <div>Patrimoine<b>${eur(b.patrimoine)}</b><small>voisin : ${eur(b.patrimoineVoisin)}</small></div><div>Livrets · placements<b>${eur(b.livrets)} · ${eur(b.placements - b.livrets)}</b></div>
@@ -388,15 +385,15 @@ function finProjection(s, r) {
 }
 export function rendreFin(s) {
   const r = scoreFinal(s);
-  const dom = r.domaines.map(d => `<tr><td>${d.nom}</td><td style="color:${d.valeur >= 0 ? '#16a34a' : '#b91c1c'}">${eur(d.valeur)}</td></tr>`).join('');
+  const dom = r.domaines.map(d => `<tr><td>${d.nom}</td><td style="color:${d.valeur >= 0 ? 'var(--ok)' : 'var(--mal)'}">${eur(d.valeur)}</td></tr>`).join('');
   const inv = r.invest.filter(i => i.prix > 0).map(i => `<li>${i.nom} : ${eur(i.prix)} → ${eur(i.gain)} économisés ${i.rentable ? '✅ rentabilisé' : i.amorti ? '🟡 amorti pour cet hiver' : '❌ pas encore'}</li>`).join('');
   const classement = tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `<li><b>${x.nom}</b> : payé ${eur(x.prix)}, mesuré ${eur(x.mesure)}, net 5 ans ${eur(x.net5)} ${x.atteint !== null ? '✅ rentabilisé' : x.payback !== null ? `(retour ~${dureeTxt(x.payback)})` : ROI_ITEMS[x.id].indirect ? '(gain indirect)' : '❌'}</li>`).join('');
   const m = r.moy;
-  const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? '#16a34a' : v >= 40 ? '#b45309' : '#b91c1c'}">${Math.round(v)} %</b></div>`;
+  const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? 'var(--ok)' : v >= 40 ? 'var(--warn)' : 'var(--mal)'}">${Math.round(v)} %</b></div>`;
   $('finContenu').innerHTML = `<h2>Fin de la campagne : ${Math.round((s.joursTotal || 365) / 365)} ans ❄️🌱☀️🍂</h2><div class="grand">${r.titre}</div>
     ${r.note ? `<p style="text-align:center;color:#b45309">${r.note}</p>` : ''}
     <div class="stats">
-      <div>Économies nettes<b style="color:${r.economies >= 0 ? '#16a34a' : '#b91c1c'}">${eur(r.economies)} (${Math.round(r.pct)} %)</b></div>
+      <div>Économies nettes<b style="color:${r.economies >= 0 ? 'var(--ok)' : 'var(--mal)'}">${eur(r.economies)} (${Math.round(r.pct)} %)</b></div>
       <div>Ton coût (investissements amortis)<b>${eur(r.cout)}</b></div>
       <div>Voisin « sans réfléchir »<b>${eur(r.base)}</b></div>
       <div>Capital investi<b>${eur(r.capital)}</b></div>
@@ -404,7 +401,7 @@ export function rendreFin(s) {
       <div>Rechutes<b>${s.rechutes}</b></div>
       <div>Économies par an en moyenne<b>${eur(r.economies * 365 / Math.max(1, s.joursTotal || 365))}</b></div>
       <div>Patrimoine final (après frais et impôts de sortie)<b>${eur(r.patrimoine)}</b><small>voisin : ${eur(r.patrimoineVoisin)}</small></div>
-      <div>Épargne et placements vs Livret A<b style="color:${r.fin.net >= 0 ? '#16a34a' : '#b91c1c'}">${r.fin.net >= 0 ? '+' : ''}${eur(r.fin.net)}</b></div>
+      <div>Épargne et placements vs Livret A<b style="color:${r.fin.net >= 0 ? 'var(--ok)' : 'var(--mal)'}">${r.fin.net >= 0 ? '+' : ''}${eur(r.fin.net)}</b></div>
     </div>
     ${finProjection(s, r)}
     ${(s.eco?.bilans || []).length ? `<h3>Année par année</h3><table class="domaines"><tr><th>Année</th><th>Économies</th><th>Patrimoine</th><th>Moral moyen</th></tr>${s.eco.bilans.map(b => `<tr><td>${b.an + 1}</td><td>${eur(b.economies)}</td><td>${eur(b.patrimoine)}</td><td>${Math.round(b.moy.volonte)} %</td></tr>`).join('')}</table>` : ''}

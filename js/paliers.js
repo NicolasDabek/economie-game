@@ -6,9 +6,9 @@
 export const PALIERS_MORAL = [
   { id: 'crise', min: 0, nom: 'Crise', ico: '🆘', effet: 'Arrêt forcé pour épuisement, consultations : coûteux.', conseil: 'Vacances, plaisirs, sorties : remonte d\'urgence au-dessus de 10.' },
   { id: 'deprime', min: 10, nom: 'Déprime', ico: '🌧️', effet: 'Gestes sautés, aucune nouvelle habitude, santé qui baisse, achats compulsifs.', conseil: 'Remets un petit budget plaisir et sors : la déprime coûte plus qu\'elle n\'économise.' },
-  { id: 'fragile', min: 25, nom: 'Fragile', ico: '🌥️', effet: 'Nouveaux gestes plus durs (+15 % de volonté), tentations d\'achat.', conseil: 'Un geste à la fois, et garde 10-20 €/semaine de plaisirs.' },
+  { id: 'fragile', min: 25, nom: 'Fragile', ico: '🌥️', effet: 'Nouveaux gestes plus durs (+15 % de coût en moral), tentations d\'achat.', conseil: 'Un geste à la fois, et garde 10-20 €/semaine de plaisirs.' },
   { id: 'neutre', min: 40, nom: 'Stable', ico: '⛅', effet: 'Aucun effet particulier.', conseil: 'Au-dessus de 60 : habitudes plus faciles et meilleure négociation salariale.' },
-  { id: 'epanoui', min: 60, nom: 'Épanoui', ico: '☀️', effet: 'Gestes −20 % de volonté, augmentation mieux négociée (+0,5 %/an).', conseil: 'Garde le cap : plaisirs variés, vie sociale, lumière.' },
+  { id: 'epanoui', min: 60, nom: 'Épanoui', ico: '☀️', effet: 'Gestes −20 % de coût en moral, augmentation mieux négociée (+0,5 %/an).', conseil: 'Garde le cap : plaisirs variés, vie sociale, lumière.' },
 ];
 export const PALIERS_BE = [
   { id: 'burnout', min: 0, nom: 'Épuisement', ico: '🔥', effet: 'Burn-out : arrêt de 2 semaines (carence, salaire réduit).', conseil: 'Du temps libre, du sommeil, des plaisirs : c\'est urgent.' },

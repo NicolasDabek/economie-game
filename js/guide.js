@@ -1,6 +1,6 @@
 // Guidage (v0.8) : navigation par sections, badges « nouveau », conseiller, objectifs, glossaire, bilan courant,
 // tutoriel pas à pas (coach marks) et aperçu des effets avant achat. DOM uniquement : aucune règle de jeu ici.
-import { ACHATS, PRINCIPES, PIECES, ORDRE_PIECES, ROI_ITEMS, COMBOS, JOURS_HABITUDE } from './data.js';
+import { ACHATS, PRINCIPES, PIECES, ORDRE_PIECES, ROI_ITEMS, JOURS_HABITUDE } from './data.js';
 import { estimationAchat } from './roi.js';
 import { scoreFinal, tempsLibre, eur, ROUTINES, routineDispo } from './simulation.js';
 import { valeurs } from './finance.js';
@@ -16,7 +16,16 @@ const eurJ = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toLocaleString('fr-FR'
 
 // ---------------------------------------------------------------- préférences d'interface (thème, sous-sections vues, tutoriel)
 const CLE_UI = 'economie-game-ui';
-export const prefs = (() => { try { return { vus: [], principesVus: 0, theme: null, tutoFait: false, objectifsFaits: [], ...JSON.parse(localStorage.getItem(CLE_UI) || '{}') }; } catch { return { vus: [], principesVus: 0, theme: null, tutoFait: false, objectifsFaits: [] }; } })();
+const PREFS_DEFAUT = { vus: [], principesVus: 0, theme: null, tutoFait: false, objectifsFaits: [] };
+export const prefs = (() => {
+  let lu = {};
+  try { lu = JSON.parse(localStorage.getItem(CLE_UI) || '{}'); } catch { lu = {}; }
+  if (!lu || typeof lu !== 'object' || Array.isArray(lu)) lu = {};
+  const p = { ...PREFS_DEFAUT, ...lu };
+  for (const k of ['vus', 'objectifsFaits']) if (!Array.isArray(p[k])) p[k] = [];
+  if (typeof p.principesVus !== 'number') p.principesVus = 0;
+  return p;
+})();
 export function sauverPrefs() { try { localStorage.setItem(CLE_UI, JSON.stringify(prefs)); } catch { /* stockage indisponible */ } }
 
 // ---------------------------------------------------------------- sections
@@ -29,7 +38,7 @@ export const SECTIONS = [
   ['achats', 'Achats', 'achats', [['b-maison', 'Maison', toujours], ['b-eau', 'Eau chaude', toujours], ['b-cuisine', 'Cuisine', toujours], ['b-elec', 'Électricité', (s) => s.jour >= 2],
     ['b-transport', 'Transport', (s) => s.jour >= 3], ['b-jardin', 'Jardin', (s) => s.jour >= 21], ['rentab', 'Rentabilité', (s) => Object.entries(s.possede).some(([k, v]) => v && ACHATS[k]?.prix > 5)]]],
   ['argent', 'Argent', 'argent', [['banque', 'Banque et épargne', toujours], ['invest', 'Investir', (s) => s.jour >= 14 || !!s.fin?.pea || !!s.fin?.av]]],
-  ['savoir', 'Savoir', 'savoir', [['principes', 'Encyclopédie', toujours], ['combos', 'Combos', (s) => Object.keys(s.combos || {}).length > 0 || s.jour >= 30], ['glossaire', 'Glossaire', (s) => s.jour >= 5], ['journal', 'Journal', (s) => s.jour >= 1]]],
+  ['savoir', 'Savoir', 'savoir', [['principes', 'Encyclopédie', toujours], ['combos', 'Combos', (s) => Object.keys(s.combos || {}).length > 0 || s.jour >= 30], ['glossaire', 'Glossaire', (s) => s.jour >= 5], ['journal', 'Journal', (s) => s.jour >= 1], ['aide', 'Aide', toujours]]],
   ['bilan', 'Bilan', 'bilan', [['resume', 'Où en es-tu ?', toujours], ['factures', 'Factures', (s) => s.factures.length > 0], ['graphes', 'Graphiques', toujours]]],
 ];
 export const sectionDe = (onglet) => SECTIONS.find(x => x[3].some(y => y[0] === onglet))?.[0] || 'maison';
@@ -232,7 +241,7 @@ export function apercuConsigne(s, piece, avant, apres) {
 const ETAPES = [
   { sel: '.tb-date', titre: 'Bienvenue !', texte: 'Ici, la date, la saison et l\'année de ta campagne. La partie commence le 1er décembre, en plein hiver.' },
   { sel: '#jauges', titre: 'Tes jauges', texte: 'Argent, confort, santé, moral, hygiène, bien-être, temps libre. Survole ou touche une jauge pour savoir ce qu\'elle mesure. Les flèches montrent la tendance.' },
-  { sel: '#vueTableau', avant: () => choisirVue('tableau'), titre: 'Ton tableau de bord', texte: 'Tout en un coup d\'œil : ta situation, ce qu\'il faut faire en priorité (bouton « Y aller »), les alertes, tes dépenses du mois face au voisin et les 3 prochains jours.' },
+  { sel: '#vueTableau', avant: () => choisirVue('tableau'), titre: 'Ton tableau de bord', texte: 'Tout en un coup d\'œil : ta situation, les conseils du moment (« Faire » applique le conseil, « Y aller » ouvre le bon réglage, 3 conseils par semaine), les alertes, tes dépenses du mois face au voisin et les 3 prochains jours.' },
   { sel: '#scene', avant: () => choisirVue('maison'), titre: 'Ta maison', texte: 'Chaque pièce affiche sa température et ce qu\'elle a coûté hier. Clique sur une pièce pour régler son chauffage.' },
   { sel: '#carteConseiller', titre: 'Le conseiller', texte: 'Un conseil à la fois, adapté à ta situation : la plus grosse fuite, le meilleur achat, une jauge qui baisse.' },
   { sel: '#carteObjectifs', titre: 'Tes objectifs', texte: 'Trois objectifs à la fois, avec ta progression. Clique sur un objectif pour aller au bon endroit.' },
@@ -242,7 +251,7 @@ const ETAPES = [
   { sel: '#btnJour', titre: 'Fais avancer le temps', texte: 'Passe au jour suivant. Un message te montrera ce que ta journée a coûté.', fait: (s) => s.jour >= 1 },
   { sel: '.temps-int', titre: 'Avancer plus vite', texte: 'Semaine, mois ou jusqu\'au prochain événement : le jeu s\'arrête de lui-même sur chaque choix important.' },
   { sel: '[data-section="savoir"]', titre: 'Ce que tu apprends', texte: 'Chaque découverte devient un principe dans l\'encyclopédie, et le glossaire explique chaque terme.' },
-  { sel: '#btnAide', titre: 'C\'est parti !', texte: 'Tu peux rejouer ce tutoriel à tout moment avec ce bouton. Bon hiver !' },
+  { sel: '#btnAide', titre: 'C\'est parti !', texte: 'Tu peux rejouer ce tutoriel à tout moment avec ce bouton. La page « Comment jouer » (Savoir › Aide) résume les règles et les raccourcis. Bon hiver !' },
 ];
 const coach = { actif: false, i: 0 };
 export const coachActif = () => coach.actif;

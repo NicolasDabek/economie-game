@@ -1,10 +1,10 @@
 // Tableau de bord (v0.8.1) : vue d'ensemble pour décider. Lecture seule de l'état, sauf l'instantané mensuel
 // (dépenses par poste au 1er du mois) pris par la simulation pour comparer « ce mois-ci » et « le mois dernier ».
-import { ACHATS, BANQUE, PRINCIPES } from './data.js';
+import { ACHATS, BANQUE, PRINCIPES, MEDIATHEQUE, JOURS_HABITUDE } from './data.js';
 import { dateDuJour, prevision } from './meteo.js';
 import { scoreFinal, evenementsAVenir, tempsLibre, eur, acheter, actions, acheterVetement, gestesActifs, planifierLessive, laverMain, linge, remplissage, ROUTINES, routineDispo } from './simulation.js';
 import { chapitreDuJour } from './meteo.js';
-import { faireReleves, resilier, reabonner } from './systemes.js';
+import { faireReleves, resilier, reabonner, prendreMediatheque } from './systemes.js';
 import { deposer } from './finance.js';
 import { valeurs } from './finance.js';
 import { tableauROI, estimationAchat } from './roi.js';
@@ -63,15 +63,15 @@ export function courbe(points, series, { unite = ' €', hauteur = 180, vide = '
   return `<svg viewBox="0 0 ${W} ${H}" class="courbe" role="img" aria-label="${series.map(se => se.nom).join(' et ')}, de ${date(points[0].jour)} à ${date(points.at(-1).jour)}">
     ${grad.map(v => `<line x1="${g}" x2="${W - 8}" y1="${ys(v)}" y2="${ys(v)}" class="grille"/><text x="${g - 4}" y="${ys(v) + 4}" text-anchor="end">${fmt(v)}</text>`).join('')}
     ${points.map((p, i) => i % pas === 0 ? `<text x="${xs(i)}" y="${H - 6}" text-anchor="middle">${date(p.jour)}</text>` : '').join('')}
-    ${series.map(se => `<polyline fill="none" stroke="${se.couleur}" stroke-width="2.5" ${se.tirets ? 'stroke-dasharray="5 4"' : ''} points="${points.map((p, i) => p[se.cle] == null ? '' : `${xs(i)},${ys(p[se.cle])}`).join(' ')}"/>`).join('')}
-  </svg><div class="tb-legende">${series.map(se => `<span style="color:${se.couleur}">${se.nom}</span>`).join('')}</div>`;
+    ${series.map(se => `<polyline fill="none" style="stroke:${se.couleur}" stroke-width="2.5" ${se.tirets ? 'stroke-dasharray="5 4"' : ''} points="${points.map((p, i) => p[se.cle] == null ? '' : `${xs(i)},${ys(p[se.cle])}`).join(' ')}"/>`).join('')}
+  </svg><div class="tb-legende">${series.map(se => `<span><i class="puce" style="background:${se.couleur}" aria-hidden="true"></i>${se.nom}</span>`).join('')}</div>`;
 }
 export function rendreCourbes(s) {
   const h = s.tab?.hist || [];
   const d = document.getElementById('courbeDepenses'), p = document.getElementById('courbePatrimoine');
-  if (d) d.innerHTML = courbe(h, [{ cle: 'moi', nom: 'Toi', couleur: 'var(--accent)' }, { cle: 'voisin', nom: 'Le voisin', couleur: '#9aa4b2', tirets: true }], { vide: 'La courbe apparaît après deux mois complets.' })
+  if (d) d.innerHTML = courbe(h, [{ cle: 'moi', nom: 'Toi', couleur: 'var(--accent)' }, { cle: 'voisin', nom: 'Le voisin', couleur: 'var(--voisin)', tirets: true }], { vide: 'La courbe apparaît après deux mois complets.' })
     + (h.length >= 2 ? `<p class="aide">Énergie, eau, courses, abonnements, plaisirs, transport, linge et imprévus (hors loyer).</p>` : '');
-  if (p) p.innerHTML = courbe(h, [{ cle: 'pat', nom: 'Ton patrimoine', couleur: 'var(--ok)' }, { cle: 'patV', nom: 'Patrimoine du voisin', couleur: '#9aa4b2', tirets: true }], { vide: 'La courbe apparaît après deux mois complets.' })
+  if (p) p.innerHTML = courbe(h, [{ cle: 'pat', nom: 'Ton patrimoine', couleur: 'var(--ok)' }, { cle: 'patV', nom: 'Patrimoine du voisin', couleur: 'var(--voisin)', tirets: true }], { vide: 'La courbe apparaît après deux mois complets.' })
     + (h.length >= 2 ? '<p class="aide">Compte courant et placements, nets de frais et d\'impôts s\'ils étaient vendus aujourd\'hui.</p>' : '');
 }
 export function moisCourant(s) {
@@ -149,7 +149,7 @@ export function appliquerConseil(s, a) {
     if (y.plaisirs < 20) { y.plaisirs = 20; return 'Plaisirs remontés à 20 €/semaine.'; }
     if (y.plaisirs < 35) { y.plaisirs = 35; return 'Plaisirs à 35 €/semaine le temps de remonter.'; }
     for (const k of ['streaming', 'musique']) if (!y.abonnements[k].actif && reabonner(s, k, c)) return `Réabonné : ${k === 'streaming' ? 'streaming vidéo' : 'musique en ligne'}.`;
-    if (!s.sys.mediatheque && s.argent > 50) { s.argent -= 20; s.depenses.services += 20; s.sys.mediatheque = true; return 'Carte de médiathèque prise (20 €/an) : livres et films à volonté.'; }
+    if (!s.sys.mediatheque && s.argent > 50 && prendreMediatheque(s, c)) return `Carte de médiathèque prise (${eur(MEDIATHEQUE)}/an) : livres, films et jeux à volonté.`;
     return null;
   }
   const P = {
@@ -212,7 +212,7 @@ export function recommandations(s, r = scoreFinal(s)) {
     if (p.id !== 'imprevus' && domaineConnu(s, DOM_ALLER[p.aller] || p.aller) && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: GESTE_POSTE[p.id]?.titre || `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: `${p.nom} : ${eur(fuite)}/an de plus que le voisin`, aller: p.aller, fuite: true, poste: p.id, action: { type: 'poste', id: p.id } });
   }
   // gestes : un seul à la fois (la volonté s'use quand on en apprend plusieurs)
-  if (!enApprentissage(s)) for (const g of GESTES_RECO) if ((s.principes.includes(PRINCIPE_GESTE[g.id]) || domaineConnu(s, g.id === 'gamelle' ? 'cuisine' : DOM_ALLER[g.aller])) && !g.fait(s) && (g.dispo?.(s) ?? true) && (!g.hiver || saisonFroide(s))) { L.push({ titre: g.titre, an: g.an, roi: null, jauge: 'nouveau geste : un peu de volonté pendant 10 jours', aller: g.aller, action: { type: 'geste', id: g.id } }); break; }
+  if (!enApprentissage(s)) for (const g of GESTES_RECO) if ((s.principes.includes(PRINCIPE_GESTE[g.id]) || domaineConnu(s, g.id === 'gamelle' ? 'cuisine' : DOM_ALLER[g.aller])) && !g.fait(s) && (g.dispo?.(s) ?? true) && (!g.hiver || saisonFroide(s))) { L.push({ titre: g.titre, an: g.an, roi: null, jauge: `nouveau geste : un peu de moral chaque jour pendant ${JOURS_HABITUDE} jours`, aller: g.aller, action: { type: 'geste', id: g.id } }); break; }
   // chauffage : baisser d'1 °C si on est couvert (≈ 7 %/°C, ADEME)
   const C = s.central, haut = s.possede.robinets ? Object.values(s.pieces).some(p => p.consigneJour > 18) : C.consigneJour > 18 || C.consigneNuit > 16;
   if (saisonFroide(s) && haut && s.sante >= 70 && s.jour >= 3 && domaineConnu(s, 'chauffage')) {

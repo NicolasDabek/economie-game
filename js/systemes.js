@@ -1,11 +1,7 @@
 // Systèmes du quotidien : eau chaude, cuisine, électricité, jardin, budget.
 // Chaque journée remplit un contexte : électricité heure par heure (W), chaleur dégagée dans les pièces,
 // coûts par domaine et effets sur santé, hygiène, bien-être et moral.
-import {
-  ELEC, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, MEDIATHEQUE, GRENIER, PRIX, ACHATS,
-  TARIFS, CHANGEMENT_TARIF, estHC, LESSIVE,
-} from './data.js';
-import { soleil } from './meteo.js';
+import { ELEC, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, MEDIATHEQUE, GRENIER, PRIX, TARIFS, CHANGEMENT_TARIF } from './data.js';
 import { makeRng } from './rng.js';
 
 const KWH_L_K = 1.163 / 1000;          // kWh pour chauffer 1 litre de 1 K

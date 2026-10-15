@@ -17,7 +17,6 @@ export function nouvelEtatTransport() {
 }
 
 const estBureau = (s) => { const j = s.jour % 7; return j < 5 && j < 5 - s.transport.teletravail; };
-export const joursBureau = (s) => estBureau(s);
 
 // le mode est-il possible aujourd'hui ?
 export function modePossible(s, m) {

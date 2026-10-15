@@ -10,6 +10,7 @@
 import { jourSuivant, choixDilemme, resoudreDilemme } from './simulation.js';
 import { valeurs } from './finance.js';
 import { ACHATS } from './data.js';
+import { appliquerIndices } from './annee.js';
 
 export const HORIZON = 30, DELAI = 21, IGNORE = 30;
 // seuils de l'écran de fin (scoreFinal : « équilibre ») et valeur d'un point-jour sous le seuil
@@ -76,7 +77,7 @@ function amorti(s, t, H) {
 let cache = { cle: null, base: null, res: new Map() };
 export function evaluer(s, action, appliquer, H = HORIZON) {
   const cle = `${H}|${s.seed}|${s.jour}|${Math.round(s.argent)}|${JSON.stringify(s.reco?.snap ?? '')}`;
-  if (cache.cle !== cle) cache = { cle, base: derouler(cloner(s), H), res: new Map() };
+  if (cache.cle !== cle) { cache = { cle, base: derouler(cloner(s), H), res: new Map() }; appliquerIndices(s); }
   const ka = JSON.stringify(action);
   if (cache.res.has(ka)) return cache.res.get(ka);
   const t = cloner(s); let ok = null;
@@ -89,6 +90,7 @@ export function evaluer(s, action, appliquer, H = HORIZON) {
     r = { valeur: eurAn - penAn, eurAn, penAn, leviers: dl, moy: x.moy, base: b.moy };
   }
   cache.res.set(ka, r);
+  appliquerIndices(s);   // la simulation à blanc a pu avancer les prix partagés (1er janvier) : on remet ceux du jour
   return r;
 }
 

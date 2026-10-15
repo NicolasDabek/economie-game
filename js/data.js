@@ -556,7 +556,6 @@ export const PUITS_DIY = [
 ];
 
 // ---------- Banque et placements (v0.5) — taux et règles en vigueur en octobre 2026 ----------
-export const CALENDRIER = { debut: '2026-12-01', chapitres: { hiver: '2026-12-01', printemps: '2027-04-06', ete: '2027-07-01' } };
 export const PROFILS = {
   // RFR d'une personne seule (1 part). LEP : RFR ≤ 23 028 € en métropole (service-public.gouv.fr, plafonds 2026).
   // Salaire net mensuel après prélèvement à la source : SMIC net ~1 440 € (2026) ; salaire net médian du privé ~2 190 € (Insee, 2024, revalorisé) ;
@@ -657,3 +656,6 @@ export const VACANCES = {
   econome: { nom: 'Une semaine chez des amis ou en camping, en train (Ouigo, réservé tôt)', cout: 350, effet: 11 },
   sejour:  { nom: 'Deux semaines en location et train (séjour classique)', cout: 1100, effet: 14 },
 };
+
+// lavage d'un vêtement à la main : 8 l d'eau tiède (≈0,25 kWh pour la chauffer), 9 min, 3 centimes de savon
+export const LAVAGE_MAIN = { litres: 8, kwh: 0.25, temps: 0.15, volonte: 1, savon: 0.03 };

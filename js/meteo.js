@@ -29,7 +29,6 @@ function normale(x) {
   const w = Math.abs(f);
   return { t: NORMALES[m] * (1 - w) + NORMALES[autre] * w, n: NUAGE[m] * (1 - w) + NUAGE[autre] * w };
 }
-export const JOURS_TOTAL = joursCampagne(CAMPAGNE.anneesDefaut);
 
 export function genererMeteo(seed, annees = CAMPAGNE.anneesDefaut) {
   const rng = makeRng(seed);

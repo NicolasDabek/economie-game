@@ -1,10 +1,11 @@
 // Point d'entrée : relie l'état, la simulation et l'interface
 import { ignorer } from './arbitre.js';
-import { nouvellePartie, sauvegarder, charger, aUneSauvegarde } from './state.js';
+import { VERSION } from './version.js';
+import { nouvellePartie, sauvegarder, charger, aUneSauvegarde, MESSAGES_MIGRATION } from './state.js';
 import { jourSuivant, acheter, acheterVetement, aererVetement, laverMain, repriser, planifierLessive, reparerMachine, resoudreDilemme } from './simulation.js';
 import { rendreTout, rendreHorloge, rendreFin, toast, options } from './ui.js';
 import { etatUI } from './onglets.js';
-import { recommandations, appliquerConseil, suivreConseil, conseillerDispo, ACTIVATION } from './tableau.js';
+import { recommandations, suivreConseil, conseillerDispo, ACTIVATION } from './tableau.js';
 import { prefs, sauverPrefs, ouvrir, ouvrirSection, apercuAchat, effetAchat, apercuConsigne, demarrerTutoriel, arreterTutoriel, etapeSuivante, coachActif, majCoach, objectifsAtteints, filtrerGlossaire, choisirVue } from './guide.js';
 import { icone } from './icones.js';
 import { ACHATS } from './data.js';
@@ -212,9 +213,15 @@ document.addEventListener('click', (e) => {
     if (b.id === 'btnTutoriel') demarrerTutoriel(s); else { prefs.tutoFait = true; sauverPrefs(); }
     return;
   }
-  else if (b.id === 'btnReprendre') { const c = charger(); if (c && c !== 'ancienne') { s = c; if (s.migre === 3) { toast('Sauvegarde v0.3 mise à jour : le transport, la rentabilité et la banque démarrent aujourd\'hui.'); delete s.migre; } else if (s.migre === 4) { toast('Sauvegarde v0.4 mise à jour : ta banque démarre aujourd\'hui (profil médian, 4 000 € sur le Livret A).'); delete s.migre; } else if (s.migre === 6) { toast('Sauvegarde v0.6 mise à jour : le moral évolue maintenant sur la durée et la santé a un coût.'); delete s.migre; } else if (s.migre === 5) { toast('Sauvegarde v0.5 mise à jour : ta partie continue en campagne de 5 ans (salaire, inflation, pannes, bilans annuels).'); delete s.migre; } else if (s.migre === 6) { toast('Sauvegarde v0.6 mise à jour : le moral évolue maintenant sur la durée et la santé a un coût.'); delete s.migre; } else if (s.migre === 5) { toast('Sauvegarde v0.5 mise à jour : ta partie continue en campagne de 5 ans (salaire, inflation, pannes, bilans annuels).'); delete s.migre; } } else if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible : nouvelle partie.'); $('intro').classList.add('cache'); }
+  else if (b.id === 'btnReprendre') {
+    const c = charger();
+    if (c && typeof c === 'object') { s = c; if (s.migre) { toast(MESSAGES_MIGRATION[s.migre] || 'Sauvegarde mise à jour.'); delete s.migre; } }
+    else signalerChargement(c);
+    $('intro').classList.add('cache');
+  }
+  else if (b.id === 'btnAideTutoriel') { demarrerTutoriel(s); return; }
   else if (b.id === 'btnSauver') { autoSauvegarde(); toast('💾 Partie sauvegardée dans ce navigateur.'); return; }
-  else if (b.id === 'btnCharger') { const c = charger(); if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible avec cette version : elle a été effacée.'); else if (c) { s = c; $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else toast('Aucune sauvegarde trouvée.'); }
+  else if (b.id === 'btnCharger') { const c = charger(); if (c && typeof c === 'object') { s = c; if (s.migre) { toast(MESSAGES_MIGRATION[s.migre] || 'Sauvegarde mise à jour.'); delete s.migre; } $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else signalerChargement(c); }
   else if (b.id === 'btnNouvelle' || b.id === 'btnRejouer') {
     if (b.id === 'btnNouvelle' && !confirm('Commencer une nouvelle partie ? La partie en cours sera perdue si elle n\'est pas sauvegardée.')) return;
     s = nouvellePartie(Math.floor(Math.random() * 1e6), Math.round(s.joursTotal / 365) || duree); $('fin').classList.add('cache'); autoSauvegarde();
@@ -223,7 +230,12 @@ document.addEventListener('click', (e) => {
 });
 
 if (aUneSauvegarde()) $('btnReprendre').classList.remove('cache');
-else { try { if (localStorage.getItem('economie-game-sauvegarde')) { charger(); toast('Ta sauvegarde d\'une ancienne version a été réinitialisée : le jeu couvre maintenant hiver, printemps et été.'); } } catch { /* stockage indisponible */ } }
+else { try { if (localStorage.getItem('economie-game-sauvegarde')) signalerChargement(charger()); } catch { /* stockage indisponible */ } }
+function signalerChargement(c) {
+  if (c === 'ancienne') toast('Ancienne sauvegarde (v0.2) incompatible avec cette version : elle a été effacée.');
+  else if (c === 'corrompue') toast('⚠️ Sauvegarde illisible : elle a été mise de côté et une nouvelle partie commence.', { type: 'alerte' });
+  else toast('Aucune sauvegarde trouvée.');
+}
 // thème, icônes, clavier
 document.documentElement.dataset.theme = prefs.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair');
 for (const [id, ic] of [['btnAnnuler', 'annuler'], ['btnReglages', 'reglages'], ['btnAide', 'aide'], ['btnTheme', 'theme'], ['btnSauver', 'sauver'], ['btnCharger', 'charger'], ['btnNouvelle', 'nouvelle']]) $(id).innerHTML = icone(ic, 18);
@@ -252,7 +264,21 @@ document.addEventListener('click', (e) => {
   if (!cible) toast('Un seul thermostat pour toute la maison : des robinets thermostatiques (Achats) permettent de régler chaque pièce.');
 });
 addEventListener('resize', () => majCoach(s));
+for (const e of document.querySelectorAll('.version-jeu')) e.textContent = 'v' + VERSION;
 appliquerPrefs();
 rendreHorloge(7, s?.jour || 0);
 rendreTout(s);
 window.__jeu = () => s; // débogage
+
+// fenêtres modales : Tab et Maj+Tab restent dans la fenêtre ouverte (accueil, choix, réglages, confirmation, fin)
+const MODALES = ['confirmation', 'reglages', 'dilemme', 'fin', 'intro'];
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const m = MODALES.map($).find(x => x && !x.classList.contains('cache'));
+  if (!m) return;
+  const f = [...m.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+  if (!f.length) return;
+  const i = f.indexOf(document.activeElement);
+  if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+  else if (!e.shiftKey && (i === -1 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
+});

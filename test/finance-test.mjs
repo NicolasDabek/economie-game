@@ -1,10 +1,10 @@
 // Test v0.6 : banque (quinzaines, LEP, PEL, SCPI, découvert), calage des marchés, projection,
 // et les trois stratégies d'arbitrage équipement / placement sur 3 graines.
 import { nouvellePartie } from '../js/state.js';
-import { jourSuivant, actions, acheter, scoreFinal, choixDilemme, resoudreDilemme, planifierLessive, payer } from '../js/simulation.js';
-import { nouvelEtatFinance, deposer, retirer, ouvrirAV, changerProfil, eligibleLEP, valeurs, valeurLiquidation, gainFinancier, pasMarche, projection, financeJour, calDuJour, dateTexte, dateCal, peaCinqAns } from '../js/finance.js';
+import { jourSuivant, actions, acheter, scoreFinal, choixDilemme, resoudreDilemme, planifierLessive } from '../js/simulation.js';
+import { nouvelEtatFinance, deposer, retirer, ouvrirAV, changerProfil, eligibleLEP, valeurLiquidation, pasMarche, projection, calDuJour, dateTexte, dateCal, peaCinqAns } from '../js/finance.js';
 import { estimationAchat } from '../js/roi.js';
-import { ROI_ITEMS, ACHATS, BANQUE, MARCHES } from '../js/data.js';
+import { ROI_ITEMS, ACHATS } from '../js/data.js';
 import { makeRng } from '../js/rng.js';
 
 let ok = true;

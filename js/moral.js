@@ -5,7 +5,6 @@
 // Sources des chiffres : voir docs/prix.md, section v0.7.
 import { MORAL, SANTE_COUTS } from './data.js';
 import { makeRng } from './rng.js';
-import { dateDuJour } from './meteo.js';
 import { valeurs } from './finance.js';
 import { palierMoral, palierBE, EFFETS_PALIERS as EP } from './paliers.js';
 
@@ -151,4 +150,3 @@ export function revisionSalaire(s, ctx) {
   }
   s.mor.an = { n: 0, volonte: 0, hygiene: 0 };
 }
-export const anneeVacances = (s) => dateDuJour(s.jour).getUTCFullYear();

@@ -1,7 +1,7 @@
 // Tests de non-régression v0.8.1 : réabonnement, étiquettes d'habitude, paliers de moral et de bien-être
 import { nouvellePartie } from '../js/state.js';
 import { actions, jourSuivant, resoudreDilemme, choixDilemme, gestesActifs } from '../js/simulation.js';
-import { resilier, reabonner, renegocier, faireReleves } from '../js/systemes.js';
+import { resilier, reabonner, renegocier } from '../js/systemes.js';
 import { ABONNEMENTS, REABONNEMENT, JOURS_HABITUDE, HABITUDE_OUBLI } from '../js/data.js';
 import { tagGeste } from '../js/onglets.js';
 import { palierMoral, palierBE } from '../js/paliers.js';

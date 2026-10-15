@@ -4,7 +4,7 @@ import { chapitreDuJour } from './meteo.js';
 import { eur, fmtH, gestesActifs } from './simulation.js';
 import { modePossible, coutKm, tempsTransport } from './transport.js';
 import { contenantPossible, newton } from './combos.js';
-import { hasCheminee, typePuits, tSol, jourAn, chantierEnCours } from './passif.js';
+import { hasCheminee, typePuits, tSol, jourAn } from './passif.js';
 import { PASSIF } from './data.js';
 
 const num = (x, d = 1) => x.toFixed(d).replace('.', ',');

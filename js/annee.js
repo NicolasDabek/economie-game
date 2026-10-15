@@ -1,7 +1,7 @@
 // Campagne pluriannuelle (v0.6) : salaire, inflation et prix qui évoluent, révisions du Livret A, mensualisation de l'énergie,
 // événements de l'année (régularisation, assurance, rentrée, impôts, renégociation), vieillissement des équipements et appareils,
 // bilan annuel avec objectifs. Les fonctions qui touchent au jeu reçoivent un contexte (msg, debloquer) pour éviter les imports circulaires.
-import { PRIX, BANQUE, INDICES, ECONOMIE, PROFILS, APPAREILS, ACHATS, CAMPAGNE, joursCampagne, VACANCES } from './data.js';
+import { PRIX, BANQUE, INDICES, ECONOMIE, PROFILS, APPAREILS, ACHATS, VACANCES, MEDIATHEQUE } from './data.js';
 import { revisionSalaire } from './moral.js';
 import { makeRng } from './rng.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
@@ -81,6 +81,8 @@ export function debutJourCampagne(s, ctx) {
     ctx.debloquer('inflation');
     if (t.salaire < t.inflation) ctx.debloquer('inflationReelle');
     defiAnnuel(s, ctx, x.getUTCFullYear());
+    // la carte de médiathèque est annuelle : renouvelée au 1er janvier
+    if (s.sys?.mediatheque) { s.argent -= MEDIATHEQUE; s.depenses.services += MEDIATHEQUE; ctx.msg(`📚 Carte de médiathèque renouvelée : ${eur0(MEDIATHEQUE)}.`, 'info'); }
   }
   // 1er février et 1er août : tarif réglementé de l'électricité et Livret A (formule : moyenne inflation / €STR, au 0,1 pt, plancher 0,5 %)
   if ((m === 1 || m === 7) && j === 1 && s.jour > 0) {
@@ -239,4 +241,3 @@ export function resoudreCampagne(s, id, choix, outils) {
   if (id === 'vacances') { const v = VACANCES[choix]; if (v.cout) outils.payer(s, v.cout, 'plaisirs'); if (s.mor) s.mor.vacances = { jour: s.jour, effet: v.effet }; if (choix === 'rester') s.mor && (s.mor.adapt *= 0.8); outils.msg(`🏖️ ${v.nom}${v.cout ? ` (−${eur0(v.cout)})` : ''}.`, 'info'); return; }
   if (id === 'bilan') { e.objectifs = e.dernierBilan?.objectifs || []; }
 }
-export const coutVoisinRentree = 180;

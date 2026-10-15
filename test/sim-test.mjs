@@ -2,7 +2,7 @@
 import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
 import { tableauROI } from '../js/roi.js';
-import { recommandations, appliquerConseil, suivreConseil, CORVEES } from '../js/tableau.js';
+import { recommandations, suivreConseil, CORVEES } from '../js/tableau.js';
 import { PRINCIPES } from '../js/data.js';
 import { chapitreDuJour } from '../js/meteo.js';
 import { deposer } from '../js/finance.js';
@@ -284,25 +284,25 @@ if (charger(mem) !== 'ancienne' || mem.getItem('economie-game-sauvegarde') !== n
 // migration v0.3 -> v0.4 : la partie continue
 { const v3 = defaut(); const o = JSON.parse(JSON.stringify(v3)); delete o.meteo; delete o.transport; delete o.roi; o.version = 3; delete o.depenses.transport; delete o.base.transport;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  if (!(m && m.version === 7 && m.transport && m.fin && m.eco && !m.fini)) { ok = false; console.log('✗ migration v3'); } }
+  if (!(m && m.version === 8 && m.transport && m.fin && m.eco && !m.fini)) { ok = false; console.log('✗ migration v3'); } }
 // migration v0.4 -> v0.5 : la banque démarre au jour de la sauvegarde, sans rattrapage
 { const v4 = defaut(); const o = JSON.parse(JSON.stringify(v4)); delete o.meteo; delete o.fin; delete o.coutVoisinCumul; delete o.depenses.banque; delete o.base.banque; o.version = 4; o.fini = false; o.jour = 40;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  const okM = m && m.version === 7 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
+  const okM = m && m.version === 8 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
   if (okM) { jourSuivant(m); }
-  if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v7'); }
+  if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v8'); }
 // migration v0.5 -> v0.6 : une partie de 18 semaines terminée devient le début d'une campagne de 5 ans
 { const v5 = defaut(); const o = JSON.parse(JSON.stringify(v5)); delete o.meteo; delete o.eco; delete o.auto; delete o.annees; delete o.joursTotal; o.version = 5; o.jour = 126; o.fini = true; o.evenementsVus = ['invites', 'chap-printemps'];
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  let okM = m && m.version === 7 && !m.fini && m.jour === 254 && m.annees === 5 && m.evenementsVus.includes('invites@0');
+  let okM = m && m.version === 8 && !m.fini && m.jour === 254 && m.annees === 5 && m.evenementsVus.includes('invites@0');
   if (okM) { for (let i = 0; i < 400 && !m.fini; i++) { if (m.dilemme) resoudreDilemme(m, choixDilemme(m).filter(x => x.possible !== false).at(-1).id); else jourSuivant(m); } okM = m.jour > 600 && Number.isFinite(scoreFinal(m).economies); }
-  if (!okM) { ok = false; console.log('✗ migration v5'); } else console.log('✓ migration v5 -> v7 (la partie continue, jour', m.jour, ')'); }
+  if (!okM) { ok = false; console.log('✗ migration v5'); } else console.log('✓ migration v5 -> v8 (la partie continue, jour', m.jour, ')'); }
 // migration v0.6 -> v0.7 : le moral sur la durée démarre au jour de la sauvegarde
 { GRAINE = 2026; const v6 = defaut(); const o = JSON.parse(JSON.stringify(v6)); delete o.meteo; delete o.mor; o.version = 6; o.fini = false; o.jour = 400;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  let okM = m && m.version === 7 && m.mor && m.migre === 6;
+  let okM = m && m.version === 8 && m.mor && m.migre === 6;
   if (okM) { for (let i = 0; i < 60; i++) { if (m.dilemme) resoudreDilemme(m, choixDilemme(m).filter(x => x.possible !== false).at(-1).id); else jourSuivant(m); } okM = Number.isFinite(m.volonte) && Number.isFinite(scoreFinal(m).economies); }
-  if (!okM) { ok = false; console.log('✗ migration v6'); } else console.log('✓ migration v6 -> v7'); }
+  if (!okM) { ok = false; console.log('✗ migration v6'); } else console.log('✓ migration v6 -> v8'); }
 console.log('principes :', Object.keys(PRINCIPES).length);
 if (Object.keys(PRINCIPES).length < 75) ok = false;
 console.log(ok ? '\nOK' : '\nÉCHEC'); process.exit(ok ? 0 : 1);

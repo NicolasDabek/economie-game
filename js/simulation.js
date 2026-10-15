@@ -1,10 +1,5 @@
 // Moteur de simulation : modèle thermique et hydrique unique, jauges, habitudes, linge, événements
-import {
-  PRIX, INDICES, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, CHARGE_FOND_W, LESSIVE, JOURS, PIECES, ORDRE_PIECES,
-  PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour,
-  VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND,
-  JOURS_HABITUDE, HABITUDE_OUBLI, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, TEMPO, ABONNEMENTS, PLAISIRS, PLAISIRS_MORAL, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART,
-} from './data.js';
+import { PRIX, INDICES, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, LESSIVE, JOURS, PIECES, ORDRE_PIECES, PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour, VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND, JOURS_HABITUDE, HABITUDE_OUBLI, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART, LAVAGE_MAIN } from './data.js';
 import { stockerSurplus, detecterCombos } from './combos.js';
 import { tExt, soleil, chapitreDuJour, FACTEUR_FENETRE } from './meteo.js';
 import { systemesJour, voisinJour, tempsRoutines, prixElec } from './systemes.js';
@@ -127,13 +122,16 @@ export function aererVetement(s, id) {
   return true;
 }
 // Laver à la main une pièce en contact avec la peau (sous-couche, chaussettes, t-shirt) : 8 l d'eau tiède
-export const LAVAGE_MAIN = { litres: 8, kwh: 0.25, temps: 0.15, volonte: 1 };
+export { LAVAGE_MAIN };
 export function laverMain(s, id) {
   const V = VETEMENTS[id], v = s.vetements[id];
   if (!v.possede || !V.peau || v.salete < 20) return false;
   if (!prendreTemps(s, LAVAGE_MAIN.temps)) return false;
-  const cout = LAVAGE_MAIN.litres / 1000 * PRIX.eauM3 + LAVAGE_MAIN.kwh * PRIX.elecKwh + 0.03;
-  payer(s, LAVAGE_MAIN.litres / 1000 * PRIX.eauM3, 'eau'); payer(s, LAVAGE_MAIN.kwh * PRIX.elecKwh + 0.03, 'elec');
+  const cout = LAVAGE_MAIN.litres / 1000 * PRIX.eauM3 + LAVAGE_MAIN.kwh * PRIX.elecKwh + LAVAGE_MAIN.savon;
+  // eau et électricité arrivent sur la facture de la semaine (et la mensualité d'énergie) ; le savon va en produits
+  const eauL = LAVAGE_MAIN.litres / 1000 * PRIX.eauM3, elecL = LAVAGE_MAIN.kwh * PRIX.elecKwh;
+  payer(s, eauL, 'eau'); payer(s, elecL, 'elec'); payer(s, LAVAGE_MAIN.savon, 'produits');
+  s.factureSemaine += eauL + elecL; mensualiser(s, elecL);
   s.depenses.linge += cout; s.volonte -= LAVAGE_MAIN.volonte;
   v.salete = 0; v.usure += 0.5;
   debloquer(s, 'volume');

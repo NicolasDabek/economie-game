@@ -57,7 +57,7 @@ function comparaison(s) {
   const la = BANQUE.livretA.taux;
   let h = `<table><tr><th>Usage de l'argent</th><th>Rendement annuel</th><th>Net d'impôt</th><th>Réel (inflation ${pc(MARCHES.inflation, 0)})</th><th>Liquidité</th><th>Risque</th></tr>`;
   h += eq.map(e => `<tr><td>🛒 ${e.nom} (${eur(e.prix)})</td><td><b>${tauxTxt(e.taux)}</b></td><td>${tauxTxt(e.taux)}</td><td>suit l'énergie</td><td>aucune</td><td>dépend de l'usage</td></tr>`).join('');
-  h += pl.map(p => `<tr><td>🏦 ${p.nom}</td><td>${pc(p.taux, 2)}${p.id === 'peaMonde' ? ' (moyenne)' : ''}</td><td>${pc(p.net, 2)}</td><td style="color:${p.reel < 0 ? '#b91c1c' : '#16a34a'}">${pc(p.reel, 2)}</td><td>${p.liquidite}</td><td>${p.risque}</td></tr>`).join('');
+  h += pl.map(p => `<tr><td>🏦 ${p.nom}</td><td>${pc(p.taux, 2)}${p.id === 'peaMonde' ? ' (moyenne)' : ''}</td><td>${pc(p.net, 2)}</td><td style="color:${p.reel < 0 ? 'var(--mal)' : 'var(--ok)'}">${pc(p.reel, 2)}</td><td>${p.liquidite}</td><td>${p.risque}</td></tr>`).join('');
   h += `</table><p class="aide">Rendement d'un équipement = économie annuelle estimée ÷ prix (estimation de la boutique). ${eq[0] ? `Exemple : ${eq[0].nom.toLowerCase()} ${tauxTxt(eq[0].taux)} contre Livret A ${pc(la, 1)}.` : 'Tu possèdes déjà tous les équipements rentables : place ton épargne.'} Un euro placé ne peut plus acheter d'équipement.</p>`;
   return h;
 }
@@ -77,7 +77,7 @@ function graphe(f) {
 export function rendreInvest(s) {
   const f = s.fin, v = valeurs(s), g = gainFinancier(s), M = MARCHES, B = BANQUE;
   let h = graphe(f);
-  const lat = (val, cout) => `<span style="color:${val >= cout ? '#16a34a' : '#b91c1c'}">${val >= cout ? '+' : ''}${eur(val - cout)}</span>`;
+  const lat = (val, cout) => `<span style="color:${val >= cout ? 'var(--ok)' : 'var(--mal)'}">${val >= cout ? '+' : ''}${eur(val - cout)}</span>`;
   h += `<h3>📊 Tes positions</h3><table><tr><th>Placement</th><th>Valeur</th><th>Versé</th><th>Latent</th><th></th></tr>`;
   h += `<tr><td><b>PEA · ETF monde</b><br><small>courtage ${pc(M.courtage.pea, 1)} ; retrait avant 5 ans = clôture</small></td><td>${eur(f.pea ? f.pea.monde * f.cours.monde : 0)}</td><td rowspan="2">${eur(f.pea?.verse || 0)}</td><td rowspan="2">${f.pea ? lat(v.pea, f.pea.verse) : '—'}</td><td>${btns('peaMonde', 'Acheter', null)}</td></tr>`;
   h += `<tr><td><b>PEA · ETF CAC 40</b></td><td>${eur(f.pea ? f.pea.cac * f.cours.cac : 0)}</td><td>${btns('peaCac', 'Acheter', null)}${f.pea ? `<button class="btn" data-fin="ret" data-v="pea">Tout vendre (clôture)</button>` : ''}</td></tr>`;
@@ -85,7 +85,7 @@ export function rendreInvest(s) {
   h += `<tr><td><b>CTO · obligations</b><br><small>OAT 10 ans ~4,8 %</small></td><td>${eur(f.cto.oblig * f.cours.oblig)}</td><td>${eur(f.cto.cout.oblig)}</td><td>${lat(f.cto.oblig * f.cours.oblig, f.cto.cout.oblig)}</td><td>${btns('ctoOblig', 'Acheter', 'Vendre')}</td></tr>`;
   h += `<tr><td><b>SCPI</b><br><small>${f.scpi ? (f.cal < f.scpi.jouissance ? `jouissance le ${dateTexte(f.scpi.jouissance)}` : `loyers nets reçus ${eur(f.scpi.loyers)}`) : `${pc(M.scpi.distribution, 2)} distribués, ~10 % de frais, jouissance ${M.scpi.jouissanceMois} mois`}${f.scpi?.retrait ? ` · retrait prévu le ${dateTexte(f.scpi.retrait.cal)}` : ''}</small></td><td>${eur(v.scpi)}<br><small>retrait : ${eur(v.scpi * (1 - M.scpi.frais))}</small></td><td>${eur(f.scpi?.verse || 0)}</td><td>${f.scpi ? lat(v.scpi * (1 - M.scpi.frais), f.scpi.verse) : '—'}</td><td>${btns('scpi', 'Souscrire', 'Demander le retrait')}</td></tr>`;
   h += `</table>`;
-  h += `<p>Placements : <b>${eur(v.total)}</b> (dont à risque ${eur(v.risque)}) · valeur si tout était vendu aujourd'hui, après frais et impôts : <b>${eur(valeurLiquidation(s))}</b> · gain net contre un voisin resté au Livret A : <b style="color:${g.net >= 0 ? '#16a34a' : '#b91c1c'}">${g.net >= 0 ? '+' : ''}${eur(g.net)}</b> (compté dans ton score). Frais payés ${eur(f.frais)}, impôts ${eur(f.impots)}.</p>`;
+  h += `<p>Placements : <b>${eur(v.total)}</b> (dont à risque ${eur(v.risque)}) · valeur si tout était vendu aujourd'hui, après frais et impôts : <b>${eur(valeurLiquidation(s))}</b> · gain net contre un voisin resté au Livret A : <b style="color:${g.net >= 0 ? 'var(--ok)' : 'var(--mal)'}">${g.net >= 0 ? '+' : ''}${eur(g.net)}</b> (compté dans ton score). Frais payés ${eur(f.frais)}, impôts ${eur(f.impots)}.</p>`;
   h += `<h3>🔎 Risque, liquidité, frais, impôts</h3><table><tr><th>Produit</th><th>Rendement espéré</th><th>Volatilité</th><th>Pire année plausible</th><th>Liquidité</th><th>Frais</th><th>Fiscalité 2026</th></tr>
   <tr><td>Livret A / LDDS / LEP</td><td>1,7 % / 1,7 % / 2,5 %</td><td>0</td><td>0 %</td><td>immédiate</td><td>aucun</td><td>exonéré</td></tr>
   <tr><td>PEL</td><td>2 % brut</td><td>0</td><td>0 %</td><td>clôture</td><td>aucun</td><td>PFU 30 %</td></tr>
