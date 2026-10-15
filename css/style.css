@@ -6,7 +6,7 @@
   --t-xs:.75rem;--t-s:.8125rem;--t-m:.9375rem;--t-l:1.125rem;--t-xl:1.5rem;
   --fond:#f3f5f9;--surface:#ffffff;--surface2:#f1f4f8;--bord:#e2e7ef;--texte:#16202c;--doux:#5b6676;
   --accent:#2457d6;--accent-doux:#e6edfd;--accent-txt:#ffffff;
-  --ok:#14823b;--ok-doux:#e2f5e8;--warn:#a85b00;--warn-doux:#fdf1dc;--mal:#c0262d;--mal-doux:#fde6e6;
+  --ok:#0e7434;--voisin:#677285;--prec:#8a6a00;--ok-doux:#e2f5e8;--warn:#a85b00;--warn-doux:#fdf1dc;--mal:#c0262d;--mal-doux:#fde6e6;
   --froid:#3b82f6;--chaud:#ef4444;
   --ombre:0 1px 2px rgba(16,24,40,.06),0 2px 8px rgba(16,24,40,.06);
   --ombre-haute:0 12px 32px rgba(16,24,40,.18);
@@ -16,7 +16,7 @@
 [data-theme="sombre"]{
   --fond:#0e131b;--surface:#161d28;--surface2:#1d2633;--bord:#2a3546;--texte:#e7ecf3;--doux:#9aa6b8;
   --accent:#6b9bff;--accent-doux:#1d2b4a;--accent-txt:#0b1020;
-  --ok:#4ccf7a;--ok-doux:#123222;--warn:#f0b04a;--warn-doux:#33270f;--mal:#ff7a7f;--mal-doux:#3a1719;
+  --ok:#4ccf7a;--voisin:#9aa4b2;--prec:#d9b63d;--ok-doux:#123222;--warn:#f0b04a;--warn-doux:#33270f;--mal:#ff7a7f;--mal-doux:#3a1719;
   --ombre:0 1px 2px rgba(0,0,0,.4);--ombre-haute:0 12px 32px rgba(0,0,0,.6);
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -286,7 +286,7 @@ html{scroll-padding-top:140px;scroll-padding-bottom:110px}
 .tb-jauge .pal{color:var(--texte);font-weight:600}
 .tb-legende{display:flex;gap:var(--e3);font-size:var(--t-xs);flex-wrap:wrap;margin-bottom:var(--e2)}
 .tb-legende span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:currentColor}
-.c-moi{color:var(--accent)}.c-voisin{color:#9aa4b2}.c-prec{color:#c9a227}
+.c-moi{color:var(--accent)}.c-voisin{color:var(--voisin)}.c-prec{color:var(--prec)}
 .tb-barres{display:grid;gap:6px}
 .tb-barre{display:grid;grid-template-columns:150px 1fr 80px;gap:var(--e2);align-items:center;font-size:var(--t-s)}
 .tb-barre.fuite{background:var(--mal-doux,rgba(220,60,60,.08));border-radius:6px}
@@ -328,5 +328,16 @@ kbd{display:inline-block;min-width:1.6em;text-align:center;padding:1px 6px;borde
 .tb-acts{display:flex;gap:6px;float:none;margin-top:4px}
 .tb-reco .btn{float:none}
 .tb-reco li.vide{list-style:none;margin-left:-1.2em}
-.btn.discret{background:transparent;border-color:transparent;color:var(--texte-2,#555);text-decoration:underline}
-.tb-conseiller{font-size:.8125rem;color:var(--texte-2,#555);margin:0 0 .5rem}
+.btn.discret{background:transparent;border-color:transparent;color:var(--doux);text-decoration:underline}
+.tb-conseiller{font-size:.8125rem;color:var(--doux);margin:0 0 .5rem}
+/* v1.0 : page d'aide et version */
+.aide-page h3{margin:var(--e3,1rem) 0 var(--e1,.25rem);font-size:1rem}
+.aide-page ol,.aide-page ul{padding-left:1.25rem;display:grid;gap:.25rem}
+.aide-page p{line-height:1.5}
+.intro-version{text-align:center;margin-top:.75rem}
+/* v1.0 : corrections de l'audit (contraste, mobile, tactile) */
+.actions button.primaire{background:var(--accent);color:var(--accent-txt);border-color:var(--accent)}
+.puce{display:inline-block;width:.75em;height:.75em;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.panneau table{display:block;max-width:100%;overflow-x:auto}
+.objectif button.lien{min-height:24px;padding:2px 0}
+.lien{min-height:24px}

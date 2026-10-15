@@ -5,7 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Économie Game : des années sobres</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
+<meta name="description" content="Jeu de gestion en français : vis plusieurs années dans une petite maison mal isolée en dépensant moins que ton voisin, avec des prix réels de 2026.">
+<meta name="author" content="Nicolas Dabek">
+<meta name="theme-color" content="#2563eb">
+<meta property="og:title" content="Économie Game : des années sobres">
+<meta property="og:description" content="Dépenser moins que le voisin sans s'abîmer : chauffage, linge, cuisine, transport, épargne. Prix réels 2026.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:image" content="docs/img/tableau.png">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="assets/site.webmanifest">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -72,6 +83,35 @@
       <div class="panneau cache" data-panneau="principes"><div class="carte"><h2>Encyclopédie des principes (<span id="nbPrincipes">0</span>/<span id="totPrincipes">0</span>)</h2><div id="principes"></div></div></div>
       <div class="panneau cache" data-panneau="combos"><div class="carte"><h2>Combos</h2><div id="combos"></div></div></div>
       <div class="panneau cache" data-panneau="glossaire"><div class="carte"><h2>Glossaire</h2><div id="glossaire"></div></div></div>
+      <div class="panneau cache" data-panneau="aide"><div class="carte aide-page">
+        <h2>Comment jouer</h2>
+        <p><b>Le but :</b> vivre plusieurs années dans une petite maison mal isolée en dépensant <b>moins que ton voisin</b>, qui vit « normalement », sans abîmer ta santé, ton moral, ton hygiène ni ton bien-être. À la fin, ton titre va de <i>Dépensier</i> à <i>Maître de la sobriété</i>.</p>
+        <h3>En 5 étapes</h3>
+        <ol>
+          <li><b>Regarde le tableau de bord</b> : ta situation, les conseils du moment, les alertes et tes dépenses du mois face au voisin.</li>
+          <li><b>Règle ta maison</b> (section Maison) : chauffage pièce par pièce, vêtements, linge, eau chaude, électricité.</li>
+          <li><b>Achète ce qui rapporte</b> (section Achats) : chaque article affiche son coût, son effet et son délai de remboursement ; l'onglet Rentabilité montre ce qu'il a vraiment rapporté.</li>
+          <li><b>Avance dans le temps</b> : un jour, une semaine, un mois ou jusqu'au prochain événement. Le jeu s'arrête de lui-même sur chaque choix.</li>
+          <li><b>Apprends</b> : chaque découverte devient un principe (section Savoir) qui débloque de nouvelles idées et de nouveaux conseils.</li>
+        </ol>
+        <h3>Les jauges</h3>
+        <ul>
+          <li><b>Confort</b> : chaleur ressentie. Le froid abîme la santé.</li>
+          <li><b>Santé</b> : sous 40, tu tombes malade (médecin, pharmacie, jours de carence).</li>
+          <li><b>Moral</b> : chaque nouveau geste en coûte jusqu'à devenir une habitude ; à zéro, c'est la rechute (achats pour se consoler).</li>
+          <li><b>Hygiène</b> : douches, linge propre, vaisselle. Basse trop longtemps, elle coûte ton augmentation.</li>
+          <li><b>Bien-être</b> : petits plaisirs, repas, sommeil, lumière, vie sociale. Il nourrit le moral.</li>
+        </ul>
+        <h3>Le conseiller</h3>
+        <p>C'est une aide pour débuter : il ne connaît que les principes que tu as découverts, raisonne poste par poste sur une dizaine de jours et n'est disponible que 3 fois par semaine. Les combos, le solaire, les tarifs Tempo et les placements, c'est ton talent. « Ignorer » masque un conseil pendant 30 jours ; Ctrl+Z annule un réglage du jour.</p>
+        <h3>Raccourcis clavier</h3>
+        <p><kbd>J</kbd> jour suivant · <kbd>S</kbd> semaine · <kbd>M</kbd> mois · <kbd>E</kbd> prochain événement · <kbd>T</kbd> tableau de bord ou maison · <kbd>1</kbd>…<kbd>6</kbd> sections · <kbd>?</kbd> réglages · <kbd>Ctrl</kbd>+<kbd>Z</kbd> annuler · <kbd>Échap</kbd> fermer.</p>
+        <p><button class="btn" id="btnAideTutoriel">Rejouer le tutoriel</button></p>
+        <h2 id="aPropos">À propos</h2>
+        <p><b>Économie Game</b> <span class="version-jeu"></span>, jeu libre de gestion du quotidien, en français. Créé par Nicolas Dabek. Code ouvert sur <a href="https://github.com/NicolasDabek/economie-game" rel="noopener">GitHub</a>. Aucune donnée ne quitte ton navigateur : la partie est sauvegardée localement.</p>
+        <p><b>Sources des chiffres</b> (France, 2026) : tarifs réglementés de l'électricité et prix repère du gaz (CRE, EDF), prix de l'eau (Eaufrance / SISPEA), gestes et consommations (ADEME), taux des livrets (arrêtés publiés au Journal officiel, Banque de France), inflation (INSEE), climat (normales Météo-France), santé (Ameli : franchises, jours de carence). Le détail, prix par prix, est dans <code>docs/prix.md</code>.</p>
+        <p class="aide">Les prix et les règles sont simplifiés pour le jeu ; ce n'est pas un conseil financier.</p>
+      </div></div>
       <div class="panneau cache" data-panneau="journal"><div class="carte"><h2>Journal</h2><div id="journal"></div></div></div>
       <div class="panneau cache" data-panneau="resume"><div class="carte"><h2>Où en es-tu ?</h2><div id="resume"></div></div></div>
       <div class="panneau cache" data-panneau="factures"><div class="carte"><h2>Factures des 12 dernières semaines</h2><div id="factures"></div></div></div>
@@ -135,6 +175,7 @@
     <button id="btnJouer">Jouer directement</button>
     <button id="btnReprendre" class="cache">Reprendre la partie sauvegardée</button>
   </div>
+  <p class="aide intro-version">Économie Game <span class="version-jeu"></span> · prix réels 2026 · tout reste dans ton navigateur</p>
 </div></div>
 <script type="module" src="js/main.js"></script>
 </body>
