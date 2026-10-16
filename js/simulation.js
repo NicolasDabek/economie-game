@@ -11,6 +11,7 @@ import { anneeDuJour, dateDuJour } from './meteo.js';
 import { nouvelEtatMoral, moralJour, santeJour, coutRechute, paliersJour } from './moral.js';
 import { palierMoral, palierBE, EFFETS_PALIERS as EP } from './paliers.js';
 import { makeRng } from './rng.js';
+import { surAchat, poeleJour, autonomieSoir, actionAutonomie, etatAutonomie } from './autonomie.js';
 import { instantaneMois } from './tableau.js';
 import { passifHeure, passifCumul, passifJour, debutJourPassif, hasCheminee, typePuits, chantierEnCours, nouvelEtatPassif } from './passif.js';
 
@@ -55,6 +56,10 @@ export function gestesActifs(s) {
     ecoconduite: !!s.transport?.ecoconduite && !s.transport.voitureVendue && s.transport.mode === 'voiture',
     gamelle: s.transport?.repas === 'emporte',
     jardiner: s.possede.potager && s.sys.potagerDepuis !== null && chapitreDuJour(s.jour).id !== 'hiver',
+    feuBois: !!s.possede.poele && s.autonomie?.poele?.mode !== 'eteint' && (chapitreDuJour(s.jour).doy >= 288 || chapitreDuJour(s.jour).doy < 115),
+    poules: !!s.possede.poules && (s.autonomie?.poules?.n || 0) > 0,
+    toilettesSeches: !!s.possede.toilettesSeches && !!s.autonomie?.toilettes,
+    levain: s.sys.pain === 'levain',
   };
 }
 export function tempsGestes(s) {
@@ -190,6 +195,7 @@ export function acheter(s, id, occasion = false) {
   if (id === 'robinets') debloquer(s, 'zones');
   if (id === 'solaire') { debloquer(s, 'rentabilite'); s.solaireDepuis = s.jour; }
   if (id === 'appoint') debloquer(s, 'local');
+  surAchat(s, id, occasion, { msg: (t, ty) => msg(s, t, ty), debloquer: (x) => debloquer(s, x), payer, prendreTemps });
   return true;
 }
 
@@ -382,8 +388,10 @@ export function jourSuivant(s) {
     d: { sante: 0, hygiene: 0, bienetre: 0, confort: 0 }, tCuisine: s.pieces.cuisine.t,
     msg: (t, ty) => msg(s, t, ty), debloquer: (id) => debloquer(s, id),
   };
+  ctx.outils = { payer, prendreTemps: () => true, msg: ctx.msg, debloquer: ctx.debloquer };
   systemesJour(s, ctx);
   transportJour(s, ctx);
+  poeleJour(s, ctx, prixGaz(s) / RENDEMENT_CHAUDIERE);
 
   // --- lessive du jour ---
   const L = s.lessivePrevue;
@@ -705,6 +713,10 @@ export function jourSuivant(s) {
   if (faits.frigo && s.sys.frigo.reglage >= 4) debloquer(s, 'frigo');
   if (s.sys.plaisirs > 0 && s.sys.plaisirs <= 20 && s.jour > 20 && s.volonte > 50) debloquer(s, 'plaisir');
 
+  // --- autosuffisance (v1.1) : cumul des parts maison / achetées ---
+  autonomieSoir(s, { nourritureAchetee: ctx.couts.nourriture, litresReseau: ctx.litres || 0, boisKwh: ctx.boisKwh || 0,
+    gazUtile: gazKwh * RENDEMENT_CHAUDIERE, appoint: jour.appointKwh || 0, solaireAuto: jour.solaire || 0, elecReseau: elecKwh,
+    msg: (x, ty) => msg(s, x, ty), debloquer: (x) => debloquer(s, x) });
   // --- bilan ---
   jour.confort = confortJour; jour.rechute = rechute; jour.cout = coutJour; jour.gazKwh = gazKwh; jour.kwh = ctx.kwh; jour.gaspillage = ctx.gaspillage; jour.litres = ctx.litres;
   s.dernierJour = jour;
@@ -879,7 +891,7 @@ export function amortissement(s) {
     + (s.depenses.vetements - Object.values(s.vetements).reduce((t, v) => t + (v.possede ? v.prixPaye : 0), 0));
   return { equip, vet };
 }
-const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport', 'banque', 'remplacements', 'sante', 'logement', 'revenus'];
+const POSTES = ['gaz', 'elec', 'eau', 'produits', 'laverie', 'nourriture', 'services', 'plaisirs', 'imprevus', 'transport', 'banque', 'remplacements', 'sante', 'logement', 'revenus', 'bois'];
 export function coutVariable(s) {
   const d = s.depenses;
   return POSTES.reduce((t, k) => t + (d[k] || 0), 0) + d.equipement + d.vetements - (d.reventes || 0);
@@ -904,7 +916,7 @@ export function scoreFinal(s) {
   const elecPlayer = d.elec - (d.climEur || 0) - (d.appointEur || 0) - (d.eauChaudeEur || 0);
   const elecBase = b.elec - (b.clim || 0) - (b.eauChaude || 0);
   const domaines = [
-    { nom: 'Chauffage (gaz + appoint)', valeur: b.gaz - d.gaz - (d.appointEur || 0) },
+    { nom: 'Chauffage (gaz + appoint + bois)', valeur: b.gaz - d.gaz - (d.appointEur || 0) - (d.bois || 0) },
     { nom: 'Rafraîchissement (clim)', valeur: (b.clim || 0) - (d.climEur || 0) },
     { nom: 'Eau chaude (ballon)', valeur: (b.eauChaude || 0) - (d.eauChaudeEur || 0) },
     { nom: 'Eau', valeur: b.eau - d.eau },
@@ -952,7 +964,8 @@ export function oublierGestes(s, actifs = gestesActifs(s)) {
   for (const [g, on] of Object.entries(actifs)) {
     const st = s.gestes[g]; if (!st) continue;
     if (on) { st.sansPratique = 0; continue; }
-    if (g === 'jardiner' && s.possede.potager) continue;   // le potager dort l'hiver : ce n'est pas un abandon
+    if (g === 'jardiner' && s.possede.potager) continue;
+    if (g === 'feuBois' && s.possede.poele) continue;      // le poêle s'éteint au printemps : pas un abandon   // le potager dort l'hiver : ce n'est pas un abandon
     if (!st.habitude && !st.pratique) { st.sansPratique = 0; continue; }
     st.sansPratique = (st.sansPratique || 0) + 1;
     if (st.habitude) {

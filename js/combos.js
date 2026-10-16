@@ -78,6 +78,12 @@ export function detecterCombos(s, { faits, chap, st, ctx }) {
     sechoirTirage: hasCheminee(s) && s.passif?.mode !== 'ferme' && !!ctx.lessive && !ctx.lessive.laverie && ctx.lessive.sechage !== 'machine',
     caveNaturelle: !!typePuits(s) && s.passif?.cave && (s.possede.potager || s.possede.boites),
     serreHumide: !!s.passif?.j && s.passif.j.heuresTube > 0 && jourLourd(ctx.jm, chap) && s.passif.debit !== 'reduit' && !(s.passif.debit === 'hygro' && s.possede.hygrometre) && s.passif.j.hrMax > 75,
+    boucleFlux: !!s.possede.poules && (s.autonomie?.poules?.n || 0) > 0 && (s.possede.composteur || s.possede.lombri) && (ctx.recolte || 0) > 0,
+    feuillesPaillage: chap.saison === 'automne' && !!s.possede.potager && (s.autonomie?.paillageJusqua || 0) > s.jour,
+    chouLacto: !!ctx.autonomie?.chou,
+    siloCave: !!s.possede.silo && !!typePuits(s) && !!s.passif?.cave,
+    levainChaleur: hiver && y.pain === 'levain' && !!faits.levain && !!faits.cuisson,
+    cetSolaire: !!s.possede.cet && !!s.possede.solaire && y.ballon.mode === 'midi',
     lessiveSoleil: !!(ctx.lessive?.midi && ctx.lessive?.sechage === 'dehors' && s.possede.solaire && !hiver),
   };
   let n = 0;

@@ -7,8 +7,9 @@ import { genererMeteo } from './meteo.js';
 import { nouvelEtatSystemes } from './systemes.js';
 import { nouvelEtatTransport } from './transport.js';
 import { nouvelEtatFinance } from './finance.js';
-// Format de sauvegarde : 3 (v0.3) … 7 (v0.7) ; 8 = v1.0 (champs ajoutés en v0.8–v0.9 complétés par défaut)
-export const VERSION_SAUVEGARDE = 8;
+import { nouvelEtatAutonomie, PLAN_CONSEILLE, nbPlanches } from './autonomie.js';
+// Format de sauvegarde : 3 (v0.3) … 7 (v0.7) ; 8 = v1.0 (champs ajoutés en v0.8–v0.9 complétés par défaut) ; 9 = v1.1 (autosuffisance)
+export const VERSION_SAUVEGARDE = 9;
 // ancien calendrier (v0.5 : 3 chapitres de 56, 28 et 42 jours) -> jour calendaire depuis le 1er décembre 2026
 const calV5 = (j) => (j < 56 ? j : j < 84 ? 126 + (j - 56) : 212 + (j - 84));
 
@@ -22,7 +23,7 @@ export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut) {
   const s = {
     version: VERSION_SAUVEGARDE, seed, jour: 0, mor: nouvelEtatMoral(), fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
     eco: nouvelleEconomie(seed, annees), auto: { lessive: false, entretien: false, saisons: false, renouveler: false },
-    meteo: genererMeteo(seed, annees),
+    meteo: genererMeteo(seed, annees), autonomie: nouvelEtatAutonomie(),
     argent: ARGENT_DEPART,
     confort: 70, sante: 90, volonte: 70, hygiene: 75, bienetre: 60,
     sommes: { confort: 0, sante: 0, volonte: 0, hygiene: 0, bienetre: 0 },
@@ -101,6 +102,7 @@ export function charger(stockage = globalThis.localStorage) {
     if (s.version === 5) migrerV5(s);
     if (s.version === 6) migrerV6(s);
     if (s.version === 7) migrerV7(s);
+    if (s.version === 8) migrerV8(s);
     if (s.version !== VERSION_SAUVEGARDE || !fini(s.seed) || !fini(s.jour) || !fini(s.argent)) return mettreDeCote(stockage, txt);
     completer(s, nouvellePartie(s.seed, s.annees || CAMPAGNE.anneesDefaut));
     s.meteo = genererMeteo(s.seed, s.annees);
@@ -122,6 +124,7 @@ export const MESSAGES_MIGRATION = {
   5: 'Sauvegarde v0.5 mise à jour : ta partie continue en campagne de 5 ans (salaire, inflation, pannes, bilans annuels).',
   6: 'Sauvegarde v0.6 mise à jour : le moral évolue maintenant sur la durée et la santé a un coût.',
   7: 'Sauvegarde v0.7–v0.9 mise à jour pour la v1.0 : tableau de bord, défis annuels et conseiller sont actifs.',
+  8: 'Sauvegarde v1.0 mise à jour pour la v1.1 : potager par planches, garde-manger, poules, poêle à bois et taux d\'autosuffisance (onglets Jardin, Cuisine, Maison, Eau chaude).',
 };
 
 // v0.3 -> v0.4 : on garde la partie, on ajoute le transport (compté à partir d'aujourd'hui pour toi et le voisin)
@@ -166,4 +169,13 @@ export function migrerV6(s) {
 // v0.7–v0.9 -> v1.0 : les champs ajoutés depuis (tableau de bord, conseiller, défis…) sont complétés par charger()
 export function migrerV7(s) {
   s.version = 8; s.migre ??= 7;
+}
+
+// v1.0 -> v1.1 : l'autosuffisance démarre aujourd'hui ; un potager déjà acheté reçoit le plan conseillé de 4 planches
+export function migrerV8(s) {
+  s.autonomie = nouvelEtatAutonomie();
+  s.possede ||= {};
+  const n = nbPlanches(s);
+  for (let i = 0; i < n; i++) s.autonomie.planches[i].culture = PLAN_CONSEILLE[i];
+  s.version = 9; s.migre ??= 8;
 }

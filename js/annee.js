@@ -238,6 +238,6 @@ export function resoudreCampagne(s, id, choix, outils) {
     if (choix === 'occasion') { outils.payer(s, 70, 'plaisirs'); s.tempsUtilise += 2; s.bienetre = Math.min(100, s.bienetre + 5); outils.debloquer('occasion'); }
     if (choix === 'rien') { s.bienetre = Math.max(0, s.bienetre - 5); s.volonte -= 3; }
   }
-  if (id === 'vacances') { const v = VACANCES[choix]; if (v.cout) outils.payer(s, v.cout, 'plaisirs'); if (s.mor) s.mor.vacances = { jour: s.jour, effet: v.effet }; if (choix === 'rester') s.mor && (s.mor.adapt *= 0.8); outils.msg(`🏖️ ${v.nom}${v.cout ? ` (−${eur0(v.cout)})` : ''}.`, 'info'); return; }
+  if (id === 'vacances') { const v = VACANCES[choix]; if (choix !== 'rester' && s.autonomie) { s.autonomie.absentJusqua = s.jour + 14; if (s.possede?.poules) outils.msg('🐔 Pendant les vacances, le voisin nourrit les poules et garde les œufs.', 'info'); } if (v.cout) outils.payer(s, v.cout, 'plaisirs'); if (s.mor) s.mor.vacances = { jour: s.jour, effet: v.effet }; if (choix === 'rester') s.mor && (s.mor.adapt *= 0.8); outils.msg(`🏖️ ${v.nom}${v.cout ? ` (−${eur0(v.cout)})` : ''}.`, 'info'); return; }
   if (id === 'bilan') { e.objectifs = e.dernierBilan?.objectifs || []; }
 }

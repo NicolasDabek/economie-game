@@ -230,6 +230,37 @@ export const ACHATS = {
                   desc: 'Récoltes après 3 semaines au printemps et en été. 15 min d\'entretien par jour, bon pour le moral.' },
   cuve:         { nom: 'Récupérateur d\'eau de pluie 300 l', prix: 69, temps: 1, invest: true, vie: 15, cat: 'Jardin',
                   desc: 'Arroser avec l\'eau du ciel plutôt qu\'avec l\'eau du robinet à 4,89 €/m³. (50-90 €)' },
+  // --- v1.1 : autosuffisance (voir docs/conception.md, « Où vit chaque idée ») ---
+  potagerGrand: { nom: 'Agrandir le potager (+4 planches, 8 m²)', prix: 35, temps: 4, invest: true, vie: 10, cat: 'Jardin',
+                  desc: 'Bêcher et border 4 planches de plus : 16 m² en tout. Il faut déjà le petit potager.' },
+  lombri:       { nom: 'Lombricomposteur', prix: 75, temps: 0.5, invest: true, vie: 10, cat: 'Jardin', occasion: 15,
+                  desc: 'Des vers dans la cuisine : 2 à 4 kg d\'épluchures par semaine, même l\'hiver. Lombricompost pour les herbes et le potager. (75-145 €, ~15 € fait maison)' },
+  bokashi:      { nom: 'Seau à bokashi', prix: 55, temps: 0.2, invest: true, vie: 8, cat: 'Jardin',
+                  desc: 'Fermente aussi les restes cuits, la viande et le pain : moins de gaspillage perdu, un jus engrais pour les plantes. (50-90 €)' },
+  oyas:         { nom: 'Oyas en terre cuite (×4)', prix: 85, temps: 1, invest: true, vie: 10, cat: 'Jardin', occasion: 10,
+                  desc: 'Pots enterrés qu\'on remplit une fois par semaine : l\'eau suinte aux racines, −60 % d\'arrosage. (19-40 € pièce ; 2 pots de fleurs collés : ~2 €)' },
+  goutte:       { nom: 'Goutte-à-goutte relié à la cuve', prix: 35, temps: 1.5, invest: true, vie: 6, cat: 'Jardin',
+                  desc: 'Tuyau microporeux branché sur la cuve : −50 % d\'eau et moitié moins de temps d\'arrosage. Il faut la cuve.' },
+  silo:         { nom: 'Silo à racines enterré', prix: 15, temps: 3, invest: true, vie: 15, cat: 'Jardin',
+                  desc: 'Une caisse enterrée dans le sable : pommes de terre, carottes et courges se gardent 4 à 6 mois sans frigo.' },
+  poules:       { nom: 'Poulailler et 3 poules', prix: 450, temps: 4, invest: true, vie: 6, cat: 'Jardin', occasion: 260,
+                  desc: '~220 œufs par poule et par an, moins l\'hiver. Aliment ~0,12 €/jour par poule, 20 min par jour. Déclaration en mairie. (250-600 €)' },
+  cloture:      { nom: 'Grillage enterré pour le poulailler', prix: 60, temps: 2, invest: true, vie: 15, cat: 'Jardin',
+                  desc: 'Le renard creuse sous le grillage simple. Enterré sur 30 cm, il passe son chemin.' },
+  guideCueillette: { nom: 'Guide de cueillette et des champignons', prix: 22, temps: 0, invest: true, vie: 20, cat: 'Jardin',
+                  desc: 'Reconnaître l\'ail des ours du muguet, la girolle du clitocybe : divise le risque de confusion par 3.' },
+  sterilisateur:{ nom: 'Stérilisateur et 20 bocaux', prix: 95, temps: 0, invest: true, vie: 15, cat: 'Cuisine', occasion: 40,
+                  desc: 'Thermostat et minuterie : le barème (100 °C, 45 min à 1 h 30) est tenu. Sans lui, la grande marmite fait l\'affaire… avec plus de risque. (60-185 €)' },
+  potLacto:     { nom: 'Pot à lactofermentation 5 l', prix: 35, temps: 0, invest: true, vie: 20, cat: 'Cuisine',
+                  desc: 'Chou, carottes, haricots : du sel, un poids, trois semaines. Aucune énergie, et des légumes d\'hiver bons pour la santé. (25-60 €)' },
+  poele:        { nom: 'Poêle à bois 7 kW (conduit tubé, posé)', prix: 4500, temps: 2, invest: true, vie: 20, cat: 'Chauffage',
+                  desc: 'Avec l\'accord du propriétaire. Bois à ~0,05-0,07 €/kWh contre ~0,12 € pour le gaz. Ramonage obligatoire chaque année. (3 500-5 500 €)' },
+  abriBois:     { nom: 'Abri à bois ventilé', prix: 120, temps: 3, invest: true, vie: 15, cat: 'Chauffage',
+                  desc: 'Le bois vert sèche en 18 mois au lieu de 2 ans, à l\'abri de la pluie.' },
+  cet:          { nom: 'Ballon thermodynamique 200 L (posé, artisan RGE)', prix: 3000, temps: 1, invest: true, vie: 15, cat: 'Eau chaude', occasion: 2600,
+                  desc: 'Une pompe à chaleur chauffe l\'eau : ~3 fois moins d\'électricité. Prime CEE si la demande précède le devis. « Occasion » = artisan non RGE, sans prime. (2 000-4 000 €)' },
+  toilettesSeches: { nom: 'Toilettes sèches (kit)', prix: 90, temps: 2, invest: true, vie: 15, cat: 'Eau',
+                  desc: 'Plus de chasse d\'eau : ~10 à 14 m³ d\'eau par personne et par an. De la sciure (~2 €/100 l), un compost à mûrir 2 ans, et une habitude difficile à prendre.' },
   couture:      { nom: 'Kit de couture', prix: KIT_COUTURE, temps: 0, invest: true, vie: 10, cat: 'Confort',
                   desc: 'Permet de repriser les vêtements usés au lieu de les racheter.' },
 };
@@ -260,6 +291,10 @@ export const GESTES = {
   voletsJour:{ nom: 'Fermer les volets le jour (été)', cout: 2, temps: 0.03 },
   ventNuit:  { nom: 'Ouvrir grand la nuit (été)', cout: 2, temps: 0.03 },
   jardiner:  { nom: 'Jardiner un quart d\'heure', cout: 0, temps: 0.25 },
+  feuBois:   { nom: 'Rentrer le bois et allumer le poêle', cout: 2, temps: 0.25 },
+  poules:    { nom: 'S\'occuper des poules', cout: 1, temps: 0.33 },
+  toilettesSeches: { nom: 'Utiliser les toilettes sèches', cout: 5, temps: 0.05 },
+  levain:    { nom: 'Nourrir le levain', cout: 2, temps: 0.1 },
   ecoconduite:{ nom: 'Écoconduite (anticiper, 2e vitesse tôt)', cout: 2, temps: 0 },
   gamelle:   { nom: 'Préparer sa gamelle la veille', cout: 2, temps: 0 },
 };
@@ -468,6 +503,18 @@ export const ROI_ITEMS = {
   corde: { indirect: 'évite l\'humidité et le sèche-linge', entretien: 0, degr: 0, revente: 0, poste: 'energie' },
   herbes: { entretien: 3, degr: 0, revente: 0, poste: 'alim', note: 'terreau, rempotage' },
   composteur: { entretien: 0, degr: 0, revente: 0.4, poste: 'alim' },
+  potagerGrand: { entretien: 20, degr: 0, revente: 0, poste: 'alim', note: 'graines et plants des 4 planches' },
+  lombri: { entretien: 0, degr: 0, revente: 0.3, poste: 'alim' },
+  bokashi: { entretien: 12, degr: 0, revente: 0, poste: 'alim', note: 'son activé' },
+  oyas: { entretien: 0, degr: 0, revente: 0, poste: 'eau' },
+  goutte: { entretien: 3, degr: 0.05, revente: 0, poste: 'eau' },
+  silo: { entretien: 0, degr: 0, revente: 0, poste: 'alim' },
+  poules: { entretien: 0, degr: 0, revente: 0.2, poste: 'alim', note: 'aliment compté chaque jour dans le gain' },
+  sterilisateur: { entretien: 4, degr: 0, revente: 0.3, poste: 'alim', note: 'capsules neuves' },
+  potLacto: { entretien: 0, degr: 0, revente: 0.3, poste: 'alim' },
+  poele: { saisonChauffe: true, entretien: 0, degr: 0, revente: 0.2, poste: 'energie', note: 'bois et ramonage déduits du gain' },
+  cet: { entretien: 0, degr: 0.01, revente: 0, poste: 'energie' },
+  toilettesSeches: { entretien: 0, degr: 0, revente: 0, poste: 'eau', note: 'sciure déduite du gain' },
   potager: { entretien: 28, degr: 0, revente: 0, poste: 'alim', note: 'graines et plants à racheter chaque année' },
   cuve: { entretien: 0, degr: 0, revente: 0.4, poste: 'eau' },
   velo: { entretien: 0, degr: 0, revente: 0.55, poste: 'carburant', note: 'pièces comptées à l\'usure (pneus, chaîne, freins)' },
@@ -520,6 +567,12 @@ export const COMBOS = {
   purgeNocturne:    { nom: 'Cheminée à masse + volets le jour + fenêtres basses la nuit', principe: 'tirage', texte: 'La masse chauffée le jour continue de tirer la nuit et vide la chaleur.' },
   sechoirTirage:    { nom: 'Linge dans le flux de la cheminée', principe: 'tirage', texte: 'Le courant d\'air emporte l\'humidité : séchage 2 fois plus rapide, sans sèche-linge.' },
   caveNaturelle:    { nom: 'Sortie du puits dans le cellier', principe: 'inertieSol', texte: 'Un cellier à 12-16 °C toute l\'année : les légumes se gardent plus longtemps.' },
+  boucleFlux:       { nom: 'Épluchures → poules → fientes → compost → potager', principe: 'cycles', texte: 'Les déchets de cuisine nourrissent les poules, leurs fientes enrichissent le compost, le compost nourrit les planches.' },
+  feuillesPaillage: { nom: 'Feuilles mortes → paillage gratuit', principe: 'solCouvert', texte: 'Les feuilles de l\'automne couvrent le sol tout l\'hiver : zéro euro, moins d\'arrosage au printemps.' },
+  chouLacto:        { nom: 'Choux du potager → lactofermentation', principe: 'lacto', texte: 'Le surplus de choux devient une conserve vivante, sans énergie, bonne pour la santé.' },
+  siloCave:         { nom: 'Silo à racines dans la cave du puits canadien', principe: 'inertieSol', texte: 'La fraîcheur du sol garde pommes de terre et courges des mois : moins de pertes, moins d\'achats d\'hiver.' },
+  levainChaleur:    { nom: 'Pain au levain → four → chaleur de la cuisine', principe: 'combo', texte: 'Le four chauffe le pain puis la pièce : en hiver, sa chaleur n\'est pas perdue.' },
+  cetSolaire:       { nom: 'Panneau → ballon thermodynamique à midi', principe: 'cop', texte: 'Le soleil alimente la pompe à chaleur : 1 kWh solaire donne 3 kWh d\'eau chaude.' },
   serreHumide:      { nom: '⚠️ Anti-combo « serre humide »', principe: 'pointRosee', anti: true, texte: 'Puits à plein débit un jour lourd : l\'air saturé entre dans des pièces fraîches, l\'humidité dépasse 80 %.' },
 };
 
@@ -659,3 +712,75 @@ export const VACANCES = {
 
 // lavage d'un vêtement à la main : 8 l d'eau tiède (≈0,25 kWh pour la chauffer), 9 min, 3 centimes de savon
 export const LAVAGE_MAIN = { litres: 8, kwh: 0.25, temps: 0.15, volonte: 1, savon: 0.03 };
+
+// ---------------------------------------------------------------- v1.1 : autosuffisance
+// Cultures du potager par planches de 2 m². kg/m² et prix au détail : docs/prix.md (App_Autosuffisance crops.ts, RNM FranceAgriMer 2026).
+// semis = jours de l'année (0 = 1er janvier) de la fenêtre conseillée ; pousse = jours avant la 1re récolte ; recolte = durée de récolte ;
+// garde = catégorie du garde-manger (frais : 7 j ; racines et courges : longue garde) ; gel = sensible au gel tardif.
+export const CULTURES = {
+  salade:    { nom: 'Salade', ico: '🥬', famille: 'composees', kgm2: 2,   prixKg: 4.0, semis: [60, 230],  pousse: 45,  recolte: 30, garde: 'frais', graines: 3 },
+  tomate:    { nom: 'Tomate', ico: '🍅', famille: 'solanacees', kgm2: 6, prixKg: 3.0, semis: [100, 150], pousse: 75,  recolte: 60, garde: 'frais', graines: 8, gel: true, bocal: true },
+  courgette: { nom: 'Courgette', ico: '🥒', famille: 'cucurbitacees', kgm2: 5, prixKg: 2.3, semis: [110, 160], pousse: 55, recolte: 70, garde: 'frais', graines: 4, gel: true, bocal: true },
+  haricot:   { nom: 'Haricot vert', ico: '🫛', famille: 'legumineuses', kgm2: 1.2, prixKg: 6.0, semis: [120, 190], pousse: 60, recolte: 30, garde: 'frais', graines: 4, gel: true, bocal: true, lacto: true },
+  pdt:       { nom: 'Pomme de terre', ico: '🥔', famille: 'solanacees', kgm2: 3, prixKg: 1.4, semis: [75, 125], pousse: 100, recolte: 10, garde: 'racines', graines: 6 },
+  carotte:   { nom: 'Carotte', ico: '🥕', famille: 'apiacees', kgm2: 4, prixKg: 1.6, semis: [70, 180], pousse: 90, recolte: 20, garde: 'racines', graines: 3, lacto: true },
+  courge:    { nom: 'Courge', ico: '🎃', famille: 'cucurbitacees', kgm2: 4, prixKg: 2.0, semis: [120, 160], pousse: 120, recolte: 15, garde: 'courges', graines: 4, gel: true },
+  chou:      { nom: 'Chou', ico: '🥬', famille: 'brassicacees', kgm2: 3, prixKg: 1.5, semis: [120, 200], pousse: 110, recolte: 40, garde: 'frais', graines: 3, lacto: true },
+  poireau:   { nom: 'Poireau', ico: '🧅', famille: 'alliacees', kgm2: 2.5, prixKg: 2.5, semis: [100, 190], pousse: 140, recolte: 90, garde: 'frais', graines: 3 },
+  ail:       { nom: 'Ail', ico: '🧄', famille: 'alliacees', kgm2: 1.5, prixKg: 8.0, semis: [290, 345], pousse: 230, recolte: 10, garde: 'courges', graines: 10 },
+};
+// associations favorables entre planches voisines (+10 % chacune)
+export const ASSOCIATIONS = [['carotte', 'poireau'], ['haricot', 'courge'], ['tomate', 'salade'], ['chou', 'salade'], ['ail', 'carotte']];
+export const POTAGER = {
+  m2Planche: 2, planchesBase: 4, planchesGrand: 4,
+  rotation: 0.8,           // même famille que l'an dernier au même endroit : −20 %
+  association: 0.1,        // par voisin favorable
+  horsFenetre: 0.5,        // semé hors fenêtre conseillée
+  gelPerte: 0.6,           // gel tardif sur une culture sensible déjà levée : −60 %
+  saintsGlace: 135,        // 15 mai : après, plus de gel
+  arrosage: { printemps: 1.0, ete: 2.5, automne: 0.8 },    // l/m²/jour cultivé
+  paillage: 0.6, oyas: 0.4, goutte: 0.5,                   // facteurs d'eau d'arrosage
+  paillageJours: 120, paillagePrix: 5, paillageTemps: 1,
+  stressEau: 0.6,          // jour d'arrosage interdit sans eau de pluie : la culture perd 60 % de la production du jour
+};
+// Garde-manger : durée de garde (jours) par catégorie ; silo et cave allongent les racines et les courges.
+export const GARDE = {
+  frais: 7, racines: 45, courges: 90, bocaux: 365, lacto: 180, oeufs: 21, cueillette: 5,
+  silo: 3, cave: 1.4,      // multiplicateurs pour racines et courges
+  partLegumes: 0.35,       // au plus 35 % des courses du jour remplacés par le garde-manger (fruits, légumes, œufs)
+};
+export const CONSERVES = {
+  bocaux: { kgMax: 8, temps: 3, kwh: 0.5, capsule: 0.2, kgParBocal: 0.5, valeurKg: 5.0, moral: 3, risqueMarmite: 0.06, risqueSterilisateur: 0.01 },
+  lacto:  { kgMax: 5, temps: 1, sel: 0.1, valeurKg: 6.0, santeJour: 0.06 },
+};
+export const ACHATS_SAISON = {
+  pdt:     { nom: '25 kg de pommes de terre au producteur', kg: 25, prixKg: 0.9, valeurKg: 1.6, garde: 'racines', mois: [8, 9, 10] },
+  tomates: { nom: '15 kg de tomates de plein champ (à transformer)', kg: 15, prixKg: 1.6, valeurKg: 3.0, garde: 'frais', mois: [7, 8], bocal: true },
+  choux:   { nom: '10 kg de choux de saison', kg: 10, prixKg: 1.2, valeurKg: 1.8, garde: 'frais', mois: [9, 10, 11], lacto: true },
+};
+export const POULES = { n: 3, oeufsAn: 220, saison: { hiver: 0.35, printemps: 1.35, ete: 1.15, automne: 0.75 }, prixOeuf: 0.40,
+  alimentKgJour: 0.13, alimentPrixKg: 0.92, epluchures: 0.3, renardRisque: 0.004, declaration: 0.25, bienetre: 0.4 };
+export const BOIS = {
+  kwhStere: 1700, rendement: 0.75, humideRendement: 0.55, puissance: 5000,
+  prixSec: 95, prixVert: 70, sechage: 720, sechageAbri: 540,   // jours
+  ramonage: 80, encrassementJour: 1, encrassementHumide: 3, feuRisque: 0.003, franchise: 1200, amende: 450,
+  bienetre: 0.5, moral: 0.3,
+};
+export const CUEILLETTE = {
+  temps: 2, bienetre: 3, moral: 1, intervalle: 14,
+  // saison (mois 0-11), kg par sortie, prix au détail, risque de confusion par sortie sans connaissances
+  especes: {
+    ortie:     { nom: 'Orties', mois: [2, 3, 4], kg: 0.5, prixKg: 6, risque: 0 },
+    ailOurs:   { nom: 'Ail des ours', mois: [2, 3], kg: 0.3, prixKg: 20, risque: 0.03, confusion: 'muguet ou colchique' },
+    sureau:    { nom: 'Fleurs de sureau', mois: [5], kg: 0.3, prixKg: 15, risque: 0.01, confusion: 'cigüe' },
+    mures:     { nom: 'Mûres', mois: [7, 8], kg: 1, prixKg: 8, risque: 0 },
+    chataignes:{ nom: 'Châtaignes', mois: [9, 10], kg: 2, prixKg: 5, risque: 0 },
+    champis:   { nom: 'Champignons', mois: [8, 9, 10], kg: 0.5, prixKg: 25, risque: 0.06, confusion: 'amanite ou clitocybe' },
+  },
+  guide: 0.33, pharmacie: 0.1, pharmacieTemps: 0.5,
+  intox: { sante: 25, moral: 10, cout: 30 },
+};
+export const CET = { cop: 3, prix: 3000, ceeModeste: 514, ceeAutre: 294, ceeBase: 100, finBonif: 31, delaiPrime: 60, delaiDossier: 14 };
+export const TOILETTES = { litresJour: 30, sciureJour: 0.33 * 0.02, hygieneDebut: 0.3 };
+export const SECHERESSE = { proba: 0.6, debut: 195, duree: [20, 40], annonce: 3 };
+export const AUTOSUFFISANCE = { titres: [[0, 'Citadin'], [10, 'Jardinier du dimanche'], [25, 'Semi-autonome'], [40, 'Autosuffisant']] };

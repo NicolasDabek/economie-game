@@ -3,6 +3,8 @@
 // coûts par domaine et effets sur santé, hygiène, bien-être et moral.
 import { ELEC, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, MEDIATHEQUE, GRENIER, PRIX, TARIFS, CHANGEMENT_TARIF } from './data.js';
 import { makeRng } from './rng.js';
+import { alimentationAutonome, arrosageJour } from './autonomie.js';
+import { CET, TOILETTES } from './data.js';
 
 const KWH_L_K = 1.163 / 1000;          // kWh pour chauffer 1 litre de 1 K
 const EAU_FIXE = 35;                   // l/jour : WC, lavabo, ménage (identique pour tous)
@@ -107,7 +109,7 @@ export function systemesJour(s, ctx) {
   if (s.possede.autocuiseur && y.regime !== 'livraison') { attr(s, 'autocuiseur', kwhCuisson * 0.35 * peC); kwhCuisson *= 0.65; }
   if (s.possede.marmite && ['maison', 'batch', 'austere'].includes(y.regime)) { attr(s, 'marmite', kwhCuisson * 0.2 * peC); kwhCuisson *= 0.8; }
   if (faits.bouilloire) kwhCuisson = Math.max(0.1, kwhCuisson - 0.1);
-  if (y.pain === 'maison') kwhCuisson += y.regime === 'batch' ? 0.1 : CUISINE.painMaisonKwh;
+  if (y.pain === 'maison' || y.pain === 'levain') kwhCuisson += y.regime === 'batch' ? 0.1 : CUISINE.painMaisonKwh;
   let solaireCuisine = 0;
   const clair = jm.nuage < 0.35;
   if (y.cuisineSolaire && clair && y.regime !== 'livraison') {
@@ -138,35 +140,33 @@ export function systemesJour(s, ctx) {
   let nourriture = R.cout * (1 + gaspi) / (1 + CUISINE.gaspillageBase);
   if (faits.prixKilo) nourriture *= 0.92;
   if (y.vrac) nourriture *= faits.prixKilo ? 0.96 : 1.08;
-  nourriture += y.pain === 'maison' ? CUISINE.painMaison : CUISINE.painBaguette;
+  // levain : pas de levure à acheter, mais il faut le nourrir ; sans le geste, il meurt et on retombe sur la levure
+  const levainVivant = y.pain === 'levain' && faits.levain;
+  nourriture += y.pain === 'maison' ? CUISINE.painMaison : y.pain === 'levain' ? (levainVivant ? CUISINE.painMaison - 0.1 : CUISINE.painMaison) : CUISINE.painBaguette;
+  if (levainVivant) { ctx.d.sante += 0.05; ctx.debloquer('lacto'); }
   if (s.possede.herbes) { nourriture -= 0.2; attr(s, 'herbes', 0.2); }
   if (y.regime === 'batch' && s.possede.boites) attr(s, 'boites', 0.05 * R.cout / (1 + CUISINE.gaspillageBase));
   attr(s, 'sechoir', 0.02 * R.cout / (1 + CUISINE.gaspillageBase));
-  // potager
-  let recolte = 0;
-  if (s.possede.potager && y.potagerDepuis !== null && chap.id !== 'hiver' && s.jour - y.potagerDepuis >= 21 && faits.jardiner) {
-    // v0.6 : le jardin mûrit (savoir-faire, sol) et le compost n'est mûr qu'après 6 à 12 mois
-    const ansJardin = Math.min(3, Math.max(0, Math.floor((s.jour - (s.eco?.jardinDepuis ?? y.potagerDepuis)) / 365)));
-    const ageCompost = s.possede.composteur ? s.jour - (s.eco?.achats?.composteur ?? 0) : 0;
-    const fCompost = !s.possede.composteur ? 1 : ageCompost < 180 ? 1.1 : ageCompost < 365 ? 1.3 : 1.45;
-    const base = (ete ? 1.3 : chap.saison === 'automne' ? 0.8 : 0.5) * (1 + 0.12 * ansJardin);
-    recolte = base * fCompost;
-    ctx.debloquer('cycles');
-    if (ansJardin >= 1) ctx.debloquer('jardinMurit');
-    attr(s, 'potager', base);
-    attr(s, 'composteur', recolte - base);
-  }
+  // potager par planches, poules, compost, garde-manger (v1.1, js/autonomie.js)
+  const au = alimentationAutonome(s, ctx, R);
+  const recolte = au.valeur;
+  nourriture += au.couts;
+  if (recolte > 0) ctx.debloquer('cycles');
+  if (s.eco?.jardinDepuis !== undefined && s.jour - s.eco.jardinDepuis >= 365 && faits.jardiner) ctx.debloquer('jardinMurit');
+  ctx.nourritureAvant = nourriture;
   nourriture = Math.max(1, nourriture - recolte);
   ctx.couts.nourriture += nourriture;
   ctx.gaspillage = gaspi; ctx.recolte = recolte;
   ctx.d.sante += R.sante + (recolte > 0 ? 0.1 : 0);
-  ctx.d.bienetre += R.bienetre + (faits.jardiner && s.possede.potager ? 0.6 : 0) + (y.pain === 'maison' ? 0.3 : 0);
+  ctx.d.bienetre += R.bienetre + (faits.jardiner && s.possede.potager ? 0.6 : 0) + (y.pain === 'maison' || levainVivant ? 0.3 : 0);
   if (y.regime === 'batch' && !s.possede.boites) ctx.d.hygiene -= 0.3;
 
   // ---------- Eau chaude et eau froide ----------
   const tf = chap.tEauFroide;
   const doucheAuj = y.douche.frequence === 'quotidienne' || s.jour % 2 === 0;
   let lMix = 0, eauFroide = EAU_FIXE;
+  if (s.possede.toilettesSeches && s.autonomie?.toilettes) { eauFroide -= TOILETTES.litresJour; attr(s, 'toilettesSeches', TOILETTES.litresJour / 1000 * PRIX.eauM3 - TOILETTES.sciureJour); ctx.couts.eau += TOILETTES.sciureJour;
+    if (!faits.toilettesSeches) ctx.d.hygiene -= TOILETTES.hygieneDebut; }
   if (doucheAuj) {
     if (y.douche.seau && s.possede.seau) lMix = DOUCHE.seau;
     else {
@@ -189,7 +189,10 @@ export function systemesJour(s, ctx) {
   const kwhPertes = pertesW * 24 / 1000;
   if (s.possede.jaquette) attr(s, 'jaquette', BALLON.UA * BALLON.jaquette * Math.max(0, y.ballon.consigne - tAmb) * 24 / 1000 * TARIFS[y.tarif].prix(y.ballon.mode === 'hc' ? 2 : 13, jm.tempo || 'bleu'));
   for (let h = 0; h < 24; h++) chaleur.cuisine[h] += pertesW;
-  const kwhBallon = kwhECS + kwhPertes;
+  let kwhBallon = kwhECS + kwhPertes;
+  // ballon thermodynamique : la pompe à chaleur divise l'électricité par le COP et prend sa chaleur à la pièce
+  if (s.possede.cet) { const gain = kwhBallon * (1 - 1 / CET.cop); kwhBallon /= CET.cop; for (let h = 0; h < 24; h++) chaleur.cuisine[h] -= gain * 1000 / 24 * 0.5;
+    attr(s, 'cet', gain * TARIFS[y.tarif].prix(13, jm.tempo || 'bleu')); ctx.debloquer('cop'); }
   const heuresBallon = y.ballon.mode === 'hc' ? plage(22, 6) : y.ballon.mode === 'midi' ? plage(11, 16) : [8, 9, 20, 21, 7, 10, 19, 22];
   repartir(elecH, kwhBallon, heuresBallon, BALLON.puissance);
   ctx.kwh.ballon = kwhBallon; ctx.kwh.ballonPertes = kwhPertes;
@@ -208,15 +211,9 @@ export function systemesJour(s, ctx) {
   // lave-vaisselle
   if (lvJour) repartir(elecH, V.kwh, y.vaisselleHC ? [23, 0] : [21, 22], 2000);
   ctx.kwh.vaisselle = lvJour ? V.kwh : 0;
-  // jardin : arrosage
-  let arrosage = 0;
-  if (s.possede.potager && chap.id !== 'hiver' && faits.jardiner) {
-    arrosage = ete ? (jm.canicule ? 30 : 20) : 8;
-    if (jm.nuage > 0.75 && s.possede.cuve) y.pluie = Math.min(300, y.pluie + 60);
-    const dePluie = s.possede.cuve ? Math.min(y.pluie, arrosage) : 0;
-    y.pluie -= dePluie; arrosage -= dePluie; attr(s, 'cuve', dePluie / 1000 * PRIX.eauM3);
-    if (faits.recupEau && s.possede.seau) arrosage = Math.max(0, arrosage - DOUCHE.recupFroide);
-  }
+  // jardin : arrosage par m² cultivé (paillage, oyas, goutte-à-goutte, arrêté sécheresse)
+  const arrosage = arrosageJour(s, ctx).reseau;
+  ctx.litresReseauJardin = arrosage;
   const litresEau = lMix + lChaudVaisselle + eauFroide + arrosage;
   ctx.couts.eau += litresEau / 1000 * PRIX.eauM3;
   ctx.litres = litresEau;
