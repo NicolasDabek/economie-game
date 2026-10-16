@@ -681,8 +681,10 @@ export function jourSuivant(s) {
   moralJour(s, { ...outilsM, confortJour, coutVolonte, doy: chapitreDuJour(s.jour).doy, pctEco: cbv > 100 ? (cbv - coutVariable(s)) / cbv : 0 });
   // paliers d'économies : la satisfaction de voir le compteur grimper
   const ecoNow = coutBaseVariable(s) - coutVariable(s);
-  const palier = Math.floor(ecoNow / 250);
-  if (palier > (s.palier || 0)) { s.palier = palier; s.volonte = Math.min(100, s.volonte + 3); msg(s, `🎯 Palier atteint : ${palier * 250} € économisés par rapport au voisin. Fierté (+3 moral) !`, 'habitude'); debloquer(s, 'progres'); }
+  // v1.1 (analyse GD, P4) : +3 tous les 250 € jusqu'à 2 000 €, puis +1 tous les 1 000 € (la fierté s'émousse)
+  const palier = ecoNow < 2000 ? Math.floor(ecoNow / 250) : 8 + Math.floor((ecoNow - 2000) / 1000);
+  if (palier > (s.palier || 0)) { const montant = palier <= 8 ? palier * 250 : 2000 + (palier - 8) * 1000, bonus = palier <= 8 ? 3 : 1;
+    s.palier = palier; s.volonte = Math.min(100, s.volonte + bonus); msg(s, `🎯 Palier atteint : ${montant.toLocaleString('fr-FR')} € économisés par rapport au voisin. Fierté (+${bonus} moral) !`, 'habitude'); debloquer(s, 'progres'); }
   suivreROI(s);
   if (sommeilScore > 85 && hiver && (s.possede.robinets ? s.pieces.chambre.consigneNuit : s.central.consigneNuit) <= 17) debloquer(s, 'sommeilFrais');
   if (globalThis.TRACE) globalThis.TRACE(s, { froid, chaud, confortJour, sommeilScore, dSante, sale, dctx: ctx.d.sante, pbe });
@@ -944,14 +946,16 @@ export function scoreFinal(s) {
   if (s.attribution.cuisson > 0) invest.push({ nom: 'Récupérer la chaleur de la cuisson (geste)', prix: 0, gain: s.attribution.cuisson, rentable: true });
   const candidats = domaines.filter(x => x.valeur > 0 && !x.nom.startsWith('Autres') && !x.nom.startsWith('Reventes')).map(x => ({ nom: x.nom, gain: x.valeur }));
   const meilleure = candidats.reduce((a, c) => (c.gain > a.gain ? c : a), { nom: '—', gain: 0 });
-  const TITRES = ['Dépensier', 'Malin', 'Optimiseur', 'Autonome', 'Maître de la sobriété'];
-  let rang = pct < 8 ? 0 : pct < 20 ? 1 : pct < 32 ? 2 : pct < 45 ? 3 : 4;
+  // v1.1 (analyse GD, P2) : paliers resserrés en bas, un titre au-dessus de Maître
+  const TITRES = ['Dépensier', 'Malin', 'Optimiseur', 'Autonome', 'Maître de la sobriété', 'Légende de la sobriété'];
+  let rang = pct < 8 ? 0 : pct < 15 ? 1 : pct < 22 ? 2 : pct < 45 ? 3 : pct < 62 ? 4 : 5;
   const notes = [];
   const equilibre = moy.confort >= 70 && moy.sante >= 70 && moy.hygiene >= 60 && moy.bienetre >= 55 && moy.moral >= 40;
   if (rang >= 3 && !equilibre) { rang = 2; notes.push('Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40.'); }
   const ans = Math.max(1, s.nbJours / 365);
-  if (rang === 4 && (s.principes.length < 28 || habitudes < 8)) { rang = 3; notes.push('Le titre suprême demande 28 principes et 8 habitudes.'); }
-  if (rang === 4 && s.fin && (fin.net < 0 || s.fin.stats.joursHorsAutorisation > 10 * ans)) { rang = 3; notes.push('Le titre suprême demande aussi une épargne au moins aussi bien gérée que le Livret A du voisin, sans découvert hors autorisation répété.'); }
+  if (rang === 5 && (s.principes.length < 40 || habitudes < 10)) { rang = 4; notes.push('La Légende demande 40 principes et 10 habitudes.'); }
+  if (rang === 4 && (s.principes.length < 28 || habitudes < 8)) { rang = 3; notes.push('Maître demande 28 principes et 8 habitudes.'); }
+  if (rang >= 4 && s.fin && (fin.net < 0 || s.fin.stats.joursHorsAutorisation > 10 * ans)) { rang = 3; notes.push('Maître demande aussi une épargne au moins aussi bien gérée que le Livret A du voisin, sans découvert hors autorisation répété.'); }
   if (rang >= 2 && (moy.hygiene < 45 || moy.bienetre < 40 || s.rechutes > 4 * Math.sqrt(ans))) { rang = 1; notes.push('Économies payées par ton hygiène, ton bien-être ou tes rechutes.'); }
   if (moy.sante < 50 || moy.confort < 55 || moy.hygiene < 30 || moy.bienetre < 25) { rang = 0; notes.push('Une sobriété qui abîme : santé, confort, hygiène ou bien-être effondrés.'); }
   return { cout, base, economies, pct, moy, confortMoy: moy.confort, sante: s.sante, habitudes, principes: s.principes.length, titre: TITRES[rang], rang, note: notes.join(' '),

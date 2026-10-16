@@ -268,7 +268,7 @@ for (let i = 0; i < graines.length; i++) {
   ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
   // v0.9 : suivre le tableau de bord ne doit jamais punir
   const d = R('débutant guidé')[i];
-  ch(d.rang === 2, `débutant guidé : Optimiseur (obtenu ${d.titre})`);
+  ch(d.rang === 3, `débutant guidé : Autonome (obtenu ${d.titre})`);
   // v0.9.2 : le conseiller aide à débuter, il ne remplace pas le joueur
   ch(d.economies < R('malin')[i].economies, 'débutant guidé < malin');
   ch(d.pct >= 18 && d.pct <= 32, `débutant guidé ${d.pct.toFixed(1)} % dans [18, 32]`);
@@ -283,7 +283,7 @@ for (let i = 0; i < graines.length; i++) {
   ch(mo('ne rien toucher') >= 55 && mo('ne rien toucher') <= 65, `moral ne rien toucher ${mo('ne rien toucher').toFixed(0)} dans [55, 65]`);
   ch(mo('naïf') >= 65 && mo('naïf') <= 75, `moral naïf ${mo('naïf').toFixed(0)} dans [65, 75]`);
   ch(mo('malin') >= 55 && mo('malin') <= 65, `moral malin ${mo('malin').toFixed(0)} dans [55, 65]`);
-  ch(mo('maître') >= 55 && mo('maître') <= 68, `moral maître ${mo('maître').toFixed(0)} dans [55, 68] (v1.1 : poules, cueillette, levain)`);
+  ch(mo('maître') >= 55 && mo('maître') <= 65, `moral maître ${mo('maître').toFixed(0)} dans [55, 65]`);
   ch(mo('austère extrême') < 25 && mo('glacial') < 30, 'moral austère < 25 et glacial < 30');
   ch(R('ne rien toucher')[i].rang <= 1, 'défaut perd');
   // v0.8.1 : négliger le moral ou le bien-être pour économiser finit par coûter plus cher que le malin

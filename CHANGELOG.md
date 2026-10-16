@@ -2,6 +2,16 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.1.1] — 16 octobre 2026
+
+Corrections rapides de l'analyse de game design (`economie-gd-analyse.md`).
+
+- **P4** Paliers d'économies : +3 de moral tous les 250 € jusqu'à 2 000 €, puis +1 tous les 1 000 €. Le moral moyen du maître revient dans [55, 65].
+- **P2** Titres : Malin dès 8 %, Optimiseur dès 15 %, Autonome dès 22 % (le débutant guidé l'atteint), Maître dès 45 %, et nouveau titre **Légende de la sobriété** dès 62 % (40 principes, 10 habitudes, épargne bien gérée).
+- **P3** Tableau de bord : ligne « Coût caché de la sobriété » (santé, revenus perdus, imprévus, moisissures) à côté de l'économie.
+- **P5** Défis annuels : la cible est la dépense de l'an dernier corrigée de l'inflation, sans les −5 % qui la rendaient hors d'atteinte.
+- Non traités (chantiers plus lourds) : P1 (calage du naïf sur le voisin), P6 (scénarios de départ).
+
 ## [1.1.0] — 16 octobre 2026
 
 L'autosuffisance : 15 idées rangées dans les onglets existants (voir `docs/conception.md` §7), chiffres sourcés dans `docs/prix.md`.

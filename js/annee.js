@@ -160,10 +160,10 @@ function defiAnnuel(s, ctx, an) {
   if (!prec) return;    // première année : apprentissage
   const d = DEFIS[(an - 2027) % DEFIS.length], dernier = D[d.poste] - (prec[d.poste] || 0);
   if (dernier < 50) return;
-  // cible corrigée de la hausse des prix : on demande de consommer 5 % de moins, pas de battre l'inflation
+  // cible corrigée de la hausse des prix : ne pas dépasser l'an dernier (v1.1, analyse GD P5 : −5 % était hors d'atteinte pour un joueur déjà optimisé)
   const k = { gaz: 'gaz', nourriture: 'alim', elec: 'elec', transport: 'carburant' }[d.poste];
   const hausse = idxPrec && e.idx[k] ? e.idx[k] / idxPrec[k] : 1;
-  e.defi = { ...d, an, jour: s.jour, debut: D[d.poste], cible: Math.round(dernier * 0.95 * hausse) };
+  e.defi = { ...d, an, jour: s.jour, debut: D[d.poste], cible: Math.round(dernier * hausse) };
   ctx.msg(`🎯 Défi ${an} : « ${d.nom} » — ${d.texte} (moins de ${eur0(e.defi.cible)} sur l'année). Récompense : moral +8.`, 'alerte');
 }
 

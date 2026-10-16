@@ -282,11 +282,13 @@ export function rendreTableau(s, etat = {}) {
   const projLib = jm < 8 && depPrec !== null ? 'Dépenses (mois dernier)' : 'Dépenses du mois (projection)';
   const pct = (x) => `${Math.round(x)} %`;
 
-  // 1. situation
+  // 1. situation (v1.1, analyse GD P3 : le coût caché de la sobriété, visible tout de suite)
+  const cache = (s.depenses.sante || 0) + (s.depenses.revenus || 0) + (s.depenses.imprevus || 0) + (s.depenses.logement || 0);
   const situation = `<div class="tb-carte tb-situation"><h3>Ta situation</h3><div class="tb-chiffres">
     <div><span>Compte courant</span><b class="${s.argent < 0 ? 'moins' : ''}">${eur(s.argent)}</b></div>
     <div><span>Patrimoine (placements compris)</span><b>${eur(r.patrimoine)}</b><small>voisin ${eur(r.patrimoineVoisin ?? 0)}</small></div>
-    <div><span>Économisé vs voisin</span><b class="${r.economies >= 0 ? 'plus' : 'moins'}">${eur(r.economies)}</b></div></div>
+    <div><span>Économisé vs voisin</span><b class="${r.economies >= 0 ? 'plus' : 'moins'}">${eur(r.economies)}</b></div>
+    <div title="Ce que les économies trop serrées te coûtent ailleurs : soins, arrêts et augmentations perdues, rechutes et pannes"><span>Coût caché de la sobriété</span><b class="${cache > 0 ? 'moins' : ''}">${cache > 0 ? '−' : ''}${eur(cache)}</b><small>santé, revenus perdus, imprévus</small></div></div>
     <div class="tb-prec"><span>Épargne de précaution : ${eur(prec)} / ${eur(cible)} (3 mois de reste à vivre)</span><div class="progres" role="progressbar" aria-valuenow="${Math.round(pPrec)}" aria-valuemin="0" aria-valuemax="100" aria-label="Épargne de précaution"><div style="width:${pPrec}%"></div></div><small>${pPrec >= 100 ? '✓ Constituée : une panne ne te mettra pas à découvert.' : 'À constituer avant d\'investir à risque.'}</small></div>
     ${s.eco ? `<div class="tb-budget"><div>Entrées / mois<b class="plus">+${eur(salaire)}</b></div><div>Loyer<b class="moins">−${eur(loyer)}</b></div><div>${projLib}<b class="moins">−${eur(projMois)}</b></div><div>Solde estimé<b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${eur(salaire - loyer - projMois)}</b></div></div>` : ''}</div>`;
 
