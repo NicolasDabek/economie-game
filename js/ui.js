@@ -58,13 +58,17 @@ export function rendreJauges(s) {
   const PAL = { 3: PM, 5: PB };
   const nivPal = (p) => ['epanoui', 'neutre', 'forme', 'correct'].includes(p.id) ? 'ok' : ['fragile', 'fatigue'].includes(p.id) ? 'warn' : 'mal';
   const prec = etatJauges.prec, mem = {};
-  $('jauges').innerHTML = j.map(([l, v, max, txt], i) => {
+  const html = j.map(([l, v, max, txt], i) => {
     const pct = Math.max(0, Math.min(100, v / max * 100));
     const niv = PAL[i] ? nivPal(PAL[i]) : i === 7 ? 'ok' : pct >= 60 ? 'ok' : pct >= 40 ? 'warn' : 'mal';
     mem[l] = v; const avant = prec?.[l];
     const fl = avant === undefined || Math.abs(v - avant) < (i === 0 || i === 7 ? 1 : 0.5) ? '' : v > avant ? '<span class="fl" aria-label="en hausse">▲</span>' : '<span class="fl" aria-label="en baisse">▼</span>';
     return `<div class="jauge niv-${niv}" role="listitem" tabindex="0" data-tip="${TIPS[i]}" aria-label="${l.replace(/^\S+ /, '')} : ${txt}. ${TIPS[i]}"><div class="lib"><span>${l}</span><b>${txt}${fl}</b></div><div class="barre"><div style="width:${pct}%"></div></div>${PAL[i] ? `<span class="palier" data-palier="${PAL[i].id}">${PAL[i].ico} ${PAL[i].nom}</span>` : ''}</div>`;
-  }).join('');
+  });
+  // v1.2 : 3 jauges clés (argent, moral, santé), les 5 autres repliables ; une jauge en alerte reste signalée dans le résumé
+  const SEC = [1, 4, 5, 6, 7], alerteSec = SEC.filter(i => /niv-mal/.test(html[i])).length;
+  $('jauges').innerHTML = [0, 3, 2].map(i => html[i]).join('') + `<details class="plus-jauges"${etatJauges.ouvert ? ' open' : ''}><summary>+5 jauges (confort, hygiène, bien-être, temps, équipements)${alerteSec ? ` · ⚠️ ${alerteSec} en alerte` : ''}</summary><div class="jauges-sec" role="list">${SEC.map(i => html[i]).join('')}</div></details>`;
+  $('jauges').querySelector('details').addEventListener('toggle', (e) => { etatJauges.ouvert = e.target.open; });
   if (etatJauges.jour !== s.jour) { etatJauges.prec = etatJauges.cur; etatJauges.cur = mem; etatJauges.jour = s.jour; }
   const tot = s.joursTotal || 365, nAns = Math.round(tot / 365);
   const ch = chapitreDuJour(Math.min(s.jour, tot - 1));
@@ -182,18 +186,26 @@ export function rendreGraphe(s) {
 }
 
 const sl = (attrs, v, lab = 'Consigne') => `<input type="range" min="8" max="23" step="1" value="${v}" ${attrs} data-depart="${v}" aria-label="${lab}" aria-valuetext="${v <= 8 ? 'Arrêt (hors-gel)' : v + ' degrés'}"><span class="val">${v <= 8 ? 'Arrêt' : v + ' °C'}</span>`;
+// v1.2 : curseur large sur toute la ligne ; le coût réel du chauffage d'hier sert de référence
+const thermo = (ico, lib, slider) => `<div class="thermo"><span>${ico} ${lib}</span>${slider}</div>`;
+function coutChauffage(s) {
+  const d = s.dernierJour, f = s.factures?.at(-1);
+  const jour = d ? ORDRE_PIECES.reduce((t, p) => t + (d.eur[p] || 0), 0) : f?.parPiece ? ORDRE_PIECES.reduce((t, p) => t + (f.parPiece[p] || 0), 0) / 7 : null;
+  if (jour === null) return 'Avance d\'un jour pour voir le coût réel de ton chauffage et l\'impact de chaque degré.';
+  return `Chauffage récent : <b>${eur(jour)}/jour</b>, soit ~<b>${eur(jour * 30.4)}/mois</b> à ce rythme. Bouge un curseur : l'impact s'affiche ici.`;
+}
 export function rendreChauffage(s) {
   let html = '';
   if (s.possede.robinets) {
     html += ORDRE_PIECES.map(id => {
       const p = s.pieces[id];
-      return `<div class="ligne"><label>${PIECES[id].nom}</label>☀️ ${sl(`data-piece="${id}" data-k="consigneJour"`, p.consigneJour, `${PIECES[id].nom}, consigne de jour`)}</div>
-              <div class="ligne"><label></label>🌙 ${sl(`data-piece="${id}" data-k="consigneNuit"`, p.consigneNuit, `${PIECES[id].nom}, consigne de nuit`)}</div>`;
+      return `<h4>${PIECES[id].nom}</h4>` + thermo('☀️', 'Jour', sl(`data-piece="${id}" data-k="consigneJour"`, p.consigneJour, `${PIECES[id].nom}, consigne de jour`))
+        + thermo('🌙', 'Nuit', sl(`data-piece="${id}" data-k="consigneNuit"`, p.consigneNuit, `${PIECES[id].nom}, consigne de nuit`));
     }).join('');
   } else {
-    html += `<div class="ligne"><label>Thermostat</label>☀️ ${sl('data-central="consigneJour"', s.central.consigneJour, 'Thermostat, consigne de jour')}</div>
-             <div class="ligne"><label></label>🌙 ${sl('data-central="consigneNuit"', s.central.consigneNuit, 'Thermostat, consigne de nuit')}</div>
-             <p class="aide">Un seul thermostat, dans le salon : tous les radiateurs chauffent en même temps. Des robinets thermostatiques permettent une consigne par pièce.</p>`;
+    html += thermo('☀️', 'Jour (7 h-23 h)', sl('data-central="consigneJour"', s.central.consigneJour, 'Thermostat, consigne de jour'))
+      + thermo('🌙', 'Nuit', sl('data-central="consigneNuit"', s.central.consigneNuit, 'Thermostat, consigne de nuit')) + `
+<p class="aide">Un seul thermostat, dans le salon : tous les radiateurs chauffent en même temps. Des robinets thermostatiques permettent une consigne par pièce.</p>`;
   }
   if (s.possede.appoint) {
     html += `<div class="ligne"><label>Appoint</label>${choix('appoint', [['non', 'Éteint'], ['oui', 'Suit ma pièce']], s.appoint.actif ? 'oui' : 'non')}
@@ -201,6 +213,7 @@ export function rendreChauffage(s) {
   }
   html += `<p class="aide">Chaudière gaz (rendement 85 %)${s.possede.purge ? ', radiateurs purgés' : ' · ⚠️ radiateurs jamais purgés : haut froid, puissance réduite'}. Jour 7 h-23 h, nuit 23 h-7 h. « Arrêt » = hors-gel (8 °C).</p>`;
   $('thermostats').innerHTML = html;
+  if ($('apercuChauffage')) { $('apercuChauffage').innerHTML = coutChauffage(s); $('apercuChauffage').classList.add('impact'); }
 }
 
 const choix = (nom, opts, val) => `<span class="choix">${opts.map(([v, l]) => `<button data-choix="${nom}" data-v="${v}" class="${v === val ? 'actif' : ''}">${l}</button>`).join('')}</span>`;
@@ -213,9 +226,14 @@ export function rendreGestes(s) {
     `<div class="ligne"><label>Cuisson</label>${choix('cuisson', [['non', 'Normal'], ['oui', 'Four ouvert après usage, couvercles']], s.recupCuisson ? 'oui' : 'non')} ${tagGeste(s, 'cuisson')}</div>`,
   ];
   if (s.possede.bouillotte) l.push(`<div class="ligne"><label>Bouillotte</label>${choix('bouillotte', [['non', 'Non'], ['oui', 'Chaque soir']], s.utiliserBouillotte ? 'oui' : 'non')} ${tagGeste(s, 'bouillotte')}${s.possede.housse ? ' <span class="tag">avec housse</span>' : ''}</div>`);
+  l.splice(3, 0, '<details class="avance"' + (etatJauges.gestesAvances ? ' open' : '') + ' id="gestesAvances"><summary>Réglages avancés (portes, cuisson, bouillotte, couches…)</summary>');
   l.push(`<div class="ligne"><label>Couches</label>${tagGeste(s, 'couches')}<span class="aide">(2 vêtements chauds ou plus)</span></div>`);
   l.push(`<p class="aide">Gestes du jour : ${fmtH(tempsGestes(s))} de temps. Le temps libre restant en fin de journée redonne du bien-être et du moral.</p>`);
+  l.splice(l.length - 1, 0, '</details>');
+  // portes en premier dans les réglages avancés
+  const iP = l.findIndex(x => x.includes('<label>Portes</label>')), portes = l.splice(iP, 1)[0]; l.splice(l.indexOf(l.find(x => x.startsWith('<details'))) + 1, 0, portes);
   $('gestes').innerHTML = l.join('');
+  $('gestesAvances')?.addEventListener('toggle', (e) => { etatJauges.gestesAvances = e.target.open; });
 }
 
 function minibarre(v, col) { return `<span class="minibarre"><div style="width:${Math.min(100, v)}%;background:${col}"></div></span>`; }

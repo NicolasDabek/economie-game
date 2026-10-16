@@ -53,12 +53,12 @@ const ANNEES = Number(process.argv[2] || 1);
       await p.evaluate((J) => { const s = window.__jeu(); }, etape);
       while ((await p.evaluate(() => window.__jeu().jour)) < etape) { await dilemmes(p); await clic(p, '#btnMois'); await p.waitForFunction(() => !document.getElementById('btnMois').disabled, null, { timeout: 30000 }).catch(() => {}); }
       await dilemmes(p);
-      for (const sec of ['maison', 'vie', 'achats', 'argent', 'savoir', 'bilan']) {
+      for (const sec of ['accueil', 'maison', 'achats', 'argent', 'bilan']) {
         await clic(p, `[data-section="${sec}"]`);
         const subs = await p.$$eval('#onglets [data-onglet]', x => x.map(y => y.dataset.onglet));
         for (const o of subs) {
           await clic(p, `[data-onglet="${o}"]`); await p.waitForTimeout(80);
-          const info = await p.evaluate(() => { const pan = [...document.querySelectorAll('.panneau')].find(x => !x.classList.contains('cache')); return { len: (pan?.innerText || '').trim().length, deborde: document.documentElement.scrollWidth > innerWidth + 1, ids: ((pan?.innerText || '').match(/\b[a-z]+[A-Z][a-zA-Z]+\b/g) || []).filter(w => !/^(kWh|kWc|MWh)$/.test(w)) }; });
+          const info = await p.evaluate(() => { const pan = document.body.dataset.section === 'accueil' ? document.getElementById('tableau') : [...document.querySelectorAll('.panneau')].find(x => !x.classList.contains('cache')); return { len: (pan?.innerText || '').trim().length, deborde: document.documentElement.scrollWidth > innerWidth + 1, ids: ((pan?.innerText || '').match(/\b[a-z]+[A-Z][a-zA-Z]+\b/g) || []).filter(w => !/^(kWh|kWc|MWh)$/.test(w)) }; });
           if (info.len < 60) friction.push(`curieux j${etape} : ${sec}/${o} presque vide (${info.len} car.)`);
           if (info.deborde) friction.push(`curieux j${etape} : ${sec}/${o} déborde horizontalement`);
           if (info.ids.length) friction.push(`curieux j${etape} : ${sec}/${o} identifiants internes visibles : ${[...new Set(info.ids)].slice(0, 4).join(', ')}`);

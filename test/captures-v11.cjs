@@ -14,7 +14,7 @@ const clic = async (p, sel) => { try { await p.click(sel, { timeout: 2000 }); re
     await p.addInitScript((sv) => { if (!sessionStorage.getItem('x')) { localStorage.setItem('economie-game-sauvegarde', sv); localStorage.setItem('economie-game-prefs', JSON.stringify({ tutoFait: true })); sessionStorage.setItem('x', '1'); } }, save);
     await p.goto('http://localhost:8779/'); await p.waitForTimeout(500);
     await clic(p, '#btnReprendre'); await p.waitForTimeout(600);
-    await clic(p, '#toast button'); 
+    await p.addStyleTag({ content: '#toasts{display:none!important}' });
     await p.screenshot({ path: `${out}/${pre}_${nom}accueil.png`, fullPage: !nom });
     for (const o of ['jardin', 'cuisine', 'maison', 'eau']) {
       await p.evaluate((o) => document.querySelector(`[data-onglet="${o}"], [data-aller="${o}"]`)?.click(), o); await p.waitForTimeout(400);

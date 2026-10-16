@@ -13,12 +13,12 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
 const pb = [], errs = [];
 const note = (t) => { if (!pb.includes(t)) pb.push(t); };
 const ONGLETS = ['maison', 'linge', 'eau', 'elec', 'routines', 'cuisine', 'budget', 'transport', 'jardin', 'b-maison', 'b-eau', 'b-cuisine', 'b-elec', 'b-transport', 'b-jardin', 'rentab', 'banque', 'invest', 'principes', 'combos', 'glossaire', 'journal', 'resume', 'factures', 'graphes', 'aide'];
-const SECTION = { maison: 'maison', linge: 'maison', eau: 'maison', elec: 'maison', routines: 'maison', cuisine: 'vie', budget: 'vie', transport: 'vie', jardin: 'vie', 'b-maison': 'achats', 'b-eau': 'achats', 'b-cuisine': 'achats', 'b-elec': 'achats', 'b-transport': 'achats', 'b-jardin': 'achats', rentab: 'achats', banque: 'argent', invest: 'argent', principes: 'savoir', combos: 'savoir', glossaire: 'savoir', journal: 'savoir', aide: 'savoir', resume: 'bilan', factures: 'bilan', graphes: 'bilan' };
+const SECTION = { maison: 'maison', linge: 'maison', eau: 'maison', elec: 'maison', routines: 'maison', cuisine: 'maison', budget: 'argent', transport: 'maison', jardin: 'maison', 'b-maison': 'achats', 'b-eau': 'achats', 'b-cuisine': 'achats', 'b-elec': 'achats', 'b-transport': 'achats', 'b-jardin': 'achats', rentab: 'achats', banque: 'argent', invest: 'argent', principes: 'bilan', combos: 'bilan', glossaire: 'bilan', journal: 'bilan', aide: 'bilan', resume: 'bilan', factures: 'bilan', graphes: 'bilan' };
 
 // exécuté dans la page : contrôles visuels de l'écran courant
 function controle(ctx) {
   const res = [];
-  const vis = (e) => { const r = e.getBoundingClientRect(), st = getComputedStyle(e); return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && !e.closest('.cache,[hidden]'); };
+  const vis = (e) => { const r = e.getBoundingClientRect(), st = getComputedStyle(e); return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && !e.closest('.cache,[hidden]') && (e.checkVisibility ? e.checkVisibility({ contentVisibilityAuto: true }) : true); };
   const txt = document.body.innerText;
   const m = txt.match(/\bNaN\b|Infinity|undefined|\[object Object\]|\bnull\b €/); if (m) res.push(`valeur cassée « ${m[0]} » : …${txt.slice(Math.max(0, m.index - 60), m.index + 10).replace(/\s+/g, ' ')}…`);
   if (document.documentElement.scrollWidth > innerWidth + 1) {
@@ -89,7 +89,7 @@ function controle(ctx) {
     console.time('j0');
     await tous(p, 'bureau j0', false);
     console.timeEnd('j0'); await avancer(p, 200); console.log('jour', await p.evaluate(() => window.__jeu().jour)); console.time('j200'); await tous(p, 'bureau j200', false); console.timeEnd('j200');
-    if (CAP) { await clic(p, '[data-vue="tableau"]'); await p.screenshot({ path: `${out}/v1_tableau.png`, fullPage: true }); await clic(p, '[data-section="bilan"]'); await clic(p, '[data-onglet="graphes"]'); await p.screenshot({ path: `${out}/v1_graphes.png`, fullPage: true }); await clic(p, '[data-section="savoir"]'); await clic(p, '[data-onglet="aide"]'); await p.screenshot({ path: `${out}/v1_aide.png`, fullPage: true }); }
+    if (CAP) { await clic(p, '[data-vue="tableau"]'); await p.screenshot({ path: `${out}/v1_tableau.png`, fullPage: true }); await clic(p, '[data-section="bilan"]'); await clic(p, '[data-onglet="graphes"]'); await p.screenshot({ path: `${out}/v1_graphes.png`, fullPage: true }); await clic(p, '[data-section="bilan"]'); await clic(p, '[data-onglet="aide"]'); await p.screenshot({ path: `${out}/v1_aide.png`, fullPage: true }); }
     // chiffres : tableau de bord = bilan = écran de fin
     const lire = () => p.evaluate(() => { const t = document.querySelector('#tableau')?.innerText || ''; const m = t.match(/Économisé vs voisin\s*([−\-]?[\d\s]+,\d\d\s?€)/); return m?.[1]?.replace(/\s/g, ''); });
         await clic(p, '[data-vue="tableau"]'); const tb = await lire();

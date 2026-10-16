@@ -24,7 +24,7 @@ const clic = async (p, sel) => { try { await p.click(sel, { timeout: 1500 }); re
     const sec = async (id, ancien) => { (await clic(p, `[data-section="${id}"]`)) || (ancien && await clic(p, ancien)); await p.waitForTimeout(400); };
     await sec('achats', '[data-onglet="maison"]'); await p.screenshot({ path: `${out}/${pre}_achats.png`, fullPage: pre === 'before' });
     await sec('argent', '[data-onglet="banque"]'); await p.screenshot({ path: `${out}/${pre}_argent.png`, fullPage: pre === 'before' });
-    await sec('savoir', null); if (pre === 'before') await p.evaluate(() => document.getElementById('principes')?.scrollIntoView()); await p.screenshot({ path: `${out}/${pre}_savoir.png` });
+    await sec('bilan', null); if (pre === 'before') await p.evaluate(() => document.getElementById('principes')?.scrollIntoView()); await p.screenshot({ path: `${out}/${pre}_savoir.png` });
     await p.evaluate(() => { const s = window.__jeu(); s.jour = 364; }); await clic(p, '#btnJour'); await p.waitForTimeout(2500);
     if (await p.isVisible('#dilemme')) await p.screenshot({ path: `${out}/${pre}_bilan.png` }); else { await sec('bilan', null); await p.screenshot({ path: `${out}/${pre}_bilan.png` }); }
     await ctx.close();

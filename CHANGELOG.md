@@ -2,6 +2,18 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.2.0] — 16 octobre 2026
+
+Refonte de l'interface d'après les maquettes (`design-economie-game`).
+
+- **Navigation en 5 sections** : Accueil, Maison, Achats, Argent, Bilan. Sur mobile et tablette, elles forment une barre en bas de l'écran. « Vie quotidienne » rejoint Maison (cuisine, jardin, transport) et Argent (budget). « Savoir » rejoint Bilan (encyclopédie, combos, glossaire, journal, aide). Raccourcis clavier 1 à 5.
+- **« Jour suivant » flottant**. Sur mobile, Semaine, Mois et Prochain événement se déplient avec ⏩.
+- **3 jauges clés** : argent, moral et santé. Les 5 autres se replient, avec un signal quand l'une d'elles est en alerte.
+- **Accueil** : le tableau de bord ouvre sur « Économisé vs voisin » (avec le solde estimé du mois et l'épargne de précaution) et une seule action conseillée. Les autres conseils sont repliés.
+- **Chauffage** : curseurs larges sur toute la ligne. L'encadré d'impact donne des valeurs réelles : coût récent du chauffage par jour et par mois, puis l'effet en €/mois de chaque degré, calculé sur ton chauffage réel. Les réglages avancés (portes, cuisson, bouillotte, couches) sont repliés.
+- **Accessibilité** : toutes les commandes font au moins 44 px et aucun texte n'est sous 12 px.
+- Les écrans d'autosuffisance (Jardin, Garde-manger, Poêle, Eau) s'intègrent dans la section Maison.
+
 ## [1.1.1] — 16 octobre 2026
 
 Corrections rapides de l'analyse de game design (`economie-gd-analyse.md`).

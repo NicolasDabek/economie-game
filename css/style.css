@@ -91,7 +91,7 @@ abbr.terme,span.terme{text-decoration:underline dotted;text-underline-offset:3px
 .sections button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:8px 2px;border-radius:var(--r1);cursor:pointer;font-size:var(--t-xs);font-weight:600;color:var(--doux);transition:background var(--anim),color var(--anim)}
 .sections button:hover{background:var(--surface2);color:var(--texte)}
 .sections button[aria-selected="true"]{background:var(--accent-doux);color:var(--accent)}
-.badge{position:absolute;top:2px;right:4px;background:var(--mal);color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 5px;line-height:1.3;animation:apparait .3s}
+.badge{position:absolute;top:2px;right:4px;background:var(--mal);color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:1px 5px;line-height:1.3;animation:apparait .3s}
 .badge.nouveau{background:var(--ok)}
 .sous-onglets{display:flex;flex-shrink:0;min-height:34px;gap:var(--e1);overflow-x:auto;scrollbar-width:thin}
 .sous-onglets button{position:relative;white-space:nowrap;border:1px solid var(--bord);background:var(--surface);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:var(--t-s);transition:background var(--anim)}
@@ -121,17 +121,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .choix button:last-child{border-right:0}
 .choix button.actif{background:var(--accent);color:var(--accent-txt)}
 .choix.col{display:flex;flex-direction:column;align-items:stretch}
-.tag{font-size:.6875rem;padding:2px 7px;border-radius:999px;background:var(--surface2);color:var(--doux);white-space:nowrap}
+.tag{font-size:.75rem;padding:2px 7px;border-radius:999px;background:var(--surface2);color:var(--doux);white-space:nowrap}
 .tag.habitude{background:var(--ok-doux);color:var(--ok)}.tag.appr{background:var(--warn-doux);color:var(--warn)}.tag.porte{background:var(--accent-doux);color:var(--accent)}
 .apercu{font-size:var(--t-s);color:var(--accent);margin:var(--e2) 0 0;min-height:1em}
 .vet{display:grid;grid-template-columns:28px 1fr auto;gap:var(--e2);align-items:center;padding:var(--e2) 0;border-bottom:1px solid var(--bord)}
-.vet .ico{font-size:22px}.mini{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--doux)}
+.vet .ico{font-size:22px}.mini{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--doux)}
 .vet .acts{display:flex;flex-direction:column;gap:4px}.vet .acts .btn{font-size:12px;padding:4px 8px}
 .minibarre{width:60px;height:5px;background:var(--surface2);border-radius:3px;display:inline-block;vertical-align:middle;overflow:hidden}.minibarre>div{height:100%}
 .meteo{display:flex;gap:var(--e2)}
 .jourMeteo{flex:1;text-align:center;background:var(--surface2);border-radius:var(--r1);padding:var(--e2);font-size:var(--t-s)}
 .jourMeteo .ico{font-size:26px}
-.tempo{font-size:11px;border-radius:6px;padding:1px 4px;margin-top:3px;color:#fff}
+.tempo{font-size:12px;border-radius:6px;padding:1px 4px;margin-top:3px;color:#fff}
 .tempo.bleu{background:#2563eb}.tempo.blanc{background:#e5e7eb;color:#111}.tempo.rouge{background:#dc2626}
 .article{display:flex;justify-content:space-between;align-items:center;gap:var(--e3);padding:var(--e3) 0;border-bottom:1px solid var(--bord)}
 .article .d{font-size:var(--t-s);color:var(--doux)}
@@ -149,7 +149,7 @@ table.roi{font-size:12px}table.roi td{vertical-align:top}
 #journal{max-height:420px;overflow:auto;font-size:var(--t-s)}
 #journal div{padding:6px 0;border-bottom:1px solid var(--bord)}
 #journal .alerte{color:var(--mal)}#journal .principe{color:var(--accent)}#journal .habitude{color:var(--ok)}
-.filtres{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}.filtres button{font-size:11px}
+.filtres{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}.filtres button{font-size:12px}
 .principe-item{padding:var(--e2) var(--e3);border-radius:var(--r1);background:var(--accent-doux);margin:6px 0}
 .principe-item b{display:inline}.principe-item.transversal{border-left:3px solid #7c3aed}
 .principe-item.verrou{background:var(--surface2);color:var(--doux)}
@@ -251,9 +251,9 @@ fieldset.duree legend{font-weight:700;padding:0 6px}
   .app{padding:var(--e3);gap:var(--e3)}
   .grille2{grid-template-columns:1fr}
   .sections{position:sticky;top:0;z-index:5}
-  .sections button{font-size:10px;padding:6px 0}
+  .sections button{font-size:12px;padding:6px 0}
   .temps{padding:6px var(--e2) calc(6px + env(safe-area-inset-bottom))}
-  .temps button{flex-direction:column;gap:0;font-size:11px;padding:6px 2px}
+  .temps button{flex-direction:column;gap:0;font-size:12px;padding:6px 2px}
   .carte{padding:var(--e3)}
   #toasts{bottom:80px;right:var(--e2);left:var(--e2)}
   .meteo{overflow-x:auto}
@@ -263,7 +263,7 @@ html{scroll-padding-top:140px;scroll-padding-bottom:110px}
 #toasts{pointer-events:none}
 .legende,.echelle{white-space:nowrap}
 .tag.pause{background:transparent;border:1px dashed var(--bord);color:var(--doux)}
-.jauge .palier{display:block;font-size:10px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jauge .palier{display:block;font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* tableau de bord (v0.8.1) */
 .vues{display:flex;gap:var(--e1);background:var(--surface);border:1px solid var(--bord);border-radius:999px;padding:4px;align-self:flex-start}
 .vues button{border:0;background:transparent;color:var(--texte);padding:6px 16px;border-radius:999px;cursor:pointer;font-weight:600}
@@ -317,7 +317,7 @@ html[data-anim="non"] *,html[data-anim="non"] *::before,html[data-anim="non"] *:
 kbd{display:inline-block;min-width:1.6em;text-align:center;padding:1px 6px;border:1px solid var(--bord);border-bottom-width:2px;border-radius:5px;background:var(--fond);font:inherit;font-size:var(--t-xs)}
 .btn-icone:disabled{opacity:.4;cursor:default}
 .tb-acts{display:inline-flex;gap:6px;float:right}.tb-reco li>div{width:calc(100% - 150px)}
-.courbe{width:100%;height:auto;font-size:11px}.courbe text{fill:var(--doux)}.courbe .grille{stroke:var(--bord);stroke-width:1}
+.courbe{width:100%;height:auto;font-size:12px}.courbe text{fill:var(--doux)}.courbe .grille{stroke:var(--bord);stroke-width:1}
 .vide{color:var(--doux);background:var(--fond);border:1px dashed var(--bord);border-radius:var(--r1);padding:var(--e3);text-align:center;font-size:var(--t-s)}
 /* v0.9 : défi annuel */
 .tb-defi { margin: 0 0 .75rem; font-size: .875rem; }
@@ -350,3 +350,76 @@ kbd{display:inline-block;min-width:1.6em;text-align:center;padding:1px 6px;borde
 table.planches select { min-height: 32px; max-width: 11em; }
 table.planches td.d { font-size: .85em; }
 .alerte-ligne { color: var(--mal, #b91c1c); font-weight: 600; }
+
+/* ---------------------------------------------------------------- v1.2 : refonte de l'interface
+   5 sections (barre du bas sur mobile), « Jour suivant » flottant, 3 jauges clés, cibles tactiles ≥ 44 px, textes ≥ 12 px */
+button,select,.btn,.lien,[role=button],summary{min-height:44px}
+.btn-icone{min-width:44px;min-height:44px}
+.choix button,.sous-onglets button,.vues button{min-height:44px}
+input[type=checkbox],input[type=radio]{width:24px;height:24px}
+.ligne label{min-height:auto}
+.lien{display:inline-flex;align-items:center}
+input[type=range]{height:44px;min-width:160px;accent-color:var(--accent)}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:8px;background:var(--bord)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:50%;background:var(--accent);border:3px solid var(--surface);box-shadow:var(--ombre)}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--accent);border:3px solid var(--surface)}
+input[type=range]::-moz-range-track{height:8px;border-radius:8px;background:var(--bord)}
+.thermo{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--e2);padding:var(--e1) 0}
+.thermo .val{font-weight:700;font-size:var(--t-l);min-width:3.5em;text-align:right}
+.thermo input[type=range]{width:100%}
+.impact{background:var(--ok-doux);border-radius:var(--r2);padding:var(--e3);margin-top:var(--e2)}
+details.avance>summary,details.plus-jauges>summary{cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;list-style:none}
+details.avance>summary::before,details.plus-jauges>summary::before{content:'▸';transition:transform var(--anim)}
+details[open].avance>summary::before,details[open].plus-jauges>summary::before{transform:rotate(90deg)}
+/* jauges : 3 clés, 5 repliables */
+.jauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2)}
+.jauges .jauge{padding:8px 10px}
+.jauges .jauge .lib{font-size:var(--t-s)}
+.jauges .jauge .lib b{font-size:var(--t-l)}
+details.plus-jauges{grid-column:1/-1}
+details.plus-jauges>summary{font-size:var(--t-s);min-height:44px;color:#fff}
+details.plus-jauges .jauges-sec{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:var(--e2);margin-top:var(--e1)}
+/* accueil : économisé vs voisin + une action */
+.tb-une{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--e4)}
+.tb-hero .grand{font-size:2.25rem;font-weight:800;font-variant-numeric:tabular-nums;display:block;margin:var(--e1) 0}
+.tb-hero .lignes>div{display:flex;justify-content:space-between;border-top:1px solid var(--bord);padding:var(--e2) 0}
+.tb-action .btn.primaire{width:100%;font-size:var(--t-m)}
+.tb-autres>summary{color:var(--accent)}
+/* sections : Accueil = tableau pleine largeur */
+body[data-section="accueil"] .lateral .panneaux,body[data-section="accueil"] .sous-onglets{display:none}
+body[data-section="accueil"] .vues{display:none}
+@media (min-width:1001px){
+  body[data-section="accueil"] .app{grid-template-columns:1fr}
+  body[data-section="accueil"] .lateral{order:-1;max-width:640px;width:100%;justify-self:center}
+}
+.tb-acts .btn{white-space:nowrap}
+.sections{grid-template-columns:repeat(5,1fr)}
+.sections button{min-height:56px;font-size:var(--t-xs)}
+/* « Jour suivant » flottant */
+.temps{left:auto;right:var(--e4);bottom:var(--e4);background:none;border:0;backdrop-filter:none;padding:0}
+.temps-int{flex-direction:row-reverse;align-items:center;gap:var(--e2)}
+.temps button{flex:0 0 auto;min-height:48px;box-shadow:var(--ombre)}
+.temps #btnJour{min-height:56px;padding:0 24px;border-radius:999px;font-size:var(--t-l);background:var(--ok);border-color:var(--ok);color:#fff;box-shadow:var(--ombre-haute)}
+#btnPlusTemps{border-radius:999px;min-width:48px}
+@media (max-width:1000px){.temps:not(.ouvert) #btnSemaine,.temps:not(.ouvert) #btnMois,.temps:not(.ouvert) #btnEvenement{display:none}}
+body{padding-bottom:96px}
+@media (max-width:1000px){
+  .lateral{display:contents}
+  .sections{position:fixed!important;left:0;right:0;bottom:0;top:auto!important;z-index:20;border-radius:0;border-width:1px 0 0;padding:4px 4px calc(4px + env(safe-area-inset-bottom));box-shadow:0 -2px 10px rgba(16,24,40,.08)}
+  .sections button{font-size:var(--t-xs);padding:4px 0}
+  .temps{bottom:calc(76px + env(safe-area-inset-bottom));right:var(--e3)}
+  .temps button{flex-direction:row;font-size:var(--t-s)}
+  body{padding-bottom:160px}
+  body:not([data-section="accueil"]) .centre{display:none}
+  body[data-section="accueil"] .panneaux,body[data-section="accueil"] .sous-onglets{display:none}
+  .sous-onglets{position:sticky;top:0;z-index:5;background:var(--fond);padding:var(--e1) 0}
+  #toasts{bottom:150px}
+}
+@media (max-width:600px){
+  .btn-icone{width:44px;height:44px}
+  .jauges .jauge{padding:6px 8px}
+  .jauges .jauge .lib{flex-direction:column;align-items:flex-start;white-space:normal}
+}
+@media (min-width:1001px){#btnPlusTemps{display:none}}
+.panneaux,.sous-onglets,.sections,.centre{min-width:0}

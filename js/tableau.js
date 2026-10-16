@@ -292,6 +292,9 @@ export function rendreTableau(s, etat = {}) {
     <div class="tb-prec"><span>Épargne de précaution : ${eur(prec)} / ${eur(cible)} (3 mois de reste à vivre)</span><div class="progres" role="progressbar" aria-valuenow="${Math.round(pPrec)}" aria-valuemin="0" aria-valuemax="100" aria-label="Épargne de précaution"><div style="width:${pPrec}%"></div></div><small>${pPrec >= 100 ? '✓ Constituée : une panne ne te mettra pas à découvert.' : 'À constituer avant d\'investir à risque.'}</small></div>
     ${s.eco ? `<div class="tb-budget"><div>Entrées / mois<b class="plus">+${eur(salaire)}</b></div><div>Loyer<b class="moins">−${eur(loyer)}</b></div><div>${projLib}<b class="moins">−${eur(projMois)}</b></div><div>Solde estimé<b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${eur(salaire - loyer - projMois)}</b></div></div>` : ''}</div>`;
 
+  const hero = `<div class="tb-carte tb-hero"><h3>Économisé vs voisin</h3><b class="grand ${r.economies >= 0 ? 'plus' : 'moins'}">${eur(r.economies)}</b><div class="lignes">
+    ${s.eco ? `<div><span>Solde estimé du mois</span><b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${salaire - loyer - projMois >= 0 ? '+' : ''}${eur(salaire - loyer - projMois)}</b></div>` : ''}
+    <div><span>Épargne de précaution</span><b>${eur(prec)} / ${eur(cible)}</b></div></div></div>`;
   // 2. jauges
   const ej = etat.prec || {};
   const J = [['😊', 'Confort', 'confort', s.confort, null, CAUSES.confort(s)], ['❤️', 'Santé', 'sante', s.sante, null, CAUSES.sante(s)],
@@ -322,7 +325,10 @@ export function rendreTableau(s, etat = {}) {
   const fourchette = (v) => `${eur(arrondi(v * 0.7)).replace(',00', '')} à ${eur(arrondi(v * 1.3)).replace(',00', '')}/an`;
   const conseillerH = `<p class="tb-conseiller">🧑‍🏫 <b>Le conseiller</b> est une aide pour débuter : il ne connaît que les principes que tu as découverts, raisonne poste par poste sur une dizaine de jours et ne planifie ni combos, ni solaire, ni Tempo, ni placements — ça, c'est ton talent. ${dispo.reste ? `Disponible encore <b>${dispo.reste} fois</b> cette semaine.` : `<b>Il revient dans ${dispo.retour} j</b> (3 conseils par semaine) ; les rappels d'entretien restent possibles.`}</p>`;
   const peutFaire = (x) => dispo.reste > 0 || CORVEES.has(x.action?.type);
-  const recos = `<div class="tb-carte"><h3>Que faire maintenant ?</h3>${conseillerH}${defiH}<ol class="tb-reco">${reco.map((x, i) => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : x.an > 0 ? `estimation : ${fourchette(x.an)}` : ''}${x.roi ? ` · rendement ~${Math.round(x.roi / 10) * 10 || Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><span class="tb-acts">${x.action && x.action.type !== 'poste' || (x.action?.type === 'poste' && x.action.id !== 'linge') ? `<button class="btn primaire" data-appliquer="${i}" aria-label="Faire : ${x.titre}"${peutFaire(x) ? '' : ' disabled title="Le conseiller revient la semaine prochaine"'}>Faire</button>` : ''}<button class="btn" data-aller="${x.aller}" aria-label="Y aller : ${x.titre}">Y aller</button><button class="btn discret" data-ignorer="${i}" aria-label="Ignorer pendant 30 jours : ${x.titre}" title="Ne plus proposer pendant 30 jours">Ignorer</button></span></li>`).join('') || '<li class="vide">Rien d\'urgent : avance dans le temps.</li>'}</ol></div>`;
+  const ligneReco = (x, i) => `<li><div><b>${x.titre}</b><small>${x.urgent ? '⚠️ prioritaire' : x.an > 0 ? `estimation : ${fourchette(x.an)}` : ''}${x.roi ? ` · rendement ~${Math.round(x.roi / 10) * 10 || Math.round(x.roi)} %/an` : ''}${x.jauge ? ` · ${x.jauge}` : ''}</small></div><span class="tb-acts">${x.action && x.action.type !== 'poste' || (x.action?.type === 'poste' && x.action.id !== 'linge') ? `<button class="btn primaire" data-appliquer="${i}" aria-label="Faire : ${x.titre}"${peutFaire(x) ? '' : ' disabled title="Le conseiller revient la semaine prochaine"'}>Faire</button>` : ''}<button class="btn" data-aller="${x.aller}" aria-label="Y aller : ${x.titre}">Y aller</button><button class="btn discret" data-ignorer="${i}" aria-label="Ignorer pendant 30 jours : ${x.titre}" title="Ne plus proposer pendant 30 jours">Ignorer</button></span></li>`;
+  // v1.2 : une seule action mise en avant, les autres conseils repliés
+  const recos = `<div class="tb-carte tb-action"><h3>🧑‍🏫 Prochaine action conseillée</h3><ol class="tb-reco">${reco.length ? ligneReco(reco[0], 0) : '<li class="vide">Rien d\'urgent : avance dans le temps.</li>'}</ol>
+    ${defiH}<details class="avance tb-autres"${etat.autresOuverts ? ' open' : ''}><summary>${reco.length > 1 ? `Voir les ${reco.length - 1} autres conseils` : 'À propos du conseiller'}</summary><ol class="tb-reco" start="2">${reco.slice(1).map((x, i) => ligneReco(x, i + 1)).join('')}</ol>${conseillerH}</details></div>`;
 
   // 5. alertes
   const al = alertes(s);
@@ -346,5 +352,5 @@ export function rendreTableau(s, etat = {}) {
   const prev = `<div class="tb-carte"><h3>Les 3 prochains jours</h3><div class="tb-prev">${pv.map((p, k) => `<div><b>${JS[dateDuJour(s.jour + k + 1).getUTCDay()]}</b><span>${p.icone} ${p.tMin}…${p.tMax} °C</span><small>${p.libelle}${p.tempo ? ` · Tempo ${p.tempo}` : ''}</small><small class="conseil-j">${conseilJ(p)}</small></div>`).join('')}</div></div>`;
 
   const autosuf = s.possede.potager || s.possede.poele || s.possede.solaire || s.possede.cuve || s.possede.poules ? carteAutosuffisance(s).replace('class="carte autosuf"', 'class="tb-carte autosuf"') : '';
-  return `<div class="tb">${situation}${recos}${jauges}${alertesH}${autosuf}${depenses}${progres}${rent}${prev}</div>`;
+  return `<div class="tb"><div class="tb-une">${hero}${recos}</div>${alertesH}${autosuf}${situation}${jauges}${depenses}${progres}${rent}${prev}</div>`;
 }

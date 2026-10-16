@@ -31,21 +31,21 @@ export function sauverPrefs() { try { localStorage.setItem(CLE_UI, JSON.stringif
 // ---------------------------------------------------------------- sections
 // [id, nom, icône, sous-sections [id, nom, visible(s)]]
 const toujours = () => true;
+// v1.2 : 5 sections (barre du bas sur mobile) ; « Vie quotidienne » rejoint Maison, « Savoir » rejoint Bilan
 export const SECTIONS = [
-  ['maison', 'Maison', 'maison', [['maison', 'Chauffage et gestes', toujours], ['linge', 'Linge', toujours], ['eau', 'Eau chaude', toujours], ['elec', 'Électricité', (s) => s.jour >= 2],
-    ['routines', 'Routines', (s) => Object.keys(ROUTINES).some(k => routineDispo(s, k))]]],
-  ['vie', 'Vie quotidienne', 'vie', [['cuisine', 'Cuisine', toujours], ['budget', 'Budget et plaisirs', toujours], ['transport', 'Transport', (s) => s.jour >= 3], ['jardin', 'Jardin', (s) => s.jour >= 21]]],
-  ['achats', 'Achats', 'achats', [['b-maison', 'Maison', toujours], ['b-eau', 'Eau chaude', toujours], ['b-cuisine', 'Cuisine', toujours], ['b-elec', 'Électricité', (s) => s.jour >= 2],
+  ['accueil', 'Accueil', 'accueil', [['tableau', 'Tableau de bord', toujours]]],
+  ['maison', 'Maison', 'feu', [['maison', 'Chauffage et gestes', toujours], ['eau', 'Eau', toujours], ['cuisine', 'Cuisine', toujours], ['jardin', 'Jardin', (s) => s.jour >= 21 || !!s.possede.potager], ['linge', 'Linge', toujours],
+    ['elec', 'Électricité', (s) => s.jour >= 2], ['transport', 'Transport', (s) => s.jour >= 3], ['routines', 'Routines', (s) => Object.keys(ROUTINES).some(k => routineDispo(s, k))]]],
+  ['achats', 'Achats', 'achats', [['b-maison', 'Maison', toujours], ['b-eau', 'Eau', toujours], ['b-cuisine', 'Cuisine', toujours], ['b-elec', 'Électricité', (s) => s.jour >= 2],
     ['b-transport', 'Transport', (s) => s.jour >= 3], ['b-jardin', 'Jardin', (s) => s.jour >= 21], ['rentab', 'Rentabilité', (s) => Object.entries(s.possede).some(([k, v]) => v && ACHATS[k]?.prix > 5)]]],
-  ['argent', 'Argent', 'argent', [['banque', 'Banque et épargne', toujours], ['invest', 'Investir', (s) => s.jour >= 14 || !!s.fin?.pea || !!s.fin?.av]]],
-  ['savoir', 'Savoir', 'savoir', [['principes', 'Encyclopédie', toujours], ['combos', 'Combos', (s) => Object.keys(s.combos || {}).length > 0 || s.jour >= 30], ['glossaire', 'Glossaire', (s) => s.jour >= 5], ['journal', 'Journal', (s) => s.jour >= 1], ['aide', 'Aide', toujours]]],
-  ['bilan', 'Bilan', 'bilan', [['resume', 'Où en es-tu ?', toujours], ['factures', 'Factures', (s) => s.factures.length > 0], ['graphes', 'Graphiques', toujours]]],
+  ['argent', 'Argent', 'argent', [['budget', 'Budget et plaisirs', toujours], ['banque', 'Banque et épargne', toujours], ['invest', 'Investir', (s) => s.jour >= 14 || !!s.fin?.pea || !!s.fin?.av]]],
+  ['bilan', 'Bilan', 'bilan', [['resume', 'Où en es-tu ?', toujours], ['factures', 'Factures', (s) => s.factures.length > 0], ['graphes', 'Graphiques', toujours], ['principes', 'Encyclopédie', toujours], ['combos', 'Combos', (s) => Object.keys(s.combos || {}).length > 0 || s.jour >= 30], ['glossaire', 'Glossaire', (s) => s.jour >= 5], ['journal', 'Journal', (s) => s.jour >= 1], ['aide', 'Aide', toujours]]],
 ];
 export const sectionDe = (onglet) => SECTIONS.find(x => x[3].some(y => y[0] === onglet))?.[0] || 'maison';
 const sousVisibles = (s, sec) => SECTIONS.find(x => x[0] === sec)[3].filter(([, , v]) => v(s));
 const nouveau = (s, id) => !prefs.vus.includes(id);
 
-export function ouvrir(onglet) { etatUI.onglet = onglet; etatUI.section = sectionDe(onglet); if (!prefs.vus.includes(onglet)) { prefs.vus.push(onglet); sauverPrefs(); } if (onglet === 'principes') { prefs.principesVus = -1; } }
+export function ouvrir(onglet) { etatUI.onglet = onglet; if (onglet === 'tableau') choisirVue('tableau'); etatUI.section = sectionDe(onglet); if (!prefs.vus.includes(onglet)) { prefs.vus.push(onglet); sauverPrefs(); } if (onglet === 'principes') { prefs.principesVus = -1; } }
 export function ouvrirSection(s, sec) {
   const subs = sousVisibles(s, sec);
   const der = etatUI.dernier?.[sec];
@@ -58,11 +58,12 @@ export function rendreNavigation(s) {
   if (!etatUI.section) etatUI.section = sectionDe(etatUI.onglet);
   if (prefs.principesVus === -1) { prefs.principesVus = s.principes.length; sauverPrefs(); }
   const sec = etatUI.section = sectionDe(etatUI.onglet);
+  document.body.dataset.section = sec;
   (etatUI.dernier ||= {})[sec] = etatUI.onglet;
   const nouvPrincipes = Math.max(0, s.principes.length - (prefs.principesVus || 0));
   $('sections').innerHTML = SECTIONS.map(([id, nom, ic, subs]) => {
-    const n = subs.filter(([sid, , v]) => v(s) && nouveau(s, sid)).length + (id === 'savoir' ? Math.min(9, nouvPrincipes) : 0);
-    return `<button role="tab" data-section="${id}" aria-selected="${id === sec}" aria-label="${nom}${n ? `, ${n} nouveauté${n > 1 ? 's' : ''}` : ''}">${icone(ic, 22)}<span>${nom}</span>${n ? `<span class="badge ${id === 'savoir' && nouvPrincipes ? '' : 'nouveau'}">${n}</span>` : ''}</button>`;
+    const n = subs.filter(([sid, , v]) => v(s) && nouveau(s, sid)).length + (id === 'bilan' ? Math.min(9, nouvPrincipes) : 0);
+    return `<button role="tab" data-section="${id}" aria-selected="${id === sec}" aria-label="${nom}${n ? `, ${n} nouveauté${n > 1 ? 's' : ''}` : ''}">${icone(ic, 22)}<span>${nom}</span>${n ? `<span class="badge ${id === 'bilan' && nouvPrincipes ? '' : 'nouveau'}">${n}</span>` : ''}</button>`;
   }).join('');
   $('onglets').innerHTML = sousVisibles(s, sec).map(([id, nom]) => `<button role="tab" data-onglet="${id}" aria-selected="${id === etatUI.onglet}">${nom}${nouveau(s, id) ? '<span class="badge nouveau">nouveau</span>' : ''}${id === 'principes' && nouvPrincipes ? `<span class="badge">+${nouvPrincipes}</span>` : ''}</button>`).join('');
   if (!prefs.vus.includes(etatUI.onglet)) { prefs.vus.push(etatUI.onglet); sauverPrefs(); }
@@ -234,7 +235,8 @@ export function apercuConsigne(s, piece, avant, apres) {
   const d = s.dernierJour; if (!d || avant === apres) return '';
   const base = piece ? d.eur[piece] || 0 : ORDRE_PIECES.reduce((t, p) => t + (d.eur[p] || 0), 0);
   const delta = (apres - avant) * 0.07 * base;
-  return `Aperçu : ${apres > avant ? '+' : '−'}${Math.abs(apres - avant)} °C ${piece ? `dans ${PIECES[piece].nom.toLowerCase()}` : 'partout'} ≈ ${eurJ(delta)} sur le chauffage, confort ${apres > avant ? '▲' : '▼'}. (Chaque degré ≈ 7 % du chauffage, ADEME.)`;
+  const mois = delta * 30.4;
+  return `Impact estimé : ${apres > avant ? '+' : '−'}${Math.abs(apres - avant)} °C ${piece ? `dans ${PIECES[piece].nom.toLowerCase()}` : 'partout'} ≈ ${eurJ(delta)}, soit ${mois >= 0 ? '+' : '−'}${Math.abs(mois).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €/mois sur le chauffage, confort ${apres > avant ? '▲' : '▼'}. (Calculé sur ton chauffage réel d'hier ; chaque degré ≈ 7 %, ADEME.)`;
 }
 
 // ---------------------------------------------------------------- tutoriel (coach marks)
@@ -250,7 +252,7 @@ const ETAPES = [
   { sel: '#thermostats', avant: () => ouvrir('maison'), titre: 'Le chauffage', texte: 'Baisse la consigne de nuit à 16 °C : sous la couette, on dort mieux au frais, et chaque degré en moins économise environ 7 %.', fait: (s) => (s.possede.robinets ? s.pieces.chambre.consigneNuit : s.central.consigneNuit) <= 16 },
   { sel: '#btnJour', titre: 'Fais avancer le temps', texte: 'Passe au jour suivant. Un message te montrera ce que ta journée a coûté.', fait: (s) => s.jour >= 1 },
   { sel: '.temps-int', titre: 'Avancer plus vite', texte: 'Semaine, mois ou jusqu\'au prochain événement : le jeu s\'arrête de lui-même sur chaque choix important.' },
-  { sel: '[data-section="savoir"]', titre: 'Ce que tu apprends', texte: 'Chaque découverte devient un principe dans l\'encyclopédie, et le glossaire explique chaque terme.' },
+  { sel: '[data-section="bilan"]', titre: 'Ce que tu apprends', texte: 'Dans Bilan : tes résultats, et chaque découverte devenue un principe dans l\'encyclopédie ; le glossaire explique chaque terme.' },
   { sel: '#btnAide', titre: 'C\'est parti !', texte: 'Tu peux rejouer ce tutoriel à tout moment avec ce bouton. La page « Comment jouer » (Savoir › Aide) résume les règles et les raccourcis. Bon hiver !' },
 ];
 const coach = { actif: false, i: 0 };

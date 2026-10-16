@@ -27,7 +27,7 @@ const clic = async (p, sel) => { try { await p.click(sel, { timeout: 2000 }); re
     await clic(p, '.tb-reco [data-aller]'); await p.waitForTimeout(300);
     console.log('Y aller → onglet', await p.evaluate(() => document.querySelector('#onglets [aria-selected="true"]')?.dataset.onglet));
     // réabonnement
-    await clic(p, '[data-section="vie"]'); await clic(p, '[data-onglet="budget"]');
+    await clic(p, '[data-section="maison"]'); await clic(p, '[data-onglet="budget"]');
     await clic(p, '[data-action="resilier"][data-v="streaming"]'); await p.waitForTimeout(200);
     await p.evaluate(() => document.querySelector('[data-action="reabonner"]')?.scrollIntoView({ block: 'center' }));
     await p.screenshot({ path: `${out}/fix_reabonner.png` });

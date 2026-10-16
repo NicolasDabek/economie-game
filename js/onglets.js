@@ -21,7 +21,7 @@ export const ONGLETS = [
   ['banque', '🏦 Banque', []],
   ['invest', '📈 Investissement', []],
 ];
-export const etatUI = { onglet: 'maison', roiTri: 'ratio', roiSens: -1, filtrePrincipes: 'tous', principeOuvert: null };
+export const etatUI = { onglet: 'tableau', roiTri: 'ratio', roiSens: -1, filtrePrincipes: 'tous', principeOuvert: null };
 
 // bouton de choix générique : modifie un chemin de l'état (ex. "sys.ballon.consigne")
 export const choixSet = (chemin, opts, val) => `<span class="choix">${opts.map(([v, l, off]) => `<button data-set="${chemin}" data-v="${v}" class="${String(v) === String(val) ? 'actif' : ''}" ${off ? 'disabled' : ''}>${l}</button>`).join('')}</span>`;

@@ -203,6 +203,7 @@ document.addEventListener('click', (e) => {
   else if (d.reparer) reparerMachine(s, d.reparer);
   else if (d.dilemme) { resoudreDilemme(s, d.dilemme); autoSauvegarde(); }
   else if (b.id === 'btnLessive') planifierLessive(s, options.lessive);
+  else if (b.id === 'btnPlusTemps') { const t = b.closest('.temps'); t.classList.toggle('ouvert'); b.setAttribute('aria-expanded', t.classList.contains('ouvert')); return; }
   else if (b.id === 'btnJour') return avancer(1);
   else if (b.id === 'btnSemaine') return avancer(7);
   else if (b.id === 'btnMois') return avancerVite(30, false);
@@ -256,7 +257,7 @@ document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'j') avancer(1); else if (k === 's') avancer(7); else if (k === 'm') avancerVite(30, false); else if (k === 'e') avancerVite(400, true);
   else if (k === 't') { choisirVue(prefs.vue === 'maison' ? 'tableau' : 'maison'); rendreTout(s); }
-  else if ('123456'.includes(k) && k) { ouvrirSection(s, ['maison', 'vie', 'achats', 'argent', 'savoir', 'bilan'][Number(k) - 1]); rendreTout(s); }
+  else if ('12345'.includes(k) && k) { ouvrirSection(s, ['accueil', 'maison', 'achats', 'argent', 'bilan'][Number(k) - 1]); rendreTout(s); }
 });
 document.addEventListener('click', (e) => {
   const g = e.target.closest?.('[data-piece-clic]'); if (!g) return;
