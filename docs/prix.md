@@ -406,3 +406,28 @@ Ces montants ont leurs lignes dans le score :
 - Santé (reste à charge).
 - Logement (moisissures).
 - Revenus perdus (carence, arrêts, augmentations manquées).
+
+## Autosuffisance (v1.1, vérifié le 15-16 octobre 2026)
+
+| Élément | Valeur dans le jeu | Fourchette relevée | Source |
+|---|---|---|---|
+| Bois de chauffage sec, livré | 95 €/stère (vert 70 €) | médiane ~80 €/stère ; indice CEEB T1 2026 : 89,1 € HT ; 95-130 € TTC livré | La Bonne Stère (oct. 2026), CEEB / Propellet |
+| Énergie d'un stère | 1 700 kWh, rendement poêle 75 % (55 % bois humide) | 1 400-2 100 kWh selon l'essence, à < 20 % d'humidité | ADEME, « Se chauffer au bois » |
+| Séchage du bois | 720 j (540 j sous abri) | 18 à 24 mois | ADEME, Flamme Verte |
+| Ramonage | 80 €, au moins 1 fois par an | médiane ~80 € ; obligation : CSP R.1331-71 (décret 2023-641), amende jusqu'à 450 €, refus d'indemnisation possible | Ramonia (13/10/2026), Légifrance |
+| Poêle à bois 7 kW posé | 4 500 € | 3 500-5 500 € | Hellowatt, Quelle Énergie 2026 |
+| Ballon thermodynamique 200 L posé | 3 000 € (non RGE 2 600 €) ; COP 3 | 2 000-4 000 € ; COP 2,8-3,8 | ADEME, Effy 2026 |
+| Prime CEE (BAR-TH-148) | 514 € modestes, 294 € autres jusqu'au 31/12/2026, 100 € ensuite | bonification ×7 / ×4 pour les opérations engagées du 01/09 au 31/12/2026 ; base ~74-128 € | arrêté du 25/08/2026, ministère de la Transition écologique |
+| MaPrimeRénov' ballon seul | 0 € | supprimée pour un CET seul depuis le 1er septembre 2026 | France Rénov' |
+| Œuf plein air | 0,40 € | 0,31-0,53 € | RNM / relevés GMS 2026 |
+| Poules : aliment | 130 g/jour à 0,92 €/kg | 120-160 g/jour ; 22,90 € le sac de 25 kg | Gamm Vert, Jardiland 2026 |
+| Poules : ponte | 220 œufs/an, presque rien l'hiver | 200-280 selon la race | ITAVI |
+| Déclaration de basse-cour | 15 min, prévient en cas d'influenza aviaire | obligatoire selon le département (Cerfa 15472) | agriculture.gouv.fr |
+| Toilettes sèches (kit) | 90 €, −30 l/jour | kit 25-300 € ; 10-14 m³/personne/an économisés ; sciure ~2 €/100 l | ADEME, Toilettes du Monde |
+| Oyas | 85 € les 4 (occasion 10 €), −60 % d'arrosage | 19-40 € pièce | Jardiland, Oyas.fr |
+| Lombricomposteur | 75 € (occasion 15 €) | 75-145 € | Lombritek, Gamm Vert |
+| Bokashi | 55 € | 50-90 € | Botanic, Leroy Merlin |
+| Stérilisateur + bocaux | 95 € (occasion 40 €) | 59,90-183,99 € | Darty, Le Parfait |
+| Tomate / courgette (prix de référence) | 3,00 € / 2,30 €/kg | 3,06 € / 2,27 €/kg (septembre 2026) | RNM FranceAgriMer |
+| Rendements potager | tomate 6, courgette 5, pdt 3, carotte 4 kg/m² | 3-8 kg/m² selon culture et savoir-faire | Rustica, SNHF |
+| Arrêté sécheresse | 60 % des étés, 20-40 jours | arrêtés sur une majorité de départements chaque été depuis 2022 | Propluvia |

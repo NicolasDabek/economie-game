@@ -163,3 +163,27 @@ Un quartier avec quelques voisins : prêt d'outils (perceuse partagée), troc de
 - Une découverte instrument (thermomètre) qui révèle la pièce la plus coûteuse.
 - Score final avec titre.
 - Toutes les dépendances vendorisées dans le repo, aucun CDN.
+
+## 7. Où vit chaque idée d'autosuffisance (v1.1)
+
+Pas de nouvel onglet : chaque idée est rangée là où le joueur la cherche déjà, et réutilise les mécanismes existants (rentabilité mesurée, habitudes, combos, principes, alertes du tableau de bord).
+
+| Idée | Où | Mécanisme réutilisé |
+|---|---|---|
+| 1. Potager par planches, rotation, associations | Jardin (remplace le « petit potager » générique ; l'agrandissement ajoute 4 planches) | geste `jardiner`, ROI du potager, principe `rotation` |
+| 2. Calendrier semis/récoltes/cueillette | Jardin + alertes du tableau de bord | fenêtres de semis, vraie météo (gel tardif), principe `calendrier` |
+| 3. Garde-manger (kg, péremption, argent immobilisé) | Cuisine | gaspillage, principe `stockImmobilise` |
+| 4. Bocaux stérilisés | Cuisine › garde-manger | facture d'électricité, risque botulisme, principes `conserver`, `douteJeter` |
+| 5. Lactofermentation | Cuisine › garde-manger | santé, principe `lacto`, combo `chouLacto` |
+| 6. Poêle à bois, bois sec, ramonage | Maison (au-dessus de l'été et de la ventilation passive) | chaleur injectée dans le salon (le gaz baisse seul), poste « bois » du domaine Chauffage, habitude `feuBois` |
+| 7. Poules et boucle épluchures → compost | Jardin | habitude `poules`, dilemme des vacances, combo `boucleFlux` (principe `cycles`) |
+| 8. Cueillette sauvage | Jardin | action de temps libre, guide et pharmacie, principe `cueillette` |
+| 9. Taux d'autosuffisance et titres | Tableau de bord (carte) + bilan de fin | séparé du rang d'économies |
+| 10. Paillage, oyas, goutte-à-goutte, arrêté sécheresse | Jardin › eau du jardin | cuve de pluie, facture d'eau, principe `solCouvert` |
+| 11. Pain au levain | Cuisine (3e option de pain) | habitude `levain`, combo `levainChaleur` |
+| 12. Lombricomposteur, bokashi | Jardin › compost (fusionné avec le composteur : le meilleur des deux compte, le bokashi ajoute 5 %) | facteur compost, ROI |
+| 13. Toilettes sèches | Eau chaude (boutique « Eau ») | habitude `toilettesSeches`, hygiène ressentie au début |
+| 14. Cave et silo à racines | Jardin + durée de garde du garde-manger | combo `siloCave` avec la cave du puits canadien |
+| 15. Ballon thermodynamique, CEE, MaPrimeRénov' | Eau chaude | COP sur le ballon, prime versée après 60 jours, principe `aidesAvant` |
+
+Le conseiller n'a pas appris ces systèmes : ils restent un terrain où le joueur attentif fait mieux que le débutant guidé.

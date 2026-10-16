@@ -1,13 +1,13 @@
 {
   "name": "economie-game",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Jeu de gestion en français : dépenser moins que le voisin sans s'abîmer, prix réels 2026",
   "private": true,
   "type": "module",
   "author": "Nicolas Dabek",
   "repository": "github:NicolasDabek/economie-game",
   "scripts": {
-    "test": "node test/sim-test.mjs && node test/finance-test.mjs && node test/passif-test.mjs && node test/regression-test.mjs && node test/reco-test.mjs && node test/sauvegarde-test.mjs && node test/coherence-test.mjs",
+    "test": "node test/sim-test.mjs && node test/finance-test.mjs && node test/passif-test.mjs && node test/regression-test.mjs && node test/reco-test.mjs && node test/sauvegarde-test.mjs && node test/coherence-test.mjs && node test/autonomie-test.mjs",
     "test:navigateur": "node test/navigateur.cjs && node test/captures-fix.cjs && node test/playtest.cjs 1 && node test/audit.cjs",
     "serve": "python3 -m http.server 8000"
   }

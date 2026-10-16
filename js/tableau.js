@@ -10,6 +10,7 @@ import { valeurs } from './finance.js';
 import { tableauROI, estimationAchat } from './roi.js';
 import { palierMoral, palierBE } from './paliers.js';
 import { arbitrer, PROTEGE } from './arbitre.js';
+import { carteAutosuffisance, alertesAutonomie } from './onglets-autonomie.js';
 // postes qui nourrissent une jauge : on ne les coupe pas quand cette jauge est basse
 export const SOURCES = { plaisirs: ['volonte', 'bienetre'], services: ['volonte', 'bienetre'], abonnements: ['volonte', 'bienetre'], alim: ['bienetre'], chauffage: ['sante', 'confort'], eauChaude: ['hygiene'], linge: ['hygiene'] };
 const valJ = (s, g) => g === 'volonte' ? s.volonte : g === 'confort' ? s.confort : s[g];
@@ -21,7 +22,7 @@ export function postes(s) {
   const elecMoi = d.elec - (d.climEur || 0) - (d.appointEur || 0) - (d.eauChaudeEur || 0);
   const elecVoisin = b.elec - (b.clim || 0) - (b.eauChaude || 0);
   return [
-    ['chauffage', 'Chauffage', d.gaz + (d.appointEur || 0), b.gaz, 'maison'],
+    ['chauffage', 'Chauffage', d.gaz + (d.appointEur || 0) + (d.bois || 0), b.gaz, 'maison'],
     ['eauChaude', 'Eau chaude', d.eauChaudeEur || 0, b.eauChaude || 0, 'eau'],
     ['eau', 'Eau', d.eau, b.eau, 'eau'],
     ['alim', 'Alimentation', d.nourriture, b.nourriture || 0, 'cuisine'],
@@ -258,6 +259,7 @@ export function alertes(s) {
   const f = s.fin;
   if (f?.pea) { const ans = (f.cal - f.pea.ouvert) / 365; if (ans >= 4.75 && ans < 5) A.push(['ok', `📈 Ton PEA aura 5 ans dans ${Math.ceil((5 - ans) * 365)} j : retraits sans impôt sur le revenu.`, 'invest']); }
   if (f?.pel) { const ans = (f.cal - f.pel.ouvert) / 365; if (ans >= 1.85 && ans < 2) A.push(['ok', `🏠 Ton PEL aura 2 ans dans ${Math.ceil((2 - ans) * 365)} j : intérêts acquis.`, 'banque']); }
+  for (const a of alertesAutonomie(s)) A.push(['warn', a.t, a.aller]);
   A.push(['info', `📄 Prochaine facture d'énergie dans ${s.jour % 7 === 0 ? 7 : 7 - s.jour % 7} j (en cours : ${eur(s.factureSemaine || 0)}).`, 'factures']);
   return A;
 }
@@ -341,5 +343,6 @@ export function rendreTableau(s, etat = {}) {
   const conseilJ = (p) => p.tempo === 'rouge' ? 'Tempo rouge : rien de gourmand' : p.nuage < 0.35 && s.possede.solaire ? 'Soleil : lessive et ballon à midi' : p.nuage < 0.35 ? 'Soleil : séchage dehors, rideaux ouverts' : p.tMin <= 0 ? 'Gel : couches et rideaux fermés le soir' : p.tMax >= 30 ? 'Chaleur : volets fermés le jour' : 'Journée ordinaire';
   const prev = `<div class="tb-carte"><h3>Les 3 prochains jours</h3><div class="tb-prev">${pv.map((p, k) => `<div><b>${JS[dateDuJour(s.jour + k + 1).getUTCDay()]}</b><span>${p.icone} ${p.tMin}…${p.tMax} °C</span><small>${p.libelle}${p.tempo ? ` · Tempo ${p.tempo}` : ''}</small><small class="conseil-j">${conseilJ(p)}</small></div>`).join('')}</div></div>`;
 
-  return `<div class="tb">${situation}${recos}${jauges}${alertesH}${depenses}${progres}${rent}${prev}</div>`;
+  const autosuf = s.possede.potager || s.possede.poele || s.possede.solaire || s.possede.cuve || s.possede.poules ? carteAutosuffisance(s).replace('class="carte autosuf"', 'class="tb-carte autosuf"') : '';
+  return `<div class="tb">${situation}${recos}${jauges}${alertesH}${autosuf}${depenses}${progres}${rent}${prev}</div>`;
 }

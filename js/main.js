@@ -16,6 +16,7 @@ import { etatFin } from './ui-finance.js';
 import { changerProfil, deposer, retirer, ouvrirAV, projection } from './finance.js';
 import { actions, prendreTemps, payer } from './simulation.js';
 import { viderRegard, changerFiltre, reprendrePente } from './passif.js';
+import { actionAutonomie } from './autonomie.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from './transport.js';
 import { changerTarif, faireReleves, resilier, reabonner, renegocier, revendre, degivrer, prendreMediatheque } from './systemes.js';
 
@@ -103,7 +104,7 @@ async function avancer(nbJours) {
 let avantCurseur = null;
 document.addEventListener('pointerdown', (e) => { if (e.target.type === 'range') avantCurseur = cliche(); });
 document.addEventListener('focusin', (e) => { if (e.target.type === 'range') avantCurseur = cliche(); });
-document.addEventListener('change', (e) => { const t = e.target; if (t.type === 'range' && avantCurseur && avantCurseur !== cliche()) { empiler(avantCurseur, `${t.getAttribute('aria-label') || 'Curseur'} → ${t.value} °C`); avantCurseur = cliche(); } });
+document.addEventListener('change', (e) => { const t = e.target; if (t.dataset.setSelect) { const av = cliche(); regler(t.dataset.setSelect, t.value); empiler(av, `${t.getAttribute('aria-label')} → ${t.selectedOptions[0].textContent}`); rafraichir(s.messages.length); return; } if (t.type === 'range' && avantCurseur && avantCurseur !== cliche()) { empiler(avantCurseur, `${t.getAttribute('aria-label') || 'Curseur'} → ${t.value} °C`); avantCurseur = cliche(); } });
 document.addEventListener('input', (e) => {
   const t = e.target;
   const lab = (v) => (v <= 8 ? 'Arrêt' : v + ' °C');
@@ -182,6 +183,7 @@ document.addEventListener('click', (e) => {
     autoSauvegarde();
   }
   else if (d.set) regler(d.set, d.v);
+  else if (d.autonomie) { const c = actions(s); if (actionAutonomie(s, d.autonomie, d.v, { prendreTemps, payer, msg: c.msg, debloquer: c.debloquer })) autoSauvegarde(); else if (s.messages.length === n) toast('Pas possible maintenant (temps libre, argent ou saison).'); }
   else if (d.action) {
     const c = actions(s);
     ({ tarif: () => changerTarif(s, d.v, c), releves: () => faireReleves(s, c), resilier: () => resilier(s, d.v, c), reabonner: () => reabonner(s, d.v, c), renegocier: () => renegocier(s, c),

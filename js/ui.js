@@ -1,6 +1,7 @@
 // Rendu de l'interface (DOM uniquement, aucune règle de jeu ici)
 import { PIECES, ORDRE_PIECES, VETEMENTS, ACHATS, PRINCIPES, PRIX, LESSIVE, SEUIL_ENCOMBREMENT, ARGENT_DEPART } from './data.js';
 import { prevision, chapitreDuJour } from './meteo.js';
+import { rendrePoele } from './onglets-autonomie.js';
 import { ONGLETS, etatUI, rendreEte, rendrePassif, rendreEau, rendreCuisine, rendreElec, rendreJardin, rendreBudget, rendreTransport, rendreEncyclopedie, rendreCombos, tagGeste } from './onglets.js';
 import { tableauROI, estimationAchat } from './roi.js';
 import { rendreBanque, rendreInvest, tauxTxt } from './ui-finance.js';
@@ -427,7 +428,7 @@ export function rendreOnglets(s) {
   rendreNavigation(s);
   const o = etatUI.onglet, panneau = o.startsWith('b-') ? 'boutique' : o;
   document.querySelectorAll('.panneau').forEach(p => p.classList.toggle('cache', p.dataset.panneau !== panneau));
-  if (o === 'maison') { rendreChauffage(s); rendreGestes(s); $('ete').innerHTML = rendreEte(s) + rendrePassif(s); }
+  if (o === 'maison') { rendreChauffage(s); rendreGestes(s); $('ete').innerHTML = rendrePoele(s, tagGeste) + rendreEte(s) + rendrePassif(s); }
   if (o === 'linge') rendreVetements(s);
   if (o === 'eau') $('pEau').innerHTML = rendreEau(s);
   if (o === 'cuisine') $('pCuisine').innerHTML = rendreCuisine(s);

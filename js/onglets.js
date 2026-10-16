@@ -6,11 +6,12 @@ import { modePossible, coutKm, tempsTransport } from './transport.js';
 import { contenantPossible, newton } from './combos.js';
 import { hasCheminee, typePuits, tSol, jourAn } from './passif.js';
 import { PASSIF } from './data.js';
+import { rendreJardinAutonomie, rendreGardeManger, rendreEauAutonomie } from './onglets-autonomie.js';
 
 const num = (x, d = 1) => x.toFixed(d).replace('.', ',');
 export const ONGLETS = [
   ['maison', '🏠 Maison', ['Instruments', 'Isolation', 'Chauffage', 'Confort', 'Été', 'Ventilation passive']],
-  ['eau', '🚿 Eau chaude', ['Eau chaude']],
+  ['eau', '🚿 Eau chaude', ['Eau chaude', 'Eau']],
   ['cuisine', '🍳 Cuisine', ['Cuisine', 'Cuisine solaire']],
   ['linge', '👕 Linge', []],
   ['elec', '⚡ Électricité', ['Électricité', 'Production']],
@@ -71,6 +72,7 @@ export function rendreEau(s) {
   }
   h += ligne('Fréquence', choixSet('sys.douche.frequence', [['quotidienne', 'Chaque jour'], ['unJourSurDeux', 'Un jour sur deux']], d.frequence));
   h += aide(`Pommeau : ${s.possede.pommeau ? DOUCHE.debitEco : DOUCHE.debitVieux} l/min. La douche au seau économise beaucoup… mais l'hygiène et le bien-être en pâtissent. Une douche trop courte ou trop rare fait baisser l'hygiène.`);
+  h += rendreEauAutonomie(s);
   return h;
 }
 
@@ -80,7 +82,8 @@ export function rendreCuisine(s) {
   if (y.regime === 'batch' && !s.possede.boites) h += aide('⚠️ Sans boîtes de conservation, le batch prend plus de temps (+25 min/jour).');
   h += ligne('Vaisselle', choixSet('sys.vaisselle', Object.entries(VAISSELLE).map(([k, v]) => [k, v.nom]), y.vaisselle));
   if (y.vaisselle.startsWith('lv')) h += ligne('Lave-vaisselle', ouiNon('sys.vaisselleHC', y.vaisselleHC, 'Départ différé en HC', 'Après le repas'));
-  h += ligne('Pain', choixSet('sys.pain', [['baguette', `Baguette (${eur(CUISINE.painBaguette)})`], ['maison', `Pain maison (${eur(CUISINE.painMaison)} + 15 min)`]], y.pain));
+  h += ligne('Pain', choixSet('sys.pain', [['baguette', `Baguette (${eur(CUISINE.painBaguette)})`], ['maison', `Pain maison (${eur(CUISINE.painMaison)} + 15 min)`], ['levain', `Au levain (${eur(CUISINE.painMaison - 0.1)} + 6 min)`]], y.pain) + (y.pain === 'levain' ? ' ' + tagGeste(s, 'levain') : ''));
+  if (y.pain === 'levain') h += aide('Le levain se nourrit chaque jour (farine et eau) : pas de levure à acheter, un pain qui se garde. Cuit au four pendant le chauffage du soir, sa chaleur n\'est pas perdue. Oublié trop longtemps, il meurt.');
   h += ligne('Courses', ouiNon('sys.liste', y.liste, 'Liste et menu des restes', 'Au feeling') + (' ' + tagGeste(s, 'liste')));
   h += ligne('Prix', ouiNon('sys.prixKiloGeste', y.prixKiloGeste, 'Comparer au kilo', 'Prix affiché') + (' ' + tagGeste(s, 'prixKilo')));
   h += ligne('Vrac', ouiNon('sys.vrac', y.vrac, 'Acheter en vrac', 'Paquets'));
@@ -90,6 +93,7 @@ export function rendreCuisine(s) {
   h += `<h3>🧊 Frigo</h3>` + ligne('Réglage', choixSet('sys.frigo.reglage', [[2, 'Très froid (1-2 °C)'], [4, '4 °C (conseillé)']], y.frigo.reglage));
   h += ligne('Plats chauds', ouiNon('sys.frigoGeste', y.frigoGeste, 'Laisser refroidir avant', 'Directement au frigo') + (' ' + tagGeste(s, 'frigo')));
   h += ligne('Givre', `<span>${Math.round(y.frigo.givre * 100)} %</span> <button class="btn" data-action="degivrer" ${y.frigo.givre < 0.1 ? 'disabled' : ''}>Dégivrer (1 h)</button>`);
+  h += rendreGardeManger(s);
   h += aide('Un quart d\'heure de cuisine en plus par jour peut économiser plus que n\'importe quel équipement : les courses sont le premier poste. Mais « pâtes et riz » à tous les repas ruine le bien-être et la santé.');
   return h;
 }
@@ -108,13 +112,10 @@ export function rendreElec(s) {
 }
 
 export function rendreJardin(s) {
-  const y = s.sys, chap = chapitreDuJour(Math.min(s.jour, (s.joursTotal || 365) - 1)).id;
   let h = '';
-  if (!s.possede.potager && !s.possede.herbes) h += aide('Un petit potager (tomates, courgettes, salades) et des herbes aromatiques réduisent les courses à partir du printemps. Il faut ~3 semaines avant la première récolte et un quart d\'heure par jour.');
-  if (s.possede.potager) h += ligne('Potager', y.potagerDepuis === null ? 'semé dès le printemps' : chap === 'hiver' ? 'en sommeil' : `${s.jour - y.potagerDepuis >= 21 ? '🥗 récoltes en cours' : `🌱 récolte dans ${21 - (s.jour - y.potagerDepuis)} j`} ${tagGeste(s, 'jardiner')}`);
-  if (s.possede.cuve) h += ligne('Cuve de pluie', `💧 ${Math.round(y.pluie)} L en réserve`);
-  if (s.possede.composteur) h += ligne('Compost', 'épluchures compostées : moins de sacs poubelle, engrais gratuit');
-  return h || aide('Rien au jardin pour l\'instant.');
+  if (!s.possede.potager && !s.possede.herbes) h += aide('Un potager et des herbes aromatiques réduisent les courses à partir du printemps.');
+  if (s.possede.herbes) h += ligne('Herbes aromatiques', 'sur le rebord de la fenêtre');
+  return h + rendreJardinAutonomie(s, tagGeste);
 }
 
 export function rendreBudget(s) {

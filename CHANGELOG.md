@@ -2,6 +2,31 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.1.0] — 16 octobre 2026
+
+L'autosuffisance : 15 idées rangées dans les onglets existants (voir `docs/conception.md` §7), chiffres sourcés dans `docs/prix.md`.
+
+### Ajouté
+- **Jardin** : le petit potager devient 4 planches de 2 m² (8 avec l'agrandissement) avec un plan conseillé ; 10 cultures, fenêtres de semis, rotation des familles (−20 %), bons voisins (+10 %), gel tardif tiré de la vraie météo, semis précoce optionnel.
+- **Eau du jardin** : arrosage au m² cultivé, paillage (feuilles mortes gratuites à l'automne), oyas, goutte-à-goutte sur la cuve, arrêtés sécheresse annoncés.
+- **Compost fusionné** : composteur, lombricomposteur et bokashi agissent sur un seul facteur.
+- **Poules** : œufs saisonniers, aliment réduit par les épluchures, renard sans grillage, déclaration en mairie (influenza aviaire), vacances chez le voisin.
+- **Cueillette sauvage** : six espèces de saison, risque de confusion réduit par un guide et la pharmacie.
+- **Cuisine › Garde-manger** : stock en kg avec péremption (le premier qui périme part d'abord), argent immobilisé, bocaux stérilisés (risque de botulisme, « dans le doute on jette »), lactofermentation, achats de saison, silo à racines (et cave du puits canadien).
+- **Pain au levain** (habitude), avec combo de chaleur du four en hiver.
+- **Maison › Poêle à bois** : chaleur réelle dans le salon, bois sec ou vert à faire sécher, encrassement, ramonage obligatoire et assurance, feu de cheminée. Nouveau poste « bois » dans le domaine Chauffage.
+- **Eau chaude** : ballon thermodynamique (COP 3), prime CEE bonifiée jusqu'au 31/12/2026 à demander avant le devis, piège de l'artisan non RGE, fin de MaPrimeRénov' pour ce geste ; toilettes sèches.
+- **Tableau de bord** : carte « Autosuffisance » (alimentation, eau, chaleur, électricité, titre) séparée du score d'économies ; alertes de semis, de péremption, de sécheresse, de bois humide, de ramonage et de prime.
+- 13 principes, 6 combos, 4 habitudes, 15 équipements.
+- Test `autonomie-test`.
+
+### Équilibre
+- Le conseiller ne connaît pas ces systèmes : le débutant guidé reste sous le malin, le maître les exploite.
+- Moral moyen du maître toléré jusqu'à 68 (poules, cueillette et levain font du bien).
+
+### Sauvegarde
+- Version 9. Une partie v1.0 est migrée : un potager déjà acheté reçoit le plan conseillé.
+
 ## [1.0.0] — 15 octobre 2026
 
 Première version stable. Elle se concentre sur la fiabilité, la cohérence des chiffres et la prise en main.

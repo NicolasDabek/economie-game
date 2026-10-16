@@ -341,3 +341,12 @@ kbd{display:inline-block;min-width:1.6em;text-align:center;padding:1px 6px;borde
 .panneau table{display:block;max-width:100%;overflow-x:auto}
 .objectif button.lien{min-height:24px;padding:2px 0}
 .lien{min-height:24px}
+
+/* v1.1 : autosuffisance */
+.autosuf .auto-l { display: grid; grid-template-columns: 9.5em 1fr 3em; align-items: center; gap: .5em; margin: .25em 0; }
+.autosuf .auto-b { height: .7em; background: var(--surface2); border-radius: 1em; overflow: hidden; }
+.autosuf .auto-b i { display: block; height: 100%; background: var(--ok, #0e7434); }
+.autosuf b { text-align: right; }
+table.planches select { min-height: 32px; max-width: 11em; }
+table.planches td.d { font-size: .85em; }
+.alerte-ligne { color: var(--mal, #b91c1c); font-weight: 600; }
