@@ -86,7 +86,7 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   // sauvegarde v0.3 : migrée
   await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('economie-game-sauvegarde')); delete o.transport; o.version = 3; localStorage.setItem('economie-game-sauvegarde', JSON.stringify(o)); });
   await p.reload(); await p.click('#btnReprendre'); console.log('migration v3 → v8', await p.evaluate(() => window.__jeu().version), typeof (await p.evaluate(() => window.__jeu().transport.mode)));
-  await p.click('#btnSauver'); await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('economie-game-sauvegarde')); delete o.fin; o.version = 4; localStorage.setItem('economie-game-sauvegarde', JSON.stringify(o)); });
+  await p.click('#btnMenu'); await p.click('#btnSauver'); await p.evaluate(() => { const o = JSON.parse(localStorage.getItem('economie-game-sauvegarde')); delete o.fin; o.version = 4; localStorage.setItem('economie-game-sauvegarde', JSON.stringify(o)); });
   await p.reload(); await p.click('#btnReprendre'); console.log('migration v4 → v8', await p.evaluate(() => window.__jeu().version), await p.evaluate(() => window.__jeu().fin.livrets.livretA.solde));
   await go('banque'); await go('invest'); await p.click('#btnJour'); await p.waitForTimeout(1500);
   const v5 = fs.readFileSync(path.join(__dirname, 'sauvegarde-v5.json'), 'utf8');

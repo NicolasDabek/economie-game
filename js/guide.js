@@ -253,7 +253,7 @@ const ETAPES = [
   { sel: '#btnJour', titre: 'Fais avancer le temps', texte: 'Passe au jour suivant. Un message te montrera ce que ta journée a coûté.', fait: (s) => s.jour >= 1 },
   { sel: '.temps-int', titre: 'Avancer plus vite', texte: 'Semaine, mois ou jusqu\'au prochain événement : le jeu s\'arrête de lui-même sur chaque choix important.' },
   { sel: '[data-section="bilan"]', titre: 'Ce que tu apprends', texte: 'Dans Bilan : tes résultats, et chaque découverte devenue un principe dans l\'encyclopédie ; le glossaire explique chaque terme.' },
-  { sel: '#btnAide', titre: 'C\'est parti !', texte: 'Tu peux rejouer ce tutoriel à tout moment avec ce bouton. La page « Comment jouer » (Savoir › Aide) résume les règles et les raccourcis. Bon hiver !' },
+  { sel: '#btnMenu', titre: 'C\'est parti !', texte: 'Le menu ⋯ permet d\'annuler un réglage, de sauvegarder, de changer de thème et de rejouer ce tutoriel. La page « Comment jouer » (Savoir › Aide) résume les règles et les raccourcis. Bon hiver !' },
 ];
 const coach = { actif: false, i: 0 };
 export const coachActif = () => coach.actif;

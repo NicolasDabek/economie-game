@@ -27,14 +27,20 @@
     <div class="tb-date"><span id="astre" aria-hidden="true">☀️</span> <span id="date" aria-live="polite">—</span> <span id="heure" class="heure">7 h</span></div>
   </div>
   <div id="jauges" class="jauges" role="list" aria-label="Jauges"></div>
-  <div class="menu" role="toolbar" aria-label="Partie">
-    <button class="btn-icone" id="btnAnnuler" aria-label="Annuler le dernier réglage (Ctrl+Z)" data-tip="Annuler le dernier réglage (Ctrl+Z)" disabled></button>
-    <button class="btn-icone" id="btnReglages" aria-label="Réglages et raccourcis" data-tip="Réglages et raccourcis"></button>
-    <button class="btn-icone" id="btnAide" aria-label="Rejouer le tutoriel" data-tip="Rejouer le tutoriel"></button>
-    <button class="btn-icone" id="btnTheme" aria-label="Thème clair ou sombre" data-tip="Thème clair / sombre"></button>
-    <button class="btn-icone" id="btnSauver" aria-label="Sauvegarder" data-tip="Sauvegarder"></button>
-    <button class="btn-icone" id="btnCharger" aria-label="Charger" data-tip="Charger la sauvegarde"></button>
-    <button class="btn-icone" id="btnNouvelle" aria-label="Nouvelle partie" data-tip="Nouvelle partie"></button>
+  <div class="menu" aria-label="Partie">
+    <details class="menu-partie" id="menuPartie">
+      <summary id="btnMenu" aria-label="Menu de la partie (annuler, réglages, aide, thème, sauvegarde)"><span aria-hidden="true">⋯</span><span class="lib-menu">Menu</span></summary>
+      <div class="menu-liste">
+        <p class="menu-annee" id="menuAnnee"></p>
+        <button id="btnAnnuler" aria-label="Annuler le dernier réglage (Ctrl+Z)" disabled><span class="m-ico"></span><span>Annuler</span></button>
+        <button id="btnSauver" aria-label="Sauvegarder"><span class="m-ico"></span><span>Sauvegarder</span></button>
+        <button id="btnCharger" aria-label="Charger la sauvegarde"><span class="m-ico"></span><span>Charger la sauvegarde</span></button>
+        <button id="btnTheme" aria-label="Thème clair ou sombre"><span class="m-ico"></span><span>Thème clair / sombre</span></button>
+        <button id="btnReglages" aria-label="Réglages et raccourcis"><span class="m-ico"></span><span>Réglages et raccourcis</span></button>
+        <button id="btnAide" aria-label="Rejouer le tutoriel"><span class="m-ico"></span><span>Rejouer le tutoriel</span></button>
+      </div>
+    </details>
+    <button class="btn-danger" id="btnNouvelle" aria-label="Recommencer une nouvelle partie (demande confirmation)"><span class="m-ico"></span><span>Recommencer</span></button>
   </div>
 </header>
 <div id="annonces" class="annonces cache" role="status"></div>

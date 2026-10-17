@@ -74,7 +74,11 @@ export function rendreJauges(s) {
   const ch = chapitreDuJour(Math.min(s.jour, tot - 1));
   const dt = dateDuJour(Math.min(s.jour, tot - 1)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
   const SAI = { hiver: '❄️ Hiver', printemps: '🌱 Printemps', ete: '☀️ Été', automne: '🍂 Automne' };
-  $('date').textContent = s.fini ? 'Fin de la campagne' : `${dt} · ${SAI[ch.saison] || ch.nom} · année ${anneeDuJour(s.jour) + 1}/${nAns}`;
+  // v1.2.1 : date longue au bureau, courte sur mobile (« mar. 1 déc. · Hiver ») ; l'année de campagne est dans le menu
+  const dc = dateDuJour(Math.min(s.jour, tot - 1)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const sai = SAI[ch.saison] || ch.nom;
+  $('date').innerHTML = s.fini ? 'Fin de la campagne' : `<span class="date-longue">${dt} · ${sai} · année ${anneeDuJour(s.jour) + 1}/${nAns}</span><span class="date-courte">${dc.charAt(0).toUpperCase() + dc.slice(1)} · ${sai.replace(/^\S+ /, '')}</span>`;
+  if ($('menuAnnee')) $('menuAnnee').textContent = s.fini ? 'Campagne terminée' : `Année ${anneeDuJour(s.jour) + 1} sur ${nAns} · jour ${s.jour + 1}`;
   const av = evenementsAVenir(s).filter(e => e.annonce > 0);
   $('annonces').innerHTML = av.map(e => `<span>📅 Dans ${e.jour - s.jour} j : <b>${e.titre}</b>. ${e.texte}</span>`).join('');
   $('annonces').classList.toggle('cache', !av.length);

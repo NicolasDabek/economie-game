@@ -2,6 +2,18 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.2.1] — 17 octobre 2026
+
+Seconde passe de design (accessibilité et mobile).
+
+- **Bas de page dégagé** : le contenu reçoit une marge basse égale à « Jour suivant » + barre d'onglets (+ zone sûre iOS) ; la carte Alertes n'est plus masquée par le bouton ni par ⏩.
+- **Date courte sur mobile** : « Mar. 1 déc. · Hiver · 7 h » sur une seule ligne ; l'année (« Année 1 sur 5 · jour 1 ») passe dans le menu.
+- **Menu ⋯ libellé** : Annuler, Sauvegarder, Charger, Thème, Réglages et Tutoriel sont regroupés dans un menu avec libellés visibles ; « Recommencer » reste à part, en rouge (action destructive) avec confirmation « irréversible ».
+- **Lien « Aller au jeu »** : 44 px de haut minimum.
+- **Contraste du bandeau** : dégradé de jour assombri (#1e40af → #2552c4) ; le texte blanc passe de 2,7:1 à ≥ 5,7:1 (WCAG AA ≥ 4,5:1).
+- **Premier jour** : le grand « 0,00 € » est remplacé par « 🌱 Ton premier écart apparaîtra demain. » et une consigne.
+- Tests : nouveau `test/captures-v121.cjs` (mobile 390×844), navigateur et playtest adaptés au menu.
+
 ## [1.2.0] — 16 octobre 2026
 
 Refonte de l'interface d'après les maquettes (`design-economie-game`).

@@ -10,7 +10,7 @@
   --froid:#3b82f6;--chaud:#ef4444;
   --ombre:0 1px 2px rgba(16,24,40,.06),0 2px 8px rgba(16,24,40,.06);
   --ombre-haute:0 12px 32px rgba(16,24,40,.18);
-  --ciel-jour:linear-gradient(120deg,#2f6fe0,#5aa1f2);--ciel-nuit:linear-gradient(120deg,#0f172a,#312e81);
+  --ciel-jour:linear-gradient(120deg,#1e40af,#2552c4);--ciel-nuit:linear-gradient(120deg,#0f172a,#312e81);
   --anim:.2s;
 }
 [data-theme="sombre"]{
@@ -423,3 +423,47 @@ body{padding-bottom:96px}
 }
 @media (min-width:1001px){#btnPlusTemps{display:none}}
 .panneaux,.sous-onglets,.sections,.centre{min-width:0}
+
+/* ---------------------------------------------------------------- v1.2.1 : seconde passe design */
+/* 1. le contenu ne passe plus sous « Jour suivant » + barre d'onglets */
+:root{--h-fab:56px;--h-onglets:68px}
+.app{padding-bottom:calc(var(--h-fab) + var(--e4) * 2)}
+@media (max-width:1000px){
+  .app{padding-bottom:calc(var(--h-fab) + var(--h-onglets) + var(--e4) * 2 + env(safe-area-inset-bottom))}
+  body{padding-bottom:0}
+}
+/* 2. date courte sur mobile */
+.date-courte{display:none}
+@media (max-width:600px){
+  .date-longue{display:none}
+  .date-courte{display:inline}
+  .tb-date{white-space:nowrap;font-size:var(--t-m)}
+}
+/* 3. menu ⋯ libellé + Recommencer séparé et marqué comme destructif */
+.menu{display:flex;align-items:center;gap:var(--e2);position:relative}
+.menu-partie>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);color:#fff;font-weight:600;cursor:pointer}
+.menu-partie>summary::-webkit-details-marker{display:none}
+.menu-partie[open]>summary{background:rgba(0,0,0,.2)}
+.menu-liste{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:250px;background:var(--surface);color:var(--texte);border:1px solid var(--bord);border-radius:var(--r2);box-shadow:var(--ombre-haute);padding:var(--e1);display:flex;flex-direction:column}
+.menu-liste button{display:flex;align-items:center;gap:10px;min-height:44px;border:0;background:none;text-align:left;padding:0 12px;border-radius:var(--r1);cursor:pointer;color:var(--texte)}
+.menu-liste button:hover:not(:disabled),.menu-liste button:focus-visible{background:var(--surface2)}
+.menu-liste button:disabled{opacity:.55;cursor:default}
+.menu-annee{margin:0;padding:8px 12px;font-size:var(--t-s);color:var(--doux);border-bottom:1px solid var(--bord)}
+.m-ico{display:inline-flex}
+.btn-danger{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;background:var(--surface);color:var(--mal);border:2px solid var(--mal);font-weight:700;cursor:pointer}
+.btn-danger:hover{background:var(--mal-doux)}
+
+/* 4. lien d'évitement */
+.sauter{min-height:44px;display:inline-flex;align-items:center}
+/* 5. contraste du bandeau : textes blancs pleins */
+.tb-date .heure,.jauge .palier{opacity:1}
+/* 6. premier jour */
+.tb-hero .vide-j1{font-size:var(--t-l);font-weight:700;color:var(--accent);margin:var(--e2) 0}
+@media (max-width:600px){
+  .lib-menu{display:none}
+  .menu-partie>summary{width:44px;padding:0;justify-content:center;font-size:var(--t-l)}
+  .btn-danger{padding:0 10px;font-size:var(--t-s)}
+  .btn-danger .m-ico{display:none}
+  .menu{gap:6px}
+  .topbar{column-gap:var(--e2)}
+}

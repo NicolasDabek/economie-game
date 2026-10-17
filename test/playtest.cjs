@@ -66,7 +66,7 @@ const ANNEES = Number(process.argv[2] || 1);
         }
       }
     }
-    if (CAP) { await clic(p, '#btnReglages'); await p.waitForTimeout(200); await p.screenshot({ path: `${out}/v09_reglages.png` }); await clic(p, '#reglagesFermer'); }
+    if (CAP) { await clic(p, '#btnMenu'); await clic(p, '#btnReglages'); await p.waitForTimeout(200); await p.screenshot({ path: `${out}/v09_reglages.png` }); await clic(p, '#reglagesFermer'); }
     // annuler : un réglage puis Ctrl+Z
     await clic(p, '[data-section="maison"]'); await clic(p, '[data-onglet="maison"]');
     const av = await p.evaluate(() => window.__jeu().aeration); await clic(p, '[data-choix="aeration"][data-v="jamais"]'); await p.waitForTimeout(50);

@@ -126,6 +126,7 @@ document.addEventListener('click', (e) => {
   const annulable = !!(d.choix || d.set || d.appliquer !== undefined || d.routine || d.porter);
   const avant = annulable ? cliche() : null, libAnnul = (b.closest('.ligne')?.querySelector('label')?.textContent || '').trim() + (b.textContent.trim() ? ` → ${b.textContent.trim()}` : '');
   if (annulable) queueMicrotask(() => { if (cliche() !== avant) empiler(avant, libAnnul.replace(/^ → /, '')); });
+  if (b.closest('.menu-liste')) $('menuPartie').open = false;   // v1.2.1 : le menu se referme après un choix
   if (b.id === 'btnAnnuler') { annuler(); return; }
   if (b.id === 'btnReglages') { ouvrirReglages(); return; }
   if (b.id === 'reglagesFermer') { $('reglages').classList.add('cache'); return; }
@@ -226,7 +227,7 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnSauver') { autoSauvegarde(); toast('💾 Partie sauvegardée dans ce navigateur.'); return; }
   else if (b.id === 'btnCharger') { const c = charger(); if (c && typeof c === 'object') { s = c; if (s.migre) { toast(MESSAGES_MIGRATION[s.migre] || 'Sauvegarde mise à jour.'); delete s.migre; } $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else signalerChargement(c); }
   else if (b.id === 'btnNouvelle' || b.id === 'btnRejouer') {
-    if (b.id === 'btnNouvelle' && !confirm('Commencer une nouvelle partie ? La partie en cours sera perdue si elle n\'est pas sauvegardée.')) return;
+    if (b.id === 'btnNouvelle' && !confirm('Recommencer une nouvelle partie ? La partie en cours sera perdue si elle n\'est pas sauvegardée. Cette action est irréversible.')) return;
     s = nouvellePartie(Math.floor(Math.random() * 1e6), Math.round(s.joursTotal / 365) || duree); $('fin').classList.add('cache'); autoSauvegarde();
   } else return;
   rafraichir(n);
@@ -241,7 +242,7 @@ function signalerChargement(c) {
 }
 // thème, icônes, clavier
 document.documentElement.dataset.theme = prefs.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair');
-for (const [id, ic] of [['btnAnnuler', 'annuler'], ['btnReglages', 'reglages'], ['btnAide', 'aide'], ['btnTheme', 'theme'], ['btnSauver', 'sauver'], ['btnCharger', 'charger'], ['btnNouvelle', 'nouvelle']]) $(id).innerHTML = icone(ic, 18);
+for (const [id, ic] of [['btnAnnuler', 'annuler'], ['btnReglages', 'reglages'], ['btnAide', 'aide'], ['btnTheme', 'theme'], ['btnSauver', 'sauver'], ['btnCharger', 'charger'], ['btnNouvelle', 'nouvelle']]) $(id).querySelector('.m-ico').innerHTML = icone(ic, 18);
 for (const [id, ic] of [['btnJour', 'jour'], ['btnSemaine', 'semaine'], ['btnMois', 'mois'], ['btnEvenement', 'evenement']]) $(id).querySelector('.t-ico').innerHTML = icone(ic, 18);
 document.addEventListener('guide-rendre', () => rendreTout(s));
 document.addEventListener('keydown', (e) => {

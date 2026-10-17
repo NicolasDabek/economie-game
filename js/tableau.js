@@ -292,7 +292,7 @@ export function rendreTableau(s, etat = {}) {
     <div class="tb-prec"><span>Épargne de précaution : ${eur(prec)} / ${eur(cible)} (3 mois de reste à vivre)</span><div class="progres" role="progressbar" aria-valuenow="${Math.round(pPrec)}" aria-valuemin="0" aria-valuemax="100" aria-label="Épargne de précaution"><div style="width:${pPrec}%"></div></div><small>${pPrec >= 100 ? '✓ Constituée : une panne ne te mettra pas à découvert.' : 'À constituer avant d\'investir à risque.'}</small></div>
     ${s.eco ? `<div class="tb-budget"><div>Entrées / mois<b class="plus">+${eur(salaire)}</b></div><div>Loyer<b class="moins">−${eur(loyer)}</b></div><div>${projLib}<b class="moins">−${eur(projMois)}</b></div><div>Solde estimé<b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${eur(salaire - loyer - projMois)}</b></div></div>` : ''}</div>`;
 
-  const hero = `<div class="tb-carte tb-hero"><h3>Économisé vs voisin</h3><b class="grand ${r.economies >= 0 ? 'plus' : 'moins'}">${eur(r.economies)}</b><div class="lignes">
+  const hero = `<div class="tb-carte tb-hero"><h3>Économisé vs voisin</h3>${s.nbJours === 0 ? '<p class="vide-j1">🌱 Ton premier écart apparaîtra demain.</p><p class="aide">Règle un ou deux gestes (thermostat, douche, courses), puis passe au jour suivant : on compare ta journée à celle du voisin.</p>' : `<b class="grand ${r.economies >= 0 ? 'plus' : 'moins'}">${eur(r.economies)}</b>`}<div class="lignes">
     ${s.eco ? `<div><span>Solde estimé du mois</span><b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${salaire - loyer - projMois >= 0 ? '+' : ''}${eur(salaire - loyer - projMois)}</b></div>` : ''}
     <div><span>Épargne de précaution</span><b>${eur(prec)} / ${eur(cible)}</b></div></div></div>`;
   // 2. jauges
