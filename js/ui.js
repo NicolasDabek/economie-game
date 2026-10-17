@@ -8,12 +8,12 @@ import { rendreBanque, rendreInvest, tauxTxt } from './ui-finance.js';
 import { projection } from './finance.js';
 import { BANQUE } from './data.js';
 import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
-import { COMBOS } from './data.js';
+import { COMBOS, SC, SCENARIOS, TARIFS, horsScenario } from './data.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
 import { ROUTINES, routineDispo } from './simulation.js';
 import { palierMoral, palierBE } from './paliers.js';
 import { rendreNavigation, rendreGuide } from './guide.js';
-import { isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, humiditeRelative, coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, evenementsAVenir, prixGaz, LAVAGE_MAIN } from './simulation.js';
+import { isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, humiditeRelative, coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, seuilRechutes, evenementsAVenir, prixGaz, LAVAGE_MAIN } from './simulation.js';
 
 const $ = (id) => document.getElementById(id);
 const deg = (t) => `${t.toFixed(1).replace('.', ',')} °C`;
@@ -78,7 +78,7 @@ export function rendreJauges(s) {
   const dc = dateDuJour(Math.min(s.jour, tot - 1)).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   const sai = SAI[ch.saison] || ch.nom;
   $('date').innerHTML = s.fini ? 'Fin de la campagne' : `<span class="date-longue">${dt} · ${sai} · année ${anneeDuJour(s.jour) + 1}/${nAns}</span><span class="date-courte">${dc.charAt(0).toUpperCase() + dc.slice(1)} · ${sai.replace(/^\S+ /, '')}</span>`;
-  if ($('menuAnnee')) $('menuAnnee').textContent = s.fini ? 'Campagne terminée' : `Année ${anneeDuJour(s.jour) + 1} sur ${nAns} · jour ${s.jour + 1}`;
+  if ($('menuAnnee')) $('menuAnnee').textContent = `${SCENARIOS[s.scenario]?.icone || '🏠'} ${SCENARIOS[s.scenario]?.court || SCENARIOS.standard.court} · ` + (s.fini ? 'Campagne terminée' : `Année ${anneeDuJour(s.jour) + 1} sur ${nAns} · jour ${s.jour + 1}`);
   const av = evenementsAVenir(s).filter(e => e.annonce > 0);
   $('annonces').innerHTML = av.map(e => `<span>📅 Dans ${e.jour - s.jour} j : <b>${e.titre}</b>. ${e.texte}</span>`).join('');
   $('annonces').classList.toggle('cache', !av.length);
@@ -215,7 +215,7 @@ export function rendreChauffage(s) {
     html += `<div class="ligne"><label>Appoint</label>${choix('appoint', [['non', 'Éteint'], ['oui', 'Suit ma pièce']], s.appoint.actif ? 'oui' : 'non')}
       ${s.appoint.actif ? sl('data-appoint="1"', s.appoint.consigne) : ''}</div>`;
   }
-  html += `<p class="aide">Chaudière gaz (rendement 85 %)${s.possede.purge ? ', radiateurs purgés' : ' · ⚠️ radiateurs jamais purgés : haut froid, puissance réduite'}. Jour 7 h-23 h, nuit 23 h-7 h. « Arrêt » = hors-gel (8 °C).</p>`;
+  html += `<p class="aide">${SC.chauffage === 'elec' ? `Convecteurs électriques (rendement 100 %, payés au prix de l'heure : option ${TARIFS[s.sys.tarif].nom}${s.sys.tarif === 'tempo' ? ', attention aux jours rouges' : ''})` : `Chaudière gaz (rendement 85 %)${s.possede.purge ? ', radiateurs purgés' : ' · ⚠️ radiateurs jamais purgés : haut froid, puissance réduite'}`}. Jour 7 h-23 h, nuit 23 h-7 h. « Arrêt » = hors-gel (8 °C).</p>`;
   $('thermostats').innerHTML = html;
   if ($('apercuChauffage')) { $('apercuChauffage').innerHTML = coutChauffage(s); $('apercuChauffage').classList.add('impact'); }
 }
@@ -292,7 +292,7 @@ export function rendreBoutique(s) {
   const dom = etatUI.onglet.startsWith('b-') ? etatUI.onglet.slice(2) : etatUI.onglet;
   const filtre = ONGLETS.find(o => o[0] === dom)?.[2] || [];
   if ($('titreBoutique')) $('titreBoutique').textContent = `Boutique : ${(ONGLETS.find(o => o[0] === dom)?.[1] || '').replace(/^\S+ /, '')}`;
-  for (const [id, a] of Object.entries(ACHATS)) if (filtre.includes(a.cat)) (cats[a.cat] ||= []).push([id, a]);
+  for (const [id, a] of Object.entries(ACHATS)) if (filtre.includes(a.cat) && !horsScenario(id)) (cats[a.cat] ||= []).push([id, a]);
   if (!Object.keys(cats).length) { $('boutique').innerHTML = ['banque', 'invest'].includes(etatUI.onglet) ? '<p class="aide">La boutique de chaque domaine affiche le rendement annuel de chaque équipement, à comparer aux placements.</p>' : '<p class="aide">Rien à acheter pour ce domaine. Change d\'onglet pour voir d\'autres articles.</p>'; return; }
   $('boutique').innerHTML = Object.entries(cats).map(([cat, items]) => `<h3>${cat}</h3>` + items.map(([id, a]) => {
     const bloque = id === 'housse' && !s.possede.bouillotte;
@@ -434,7 +434,7 @@ export function rendreFin(s) {
     <h3>Combos découverts</h3><p>${Object.keys(s.combos || {}).length ? Object.keys(s.combos).map(id => '🔗 ' + COMBOS[id].nom).join('<br>') : 'Aucun.'}</p>
     <h3>Meilleure découverte</h3><p>🏆 <b>${r.meilleure.nom}</b> : ${eur(r.meilleure.gain)} économisés.</p>
     <p class="aide">Les abonnements d'énergie (${eur(r.abonnements)}) sont exclus de la comparaison. Les équipements comptent pour prix ÷ durée de vie, les vêtements pour leur part usée, les reventes en déduction. Les placements comptent pour leur valeur de revente du jour (frais et impôts de sortie déduits) plus les revenus versés, moins ce que le voisin a gagné en laissant la même épargne sur son Livret A.</p>
-    <p class="aide">Titres : Dépensier &lt; 8 % · Malin &lt; 15 % · Optimiseur &lt; 22 % · Autonome &lt; 45 % · Maître de la sobriété &lt; 62 % · Légende de la sobriété (40 principes et 10 habitudes). Autonome et Maître exigent en moyenne confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40 ; Maître demande aussi 28 principes et 8 habitudes. Maître exige aussi une épargne gérée au moins aussi bien que le Livret A du voisin et au plus 10 jours de découvert non autorisé par an. Hygiène &lt; 45, bien-être &lt; 40 ou plus de 4 × √(années) rechutes plafonnent à Malin. Les pourcentages comparent tes dépenses à celles du voisin sur toute la campagne.</p>
+    <p class="aide">Titres : Dépensier &lt; 8 % · Malin &lt; 15 % · Optimiseur &lt; 22 % · Économe &lt; 32 % · Autonome &lt; 45 % · Maître de la sobriété &lt; 62 % · Légende de la sobriété (40 principes et 10 habitudes). Économe, Autonome et Maître exigent en moyenne confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40 ; Maître demande aussi 28 principes et 8 habitudes, une épargne gérée au moins aussi bien que le Livret A du voisin et au plus 10 jours de découvert non autorisé par an. Hygiène &lt; 45 plafonne à Malin. Bien-être &lt; 40 ou ${seuilRechutes(Math.max(1, s.nbJours / 365))} rechutes ou plus (8 pour 5 ans) : aucun titre, même Malin. Les pourcentages comparent tes dépenses à celles du voisin sur toute la campagne.</p>
     <button class="primaire btn" id="btnRejouer" style="width:100%;padding:12px">Rejouer une nouvelle campagne</button>`;
   $('fin').classList.remove('cache');
 }

@@ -1,7 +1,7 @@
 // Campagne pluriannuelle (v0.6) : salaire, inflation et prix qui évoluent, révisions du Livret A, mensualisation de l'énergie,
 // événements de l'année (régularisation, assurance, rentrée, impôts, renégociation), vieillissement des équipements et appareils,
 // bilan annuel avec objectifs. Les fonctions qui touchent au jeu reçoivent un contexte (msg, debloquer) pour éviter les imports circulaires.
-import { PRIX, BANQUE, INDICES, ECONOMIE, PROFILS, APPAREILS, ACHATS, VACANCES, MEDIATHEQUE } from './data.js';
+import { PRIX, BANQUE, INDICES, ECONOMIE, PROFILS, APPAREILS, ACHATS, VACANCES, MEDIATHEQUE, SCENARIOS } from './data.js';
 import { revisionSalaire } from './moral.js';
 import { makeRng } from './rng.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
@@ -30,8 +30,8 @@ export function trajectoires(seed, annees) {
   return out;
 }
 
-export function nouvelleEconomie(seed, annees, profil = 'median') {
-  const P = PROFILS[profil], r = makeRng(seed * 911 + 5);
+export function nouvelleEconomie(seed, annees, profil = 'median', scenario = 'standard') {
+  const P = PROFILS[profil], r = makeRng(seed * 911 + 5), X = SCENARIOS[scenario] || SCENARIOS.standard;
   const appareils = {};
   for (const [id, A] of Object.entries(APPAREILS)) {
     const vie = A.vie * (0.75 + 0.5 * r());
@@ -40,7 +40,7 @@ export function nouvelleEconomie(seed, annees, profil = 'median') {
   }
   return {
     annees, traj: trajectoires(seed, annees), idx: { elec: 1, gaz: 1, eau: 1, alim: 1, carburant: 1, services: 1, general: 1 }, remise: 1, inflationAn: ECONOMIE.inflation.depart,
-    salaire: P.salaire, loyer: P.loyer, revenus: 0, mensualite: 170, energieDu: 0, energiePaye: 0, energieAn: [],
+    salaire: P.salaire + X.salairePlus, loyer: P.loyer + X.loyerPlus, revenus: 0, mensualite: 170, energieDu: 0, energiePaye: 0, energieAn: [],
     taux: { ...TAUX0 }, achats: {}, finVie: {}, appareils, bilans: [], objectifs: [], dernierBilan: null, regul: null, impots: null,
   };
 }
@@ -139,20 +139,40 @@ export function debutJourCampagne(s, ctx) {
   return dilemme;
 }
 
-// v0.9 : à partir de la 2e année, un défi par an sur un poste (−5 % de consommation par rapport à l'an passé, hausse des prix comprise).
-// L'année 1 reste une année d'apprentissage ; ensuite les postes déjà optimisés deviennent plus durs à réduire.
+// v0.9 : à partir de la 2e année, un défi par an sur un poste, hausse des prix comprise.
+// v1.3 (passe GD 2, C) : plus de victoire gratuite. Il faut faire 2 % de mieux que l'an dernier (corrigé des prix)
+// ET avoir agi sur ce poste : un geste lié devenu habitude, ou un équipement lié en service (acheté avant ou pendant l'année).
 export const DEFIS = [
-  { poste: 'gaz', nom: 'Un hiver plus sobre', texte: 'consommer 5 % de gaz en moins que l\'an dernier' },
-  { poste: 'nourriture', nom: 'Le panier malin', texte: 'réduire de 5 % le budget nourriture (hors inflation)' },
-  { poste: 'elec', nom: 'La chasse aux watts', texte: 'consommer 5 % d\'électricité en moins' },
-  { poste: 'transport', nom: 'Bouger autrement', texte: 'réduire de 5 % le budget transport (hors hausse du carburant)' },
+  { poste: 'gaz', nom: 'Un hiver plus sobre', texte: 'dépenser 2 % de moins en chauffage que l\'an dernier (hausse des prix comprise), avec au moins une habitude ou un équipement de chauffage ou d\'isolation' },
+  { poste: 'nourriture', nom: 'Le panier malin', texte: 'dépenser 2 % de moins en nourriture que l\'an dernier (hors inflation), avec au moins une habitude ou un équipement de cuisine ou de jardin' },
+  { poste: 'elec', nom: 'La chasse aux watts', texte: 'dépenser 2 % de moins en électricité que l\'an dernier (hausse des prix comprise), avec au moins une habitude ou un équipement électrique' },
+  { poste: 'transport', nom: 'Bouger autrement', texte: 'dépenser 2 % de moins en transport que l\'an dernier (hors hausse du carburant), avec une habitude, un équipement ou un mode de transport sans voiture' },
 ];
+export const DEFI_EFFORT = 0.98;
+// leviers liés à chaque poste : gestes (habitude) et catégories d'équipements
+export const LEVIERS_DEFI = {
+  gaz: { gestes: ['rideaux', 'portes', 'bouillotte', 'couches', 'cuisson', 'feuBois'], cats: ['Isolation', 'Chauffage', 'Confort', 'Ventilation passive'] },
+  nourriture: { gestes: ['liste', 'prixKilo', 'levain', 'gamelle', 'jardiner', 'poules'], cats: ['Cuisine', 'Cuisine solaire', 'Jardin'] },
+  elec: { gestes: ['multiprise', 'frigo', 'couvercle', 'bouilloire', 'couperEau', 'voletsJour', 'ventNuit'], cats: ['Électricité', 'Production', 'Eau chaude'] },
+  transport: { gestes: ['ecoconduite', 'gamelle'], cats: ['Transport'] },
+};
+/** Le joueur a-t-il agi sur ce poste ? Renvoie la première action trouvée (texte) ou null. */
+export function actionDefi(s, poste) {
+  const L = LEVIERS_DEFI[poste]; if (!L) return 'poste libre';
+  const g = L.gestes.find(id => s.gestes?.[id]?.habitude);
+  if (g) return 'habitude';
+  const a = Object.keys(ACHATS).find(id => s.possede?.[id] && L.cats.includes(ACHATS[id].cat) && id !== 'thermometre' && id !== 'hygrometre');
+  if (a) return 'équipement';
+  if (poste === 'transport' && s.transport && (s.transport.mode !== 'voiture' || s.transport.teletravail > 2)) return 'mode';
+  return null;
+}
 function defiAnnuel(s, ctx, an) {
   const e = s.eco, D = s.depenses;
   if (e.defi) {   // bilan du défi précédent
-    const f = e.defi, fait = (D[f.poste] - f.debut) <= f.cible;
-    (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait });
+    const f = e.defi, chiffre = (D[f.poste] - f.debut) <= f.cible, action = actionDefi(s, f.poste), fait = chiffre && !!action;
+    (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait, chiffre, action: !!action });
     if (fait) { s.volonte = Math.min(100, s.volonte + 8); ctx.msg(`🏅 Défi ${f.an} réussi : « ${f.nom} ». Moral +8.`, 'alerte'); }
+    else if (chiffre) ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». La dépense a baissé toute seule (météo, prix), mais aucune habitude ni aucun équipement lié : un défi se gagne en agissant.`, 'info');
     else ctx.msg(`🎯 Défi ${f.an} manqué de ${eur0(D[f.poste] - f.debut - f.cible)} : « ${f.nom} ».`, 'info');
     e.defi = null;
   }
@@ -160,10 +180,10 @@ function defiAnnuel(s, ctx, an) {
   if (!prec) return;    // première année : apprentissage
   const d = DEFIS[(an - 2027) % DEFIS.length], dernier = D[d.poste] - (prec[d.poste] || 0);
   if (dernier < 50) return;
-  // cible corrigée de la hausse des prix : ne pas dépasser l'an dernier (v1.1, analyse GD P5 : −5 % était hors d'atteinte pour un joueur déjà optimisé)
-  const k = { gaz: 'gaz', nourriture: 'alim', elec: 'elec', transport: 'carburant' }[d.poste];
+  // cible : 2 % sous l'an dernier corrigé de la hausse des prix (v1.1 : −5 % était hors d'atteinte ; v1.3 : « ne rien toucher » ne doit pas gagner)
+  const k = { gaz: s.scenario && SCENARIOS[s.scenario]?.chauffage === 'elec' ? 'elec' : 'gaz', nourriture: 'alim', elec: 'elec', transport: 'carburant' }[d.poste];
   const hausse = idxPrec && e.idx[k] ? e.idx[k] / idxPrec[k] : 1;
-  e.defi = { ...d, an, jour: s.jour, debut: D[d.poste], cible: Math.round(dernier * hausse) };
+  e.defi = { ...d, an, jour: s.jour, debut: D[d.poste], cible: Math.round(dernier * hausse * DEFI_EFFORT) };
   ctx.msg(`🎯 Défi ${an} : « ${d.nom} » — ${d.texte} (moins de ${eur0(e.defi.cible)} sur l'année). Récompense : moral +8.`, 'alerte');
 }
 

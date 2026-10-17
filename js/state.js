@@ -1,19 +1,20 @@
 // État initial de la partie + sauvegarde
 import { nouvelEtatPassif } from './passif.js';
 import { nouvelEtatMoral } from './moral.js';
-import { ARGENT_DEPART, ORDRE_PIECES, VETEMENTS, GESTES, ACHATS, CAMPAGNE, joursCampagne } from './data.js';
+import { ARGENT_DEPART, ORDRE_PIECES, VETEMENTS, GESTES, ACHATS, CAMPAGNE, joursCampagne, SCENARIOS, SCENARIO_DEFAUT, appliquerScenario } from './data.js';
 import { nouvelleEconomie, debutJourCampagne, appliquerIndices } from './annee.js';
 import { genererMeteo } from './meteo.js';
 import { nouvelEtatSystemes } from './systemes.js';
 import { nouvelEtatTransport } from './transport.js';
 import { nouvelEtatFinance } from './finance.js';
 import { nouvelEtatAutonomie, PLAN_CONSEILLE, nbPlanches } from './autonomie.js';
-// Format de sauvegarde : 3 (v0.3) … 7 (v0.7) ; 8 = v1.0 (champs ajoutés en v0.8–v0.9 complétés par défaut) ; 9 = v1.1 (autosuffisance)
-export const VERSION_SAUVEGARDE = 9;
+// Format de sauvegarde : 3 (v0.3) … 7 (v0.7) ; 8 = v1.0 (champs ajoutés en v0.8–v0.9 complétés par défaut) ; 9 = v1.1 (autosuffisance) ; 10 = v1.3 (scénarios de départ)
+export const VERSION_SAUVEGARDE = 10;
 // ancien calendrier (v0.5 : 3 chapitres de 56, 28 et 42 jours) -> jour calendaire depuis le 1er décembre 2026
 const calV5 = (j) => (j < 56 ? j : j < 84 ? 126 + (j - 56) : 212 + (j - 84));
 
-export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut) {
+export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut, scenario = SCENARIO_DEFAUT) {
+  if (!SCENARIOS[scenario]) scenario = SCENARIO_DEFAUT;
   const pieces = {};
   for (const p of ORDRE_PIECES) pieces[p] = { t: 19, hum: 50, consigneJour: 20, consigneNuit: 18, kwhSemaine: 0, eurSemaine: 0 };
   const vetements = {};
@@ -21,8 +22,8 @@ export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut) {
   const gestes = {};
   for (const id of Object.keys(GESTES)) gestes[id] = { pratique: 0, habitude: false };
   const s = {
-    version: VERSION_SAUVEGARDE, seed, jour: 0, mor: nouvelEtatMoral(), fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
-    eco: nouvelleEconomie(seed, annees), auto: { lessive: false, entretien: false, saisons: false, renouveler: false },
+    version: VERSION_SAUVEGARDE, seed, scenario, jour: 0, mor: nouvelEtatMoral(), fini: false, annees, joursTotal: joursCampagne(annees), passif: nouvelEtatPassif(seed), fin: nouvelEtatFinance('median'), coutVoisinCumul: 0,
+    eco: nouvelleEconomie(seed, annees, 'median', scenario), auto: { lessive: false, entretien: false, saisons: false, renouveler: false },
     meteo: genererMeteo(seed, annees), autonomie: nouvelEtatAutonomie(),
     argent: ARGENT_DEPART,
     confort: 70, sante: 90, volonte: 70, hygiene: 75, bienetre: 60,
@@ -57,6 +58,7 @@ export function nouvellePartie(seed = 2026, annees = CAMPAGNE.anneesDefaut) {
       chaleur: chaleurVoisin() },
   };
   // 1er décembre 2026 : premier salaire et première mensualité d'énergie
+  appliquerScenario(s);
   appliquerIndices(s);
   debutJourCampagne(s, { msg: () => {}, debloquer: () => {} });
   return s;
@@ -103,8 +105,10 @@ export function charger(stockage = globalThis.localStorage) {
     if (s.version === 6) migrerV6(s);
     if (s.version === 7) migrerV7(s);
     if (s.version === 8) migrerV8(s);
+    if (s.version === 9) migrerV9(s);
     if (s.version !== VERSION_SAUVEGARDE || !fini(s.seed) || !fini(s.jour) || !fini(s.argent)) return mettreDeCote(stockage, txt);
-    completer(s, nouvellePartie(s.seed, s.annees || CAMPAGNE.anneesDefaut));
+    completer(s, nouvellePartie(s.seed, s.annees || CAMPAGNE.anneesDefaut, s.scenario));
+    appliquerScenario(s);
     s.meteo = genererMeteo(s.seed, s.annees);
     appliquerIndices(s);
     return s;
@@ -124,6 +128,7 @@ export const MESSAGES_MIGRATION = {
   5: 'Sauvegarde v0.5 mise à jour : ta partie continue en campagne de 5 ans (salaire, inflation, pannes, bilans annuels).',
   6: 'Sauvegarde v0.6 mise à jour : le moral évolue maintenant sur la durée et la santé a un coût.',
   7: 'Sauvegarde v0.7–v0.9 mise à jour pour la v1.0 : tableau de bord, défis annuels et conseiller sont actifs.',
+  9: 'Sauvegarde v1.1–v1.2 mise à jour pour la v1.3 : ta partie continue dans la petite maison au gaz ; les nouveaux scénarios de départ se choisissent à l\'accueil.',
   8: 'Sauvegarde v1.0 mise à jour pour la v1.1 : potager par planches, garde-manger, poules, poêle à bois et taux d\'autosuffisance (onglets Jardin, Cuisine, Maison, Eau chaude).',
 };
 
@@ -178,4 +183,10 @@ export function migrerV8(s) {
   const n = nbPlanches(s);
   for (let i = 0; i < n; i++) s.autonomie.planches[i].culture = PLAN_CONSEILLE[i];
   s.version = 9; s.migre ??= 8;
+}
+
+// v1.1–v1.2 -> v1.3 : une partie en cours garde la maison d'origine (scénario « standard »)
+export function migrerV9(s) {
+  s.scenario = 'standard';
+  s.version = 10; s.migre ??= 9;
 }

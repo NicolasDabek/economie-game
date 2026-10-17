@@ -254,37 +254,44 @@ function jourDoy(s, an, d) { const t0 = Date.UTC(2026, 11, 1), t = Date.UTC(2027
 export const saisonChauffe = (d) => d >= 288 || d < 115;
 export function boisDisponible(s) { const A = etatAutonomie(s); return A.bois.reduce((t, l) => t + l.st, 0); }
 export const lotSec = (s, l) => s.jour - l.jour >= (s.possede.abriBois ? BOIS.sechageAbri : BOIS.sechage) || l.sec;
-export function poeleJour(s, ctx, prixGazUtile) {
+// v1.3 : le poêle se règle comme on le fait vraiment (allure, nombre de bûches) : il chauffe le salon jusqu'à POELE_CIBLE °C, pas au-delà.
+// poeleJour prépare la flambée (bois disponible, puissance) ; la simulation horaire décide de la chaleur utile ; poeleConsommer brûle le bois.
+export const POELE_CIBLE = 21;
+export function poeleJour(s, ctx) {
   const A = etatAutonomie(s), P = A.poele;
-  ctx.boisKwh = 0;
+  ctx.boisKwh = 0; ctx.poele = null;
   if (!s.possede.poele || P.mode === 'eteint' || !saisonChauffe(ctx.chap.doy) || s.jour < P.horsService) return;
   const heures = P.mode === 'jour' ? [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22] : [17, 18, 19, 20, 21, 22];
-  const puissance = BOIS.puissance * (ctx.jm.tMoy > 8 ? 0.6 : 1);
-  const kwh = puissance * heures.length / 1000;
   A.bois.sort((a, b) => (lotSec(s, b) - lotSec(s, a)) || a.jour - b.jour);
   const lot = A.bois.find(l => l.st > 0.001);
   if (!lot) { if (!A.alertes.sansBois) { A.alertes.sansBois = 1; ctx.msg('🪵 Plus de bois : le poêle reste froid. Commande du bois (onglet Maison).', 'alerte'); } return; }
   A.alertes.sansBois = 0;
   const sec = lotSec(s, lot), rend = sec ? BOIS.rendement : BOIS.humideRendement;
-  const st = Math.min(lot.st, kwh / rend / BOIS.kwhStere); lot.st -= st;
-  const chaleur = st * BOIS.kwhStere * rend;
-  for (const h of heures) ctx.chaleur.salon[h] += chaleur * 1000 / heures.length;
-  P.encrassement += sec ? BOIS.encrassementJour : BOIS.encrassementHumide;
-  if (!sec && !A.alertes.humide) { A.alertes.humide = 1; ctx.msg('💨 Bois humide : il fume, chauffe 25 % de moins et encrasse le conduit trois fois plus vite. Le bois se fait sécher 18 à 24 mois.', 'alerte'); ctx.debloquer('boisSec'); }
-  if (sec) ctx.debloquer('boisSec');
+  // bois humide : 25 % de chaleur en moins pour la même flambée
+  ctx.poele = { heures: new Set(heures), p: BOIS.puissance * rend / BOIS.rendement, cible: POELE_CIBLE, sec, rend };
+}
+export function poeleConsommer(s, ctx, chaleur, prixGazUtile) {
+  const A = etatAutonomie(s), P = A.poele, f = ctx.poele;
+  if (!f || chaleur <= 0.05) return;
+  let reste = chaleur / f.rend / BOIS.kwhStere, cout = 0, st = 0;
+  for (const l of A.bois) { if (reste <= 0) break; const x = Math.min(l.st, reste); l.st -= x; reste -= x; st += x; cout += x * l.prixSt; }
   A.bois = A.bois.filter(l => l.st > 0.001);
+  P.encrassement += (f.sec ? BOIS.encrassementJour : BOIS.encrassementHumide) * Math.min(1, chaleur / 15);
+  if (!f.sec && !A.alertes.humide) { A.alertes.humide = 1; ctx.msg('💨 Bois humide : il fume, chauffe 25 % de moins et encrasse le conduit trois fois plus vite. Le bois se fait sécher 18 à 24 mois.', 'alerte'); ctx.debloquer('boisSec'); }
+  if (f.sec) ctx.debloquer('boisSec');
   ctx.boisKwh = chaleur;
   ctx.d.bienetre += BOIS.bienetre; s.volonte = Math.min(100, s.volonte + BOIS.moral * 0.1);
-  s.attribution.poele = (s.attribution.poele || 0) + chaleur * 0.85 * prixGazUtile - st * lot.prixSt;
+  s.attribution.poele = (s.attribution.poele || 0) + chaleur * 0.85 * prixGazUtile - cout;
   // feu de cheminée : conduit encrassé
   const r = makeRng(s.seed * 83 + s.jour * 29 + 1)();
   if (P.encrassement > 150 && r < BOIS.feuRisque * (P.encrassement - 150) / 50) {
     const assure = s.jour - P.ramonage <= 365;
-    const cout = assure ? 300 : BOIS.franchise;
-    ctx.couts.imprevus += cout; ctx.d.sante -= 10; P.horsService = s.jour + 14; P.encrassement = 0;
-    ctx.msg(`🔥 Feu de cheminée ! Pompiers, conduit à vérifier, poêle arrêté 14 jours. ${assure ? 'Assurance : franchise de 300 €.' : `Pas d'attestation de ramonage de moins d'un an : l'assurance refuse d'indemniser (${cout} € à ta charge).`}`, 'alerte');
+    const c = assure ? 300 : BOIS.franchise;
+    ctx.couts.imprevus += c; ctx.d.sante -= 10; P.horsService = s.jour + 14; P.encrassement = 0;
+    ctx.msg(`🔥 Feu de cheminée ! Pompiers, conduit à vérifier, poêle arrêté 14 jours. ${assure ? 'Assurance : franchise de 300 €.' : `Pas d'attestation de ramonage de moins d'un an : l'assurance refuse d'indemniser (${c} € à ta charge).`}`, 'alerte');
     ctx.debloquer('ramonage');
   }
+  return st;
 }
 
 // ---------------------------------------------------------------- fin de journée : taux d'autosuffisance

@@ -3,13 +3,13 @@ import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
 import { tableauROI } from '../js/roi.js';
 import { recommandations, suivreConseil, CORVEES } from '../js/tableau.js';
-import { PRINCIPES } from '../js/data.js';
+import { PRINCIPES, ACHATS, SCENARIOS } from '../js/data.js';
 import { chapitreDuJour } from '../js/meteo.js';
-import { deposer } from '../js/finance.js';
+import { deposer, retirer } from '../js/finance.js';
 import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from '../js/systemes.js';
-let GRAINE = 2026;
+let GRAINE = 2026, ANNEES = 5, SCEN = 'standard';
 let HOOK = null;
-import { actionAutonomie, kgBocaux, kgLacto, tauxAutosuffisance, etatAutonomie } from '../js/autonomie.js';
+import { actionAutonomie, kgBocaux, kgLacto, tauxAutosuffisance, etatAutonomie, lotSec } from '../js/autonomie.js';
 import { prendreTemps, payer, tempsLibre, actions, jourSuivant, scoreFinal, acheter, acheterVetement, planifierLessive, resoudreDilemme, choixDilemme, aererVetement, repriser, reparerMachine, laverMain, linge, remplissage } from '../js/simulation.js';
 
 function jouer(s, chaqueJour, dilemmes = {}) {
@@ -27,23 +27,23 @@ function jouer(s, chaqueJour, dilemmes = {}) {
 const toutes = (s, j, n) => { for (const p of ['salon', 'chambre', 'cuisine']) { s.pieces[p].consigneJour = j; s.pieces[p].consigneNuit = n; } };
 
 function naive() {
-  const s = nouvellePartie(GRAINE);
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   s.central = { consigneJour: 22, consigneNuit: 21 };
   return jouer(s, (s) => { if (s.jour % 3 === 2) planifierLessive(s, { temp: 40, sechage: 'machine' }); },
     { invites: 'chauffer', promo: 'acheter', panne: 'technicien' });
 }
 function defaut() { // ne touche à rien : thermostat 20/18, fenêtre entrouverte, lessive 40 °C hebdo
-  const s = nouvellePartie(GRAINE);
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   return jouer(s, (s) => { if (s.jour % 7 === 6) planifierLessive(s, { temp: 40, sechage: 'air' }); });
 }
 function glacial() {
-  const s = nouvellePartie(GRAINE);
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   s.central = { consigneJour: 8, consigneNuit: 8 };
   return jouer(s, (s) => { if (s.jour % 4 === 3) planifierLessive(s, { temp: 30, sechage: 'air' }); }, { panne: 'laverie', vacances: 'rester' });
 }
 // Malin : équipements bon marché, consignes basses, quelques couches, sans optimiser à fond
 function maligne() {
-  const s = nouvellePartie(GRAINE);
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   return jouer(s, (s) => {
     if (s.jour === 0) { acheter(s, 'thermometre'); acheter(s, 'purge'); acheterVetement(s, 'sweat'); acheterVetement(s, 'polaire'); acheterVetement(s, 'chaussettes'); s.aeration = 'breve'; }
     if (s.jour === 1) { acheter(s, 'calfeutrage'); acheter(s, 'bouillotte'); acheter(s, 'housse'); s.utiliserBouillotte = true; }
@@ -55,7 +55,7 @@ function maligne() {
 }
 // Maître : tout l'arsenal, introduit progressivement pour ménager la volonté
 export function maitre() {
-  const s = nouvellePartie(GRAINE);
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   return jouer(s, (s) => {
     const j = s.jour;
     if (j === 0) { acheter(s, 'thermometre'); acheter(s, 'hygrometre'); acheter(s, 'purge'); acheterVetement(s, 'souscouche', 'durable'); s.vetements.tshirt.porte = false; acheterVetement(s, 'sweat', 'durable'); acheterVetement(s, 'chaussettes', 'durable'); s.aeration = 'breve'; s.central = { consigneJour: 19, consigneNuit: 15 }; }
@@ -89,8 +89,9 @@ const rafraichirVet = (s) => { if (s.vetements.tshirt.salete >= 80 && chapitreDu
 function ajoute(nom, f) { STRATS.push([nom, f]); }
 const STRATS = [];
 ajoute('ne rien toucher', defaut);
-ajoute('naïf', () => {
-  const s = nouvellePartie(GRAINE);
+// « tout à fond » (ex-« naïf », passe GD 2 §4.6) : confort maximal, ce n'est PAS la référence (la référence est « ne rien toucher »)
+ajoute('tout à fond', () => {
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   s.central = { consigneJour: 22, consigneNuit: 21 };
   s.sys.douche.minutes = 15; s.sys.regime = 'livraison'; s.sys.plaisirs = 35; s.transport.teletravail = 0;
   return jouer(s, (s) => {
@@ -104,7 +105,7 @@ ajoute('glacial', () => {
 });
 // Austère extrême : tout couper, douche au seau, pâtes, zéro plaisir, rien ne se lave
 ajoute('austère extrême', () => {
-  const s = nouvellePartie(GRAINE);
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   const c = actions(s);
   s.central = { consigneJour: 14, consigneNuit: 12 };
   Object.assign(s.sys, { regime: 'austere', plaisirs: 0, vaisselle: 'bassine' });
@@ -124,7 +125,7 @@ ajoute('maître', () => maitre());
 // v0.9 : le débutant ne connaît rien mais suit le tableau de bord : deux fois par semaine (tous les 3 jours), il clique « Faire » sur
 // la première recommandation applicable (lessive comprise). Il ne fait rien d'autre de lui-même ; aux choix, il prend le premier.
 export function debutant() {
-  const s = nouvellePartie(GRAINE);
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   return jouer(s, (s) => {
     if (s.jour % 3 === 0) { let n = 0; for (const r of recommandations(s)) { if (n >= 1) break; if (suivreConseil(s, r) && !CORVEES.has(r.action.type)) n++; } }
   }, { premier: true });
@@ -133,6 +134,7 @@ ajoute('débutant guidé', debutant);
 // v0.8.1 : économiser en laissant une jauge vers 30 doit coûter plus cher que le malin
 ajoute('moral négligé', () => maligne());
 ajoute('bien-être négligé', () => maligne());
+ajoute('autosuffisant', () => maligne());
 
 // enrichit malin et maître avec les nouveaux systèmes via un hook
 const HOOKS = {
@@ -205,6 +207,33 @@ const HOOKS = {
     if (j >= 56 && linge(s).length && remplissage(s) >= 0.75) planifierLessive(s, { temp: 30, sechage: chapitreDuJour(j).saison === 'hiver' ? 'air' : 'dehors', hc: true });
   },
 };
+// v1.3 (passe GD 2, D) : l'autosuffisant = le malin + jardin, poules et poêle à bois achetés la première année.
+// Un vrai pari de long terme : moins bien que le malin sur 3 ans, mieux sur 10 ans.
+HOOKS.autosuffisant = (s) => {
+  HOOKS.malin(s);
+  const j = s.jour, d = j % 365, oA = { prendreTemps, payer, msg: () => {}, debloquer: () => {} };
+  const an1 = j < 365;   // tout s'achète la première année, dès que le temps libre le permet
+  // poêle payé avec le compte courant à l'automne de la 1re année, sans entamer l'épargne de précaution (la vider stresse et coûte plus cher)
+  if (an1 && j >= 280 && !s.possede.poele && s.argent >= ACHATS.poele.prix + 1200) { if (acheter(s, 'poele')) { etatAutonomie(s).poele.mode = 'jour';   /* 2 jours de télétravail : il tourne en journée, réglé sur la consigne */ actionAutonomie(s, 'bois', 'sec', oA); actionAutonomie(s, 'bois', 'sec', oA); } }
+  if (an1 && s.possede.poele && !s.possede.abriBois) acheter(s, 'abriBois');
+  if (an1 && j >= 70) for (const id of ['composteur', 'potager', 'herbes', 'cuve']) if (!s.possede[id]) acheter(s, id);
+  if (an1 && j >= 100 && !s.possede.poules) acheter(s, 'poules', true);
+  // usure : graines et plants chaque année, poules réformées au bout de quelques années… on renouvelle ce qui arrive en fin de vie
+  if (!an1) for (const id of ['potager', 'herbes', 'composteur', 'cuve', 'poules', 'abriBois']) if (!s.possede[id] && s.eco?.finVie?.[id]) acheter(s, id, id === 'poules');
+  if (s.possede.poules && !s.possede.cloture) acheter(s, 'cloture');
+  if (s.possede.poules) actionAutonomie(s, 'declarer', null, oA);
+  if (j >= 200 && s.possede.potager && !s.possede.potagerGrand) acheter(s, 'potagerGrand');
+  if (j >= 230 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
+  if (j > 70 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); }
+  // bois : on achète vert au printemps (sèche 18 mois sous l'abri), du sec en dépannage si le stock manque en saison de chauffe
+  if (s.possede.poele) {
+    const A = etatAutonomie(s), stock = A.bois.reduce((t, l) => t + l.st, 0);
+    if (d === 130 && stock < 3) actionAutonomie(s, 'bois', 'vert', oA);   // ~2 hivers d'avance, pas plus
+    const sec = A.bois.filter(l => lotSec(s, l)).reduce((t, l) => t + l.st, 0);
+    if ((d >= 280 || d < 110) && sec < 0.3) actionAutonomie(s, 'bois', 'sec', oA);
+    if (d === 250) actionAutonomie(s, 'ramoner', null, oA);
+  }
+};
 // moral négligé : le malin, mais plaisirs au minimum (10 €/sem.), plus de streaming ni de musique, tout en télétravail (isolé)
 HOOKS['moral négligé'] = (s) => {
   HOOKS.malin(s); const c = actions(s);
@@ -224,7 +253,8 @@ function lancer(graine) {
   for (const [nom, f] of STRATS) {
     HOOK = HOOKS[nom] || null;
     const s = f(); HOOK = null;
-    res.push([nom, s, scoreFinal(s)]);
+    const r = scoreFinal(s); r.defis = (s.eco?.defisReussis || []).map(d => d.fait);
+    res.push([nom, s, r]);
   }
   return res;
 }
@@ -233,7 +263,8 @@ const lignes = [];
 let ok = true;
 const graines = [2026, 7, 1789];
 const tous = {};
-for (const g of graines) {
+const SEUL = process.env.SEUL || '';
+for (const g of (SEUL ? [] : graines)) {
   console.log(`\n=== graine ${g} ===`);
   for (const [nom, s, r] of lancer(g)) {
     const m = r.moy;
@@ -257,18 +288,22 @@ if (process.env.ROI) {
   for (const [n, a] of Object.entries(agg).sort((x, y) => y[1].mes / y[1].prix - x[1].mes / x[1].prix)) console.log(`  ${n.slice(0, 40).padEnd(40)} ${String(a.n).padStart(2)} strat. · prix moy ${(a.prix / a.n).toFixed(0).padStart(4)} € · ${(a.mes / a.n).toFixed(0).padStart(5)} €/an · ROI ${(a.mes / a.prix * 100).toFixed(0).padStart(5)} %/an · ${a.strats.join(',')}`);
 }
 const R = (n) => tous[n];
-for (let i = 0; i < graines.length; i++) {
+for (let i = 0; i < (SEUL ? 0 : graines.length); i++) {
   const ch = (c, t) => { if (!c) { ok = false; console.log('✗', graines[i], t); } };
   ch(R('maître')[i].rang > R('austère extrême')[i].rang, 'maître > austère (rang)');
-  ch(R('maître')[i].rang >= 3, 'maître rang ≥ 3');
+  ch(R('maître')[i].rang >= 4, `maître au moins Autonome (obtenu ${R('maître')[i].titre})`);
   ch(R('malin')[i].economies > R('ne rien toucher')[i].economies, 'malin > défaut');
   ch(R('austère extrême')[i].rang <= 2, 'austère plafonné');
   ch(R('glacial')[i].rang <= 1, 'glacial perd');
-  ch(R('naïf')[i].rang === 0, 'naïf perd');
+  ch(R('tout à fond')[i].rang === 0, 'tout à fond perd');
   ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
   // v0.9 : suivre le tableau de bord ne doit jamais punir
   const d = R('débutant guidé')[i];
-  ch(d.rang === 3, `débutant guidé : Autonome (obtenu ${d.titre})`);
+  ch(d.rang === 2 || d.rang === 3, `débutant guidé : Optimiseur ou Économe (obtenu ${d.titre})`);
+  ch(R('malin')[i].rang === 3 || R('malin')[i].rang === 4, `malin : Économe ou Autonome (obtenu ${R('malin')[i].titre})`);
+  // v1.3 (passe GD 2, B et C)
+  ch(R('bien-être négligé')[i].rang === 0, `bien-être négligé : Dépensier (obtenu ${R('bien-être négligé')[i].titre})`);
+  { const dn = R('ne rien toucher')[i].defis; ch(dn.length >= 2 && dn.every(x => !x), `ne rien toucher : aucun défi réussi (${dn.map(x => x ? '✓' : '✗').join('')})`); }
   // v0.9.2 : le conseiller aide à débuter, il ne remplace pas le joueur
   ch(d.economies < R('malin')[i].economies, 'débutant guidé < malin');
   ch(d.pct >= 18 && d.pct <= 32, `débutant guidé ${d.pct.toFixed(1)} % dans [18, 32]`);
@@ -281,7 +316,7 @@ for (let i = 0; i < graines.length; i++) {
   // moral sur 5 ans : cibles de conception
   const mo = (n) => R(n)[i].moy.moral;
   ch(mo('ne rien toucher') >= 55 && mo('ne rien toucher') <= 65, `moral ne rien toucher ${mo('ne rien toucher').toFixed(0)} dans [55, 65]`);
-  ch(mo('naïf') >= 65 && mo('naïf') <= 75, `moral naïf ${mo('naïf').toFixed(0)} dans [65, 75]`);
+  ch(mo('tout à fond') >= 65 && mo('tout à fond') <= 75, `moral tout à fond ${mo('tout à fond').toFixed(0)} dans [65, 75]`);
   ch(mo('malin') >= 55 && mo('malin') <= 65, `moral malin ${mo('malin').toFixed(0)} dans [55, 65]`);
   ch(mo('maître') >= 55 && mo('maître') <= 65, `moral maître ${mo('maître').toFixed(0)} dans [55, 65]`);
   ch(mo('austère extrême') < 25 && mo('glacial') < 30, 'moral austère < 25 et glacial < 30');
@@ -292,6 +327,23 @@ for (let i = 0; i < graines.length; i++) {
   ch(R('moral négligé')[i].economies < R('malin')[i].economies, `moral négligé ${R('moral négligé')[i].economies.toFixed(0)} € < malin`);
   ch(R('bien-être négligé')[i].economies < R('malin')[i].economies, `bien-être négligé ${R('bien-être négligé')[i].economies.toFixed(0)} € < malin`);
 }
+
+// v1.3 (passe GD 2, D) : jardin + poules + poêle achetés la 1re année = pari de long terme (moins bien que le malin sur 3 ans, mieux sur 10 ans)
+if (!SEUL || SEUL === 'auto') for (const g of graines) for (const an of [3, 10]) {
+  GRAINE = g; ANNEES = an;
+  HOOK = HOOKS.malin; const sm = maligne(); const m = scoreFinal(sm);
+  HOOK = HOOKS.autosuffisant; const sa = maligne(); const a = scoreFinal(sa); HOOK = null; ANNEES = 5;
+  const t = tauxAutosuffisance(sa), roi = Object.fromEntries(tableauROI(sa).map(x => [x.nom.slice(0, 12), Math.round(x.mesure)]));
+  console.log(`autosuffisant ${an} ans, graine ${g} : ${a.economies.toFixed(0)} € (${a.pct.toFixed(1)} %, ${a.titre}) vs malin ${m.economies.toFixed(0)} € (${m.pct.toFixed(1)} %) → écart ${(a.economies - m.economies).toFixed(0)} € · autosuffisance ${Math.round(t.global)} % · mesuré : ${JSON.stringify(roi)}`);
+  const okA = an === 3 ? a.economies < m.economies : a.economies > m.economies;
+  if (!okA) { ok = false; console.log(`✗ autosuffisant ${an === 3 ? '< malin sur 3 ans' : '> malin sur 10 ans'} (graine ${g})`); }
+}
+// v1.3 (passe GD 2, P6) : pour chaque scénario de départ, « ne rien toucher » ≈ voisin ± 5 %
+if (!SEUL || SEUL === 'scenarios') for (const sc of Object.keys(SCENARIOS)) for (const g of graines) {
+  GRAINE = g; SCEN = sc; const sd = defaut(); const r = scoreFinal(sd); SCEN = 'standard';
+  console.log(`scénario ${sc.padEnd(21)} graine ${String(g).padEnd(4)} : ne rien toucher ${r.pct.toFixed(1)} % (voisin ${Math.round(r.base / (sd.nbJours / 365))} €/an, chauffage voisin ${Math.round(sd.base.gaz / (sd.nbJours / 365))} €/an, ${sd.scenario})`);
+  if (!(Math.abs(r.pct) <= 5) || sd.scenario !== sc) { ok = false; console.log(`✗ scénario ${sc} : ne rien toucher hors voisin ± 5 %`); }
+}
 // sauvegarde aller-retour + ancienne sauvegarde
 const mem = { d: {}, setItem(k, v) { this.d[k] = v; }, getItem(k) { return this.d[k] ?? null; }, removeItem(k) { delete this.d[k]; } };
 GRAINE = 2026; const sv = defaut(); sauvegarder(sv, mem); const sv2 = charger(mem);
@@ -301,23 +353,23 @@ if (charger(mem) !== 'ancienne' || mem.getItem('economie-game-sauvegarde') !== n
 // migration v0.3 -> v0.4 : la partie continue
 { const v3 = defaut(); const o = JSON.parse(JSON.stringify(v3)); delete o.meteo; delete o.transport; delete o.roi; o.version = 3; delete o.depenses.transport; delete o.base.transport;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  if (!(m && m.version === 9 && m.transport && m.fin && m.eco && !m.fini)) { ok = false; console.log('✗ migration v3'); } }
+  if (!(m && m.version === 10 && m.transport && m.fin && m.eco && !m.fini)) { ok = false; console.log('✗ migration v3'); } }
 // migration v0.4 -> v0.5 : la banque démarre au jour de la sauvegarde, sans rattrapage
 { const v4 = defaut(); const o = JSON.parse(JSON.stringify(v4)); delete o.meteo; delete o.fin; delete o.coutVoisinCumul; delete o.depenses.banque; delete o.base.banque; o.version = 4; o.fini = false; o.jour = 40;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  const okM = m && m.version === 9 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
+  const okM = m && m.version === 10 && m.fin && m.fin.cal === 39 && m.fin.livrets.livretA.solde === 4000 && m.migre === 4;
   if (okM) { jourSuivant(m); }
   if (!(okM && m.jour === 41 && m.fin.cal === 40 && Number.isFinite(scoreFinal(m).economies))) { ok = false; console.log('✗ migration v4'); } else console.log('✓ migration v4 -> v8'); }
 // migration v0.5 -> v0.6 : une partie de 18 semaines terminée devient le début d'une campagne de 5 ans
 { const v5 = defaut(); const o = JSON.parse(JSON.stringify(v5)); delete o.meteo; delete o.eco; delete o.auto; delete o.annees; delete o.joursTotal; o.version = 5; o.jour = 126; o.fini = true; o.evenementsVus = ['invites', 'chap-printemps'];
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  let okM = m && m.version === 9 && !m.fini && m.jour === 254 && m.annees === 5 && m.evenementsVus.includes('invites@0');
+  let okM = m && m.version === 10 && !m.fini && m.jour === 254 && m.annees === 5 && m.evenementsVus.includes('invites@0');
   if (okM) { for (let i = 0; i < 400 && !m.fini; i++) { if (m.dilemme) resoudreDilemme(m, choixDilemme(m).filter(x => x.possible !== false).at(-1).id); else jourSuivant(m); } okM = m.jour > 600 && Number.isFinite(scoreFinal(m).economies); }
   if (!okM) { ok = false; console.log('✗ migration v5'); } else console.log('✓ migration v5 -> v8 (la partie continue, jour', m.jour, ')'); }
 // migration v0.6 -> v0.7 : le moral sur la durée démarre au jour de la sauvegarde
 { GRAINE = 2026; const v6 = defaut(); const o = JSON.parse(JSON.stringify(v6)); delete o.meteo; delete o.mor; o.version = 6; o.fini = false; o.jour = 400;
   mem.setItem('economie-game-sauvegarde', JSON.stringify(o)); const m = charger(mem);
-  let okM = m && m.version === 9 && m.mor && m.migre === 6;
+  let okM = m && m.version === 10 && m.mor && m.migre === 6;
   if (okM) { for (let i = 0; i < 60; i++) { if (m.dilemme) resoudreDilemme(m, choixDilemme(m).filter(x => x.possible !== false).at(-1).id); else jourSuivant(m); } okM = Number.isFinite(m.volonte) && Number.isFinite(scoreFinal(m).economies); }
   if (!okM) { ok = false; console.log('✗ migration v6'); } else console.log('✓ migration v6 -> v8'); }
 console.log('principes :', Object.keys(PRINCIPES).length);

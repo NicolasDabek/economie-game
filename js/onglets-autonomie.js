@@ -104,6 +104,7 @@ export function rendrePoele(s, tagGeste) {
   h += ligne('Commander', bouton('bois', 'sec', `2 stères secs (${eur(2 * BOIS.prixSec)})`) + ' ' + bouton('bois', 'vert', `2 stères verts (${eur(2 * BOIS.prixVert)})`));
   const depuis = s.jour - P.ramonage;
   h += ligne('Ramonage', `${P.ramonage < 0 ? '<span class="tag" style="color:var(--mal)">jamais fait</span>' : depuis > 365 ? `<span class="tag" style="color:var(--mal)">il y a ${depuis} j</span>` : `<span class="tag habitude">il y a ${depuis} j</span>`} encrassement ${Math.min(100, Math.round(P.encrassement / 2))} % ` + bouton('ramoner', null, `Faire ramoner (${eur(BOIS.ramonage)})`));
+  h += aide('Tu charges le poêle selon le froid : il chauffe le salon jusqu\'à la consigne du salon, pas au-delà (allure réduite quand il fait doux). Les radiateurs complètent dans les autres pièces.');
   h += aide(`Un stère de bois sec donne ~${BOIS.kwhStere} kWh (${Math.round(BOIS.rendement * 100)} % de rendement). Vert ou humide, il chauffe 25 % de moins et encrasse le conduit trois fois plus vite : le bois se fait sécher 18 à 24 mois${s.possede.abriBois ? ' (abri : 18 mois)' : ''}. Ramonage obligatoire au moins une fois par an : sans attestation, l'assurance peut refuser d'indemniser un feu de cheminée.${saisonChauffe(chapitreDuJour(jourMax(s)).doy) ? '' : ' Hors saison de chauffe, le poêle reste éteint.'}`);
   return h;
 }

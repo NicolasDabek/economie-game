@@ -1,6 +1,6 @@
 // Tableau de bord (v0.8.1) : vue d'ensemble pour décider. Lecture seule de l'état, sauf l'instantané mensuel
 // (dépenses par poste au 1er du mois) pris par la simulation pour comparer « ce mois-ci » et « le mois dernier ».
-import { ACHATS, BANQUE, PRINCIPES, MEDIATHEQUE, JOURS_HABITUDE } from './data.js';
+import { ACHATS, BANQUE, PRINCIPES, MEDIATHEQUE, JOURS_HABITUDE, horsScenario } from './data.js';
 import { dateDuJour, prevision } from './meteo.js';
 import { scoreFinal, evenementsAVenir, tempsLibre, eur, acheter, actions, acheterVetement, gestesActifs, planifierLessive, laverMain, linge, remplissage, ROUTINES, routineDispo } from './simulation.js';
 import { chapitreDuJour } from './meteo.js';
@@ -82,7 +82,7 @@ export function moisCourant(s) {
 
 // une action concrète par poste en dérapage (le joueur sait quoi faire en arrivant)
 export const GESTE_POSTE = {
-  chauffage: { titre: 'Baisser le chauffage d\'1 °C (≈ −7 % de gaz)' },
+  chauffage: { titre: 'Baisser le chauffage d\'1 °C (≈ −7 % sur la facture de chauffage)' },
   eauChaude: { titre: 'Douche de 7 min et ballon à 55 °C' },
   eau: { titre: 'Douches plus courtes, vaisselle à la bassine' },
   alim: { titre: 'Cuisiner maison plutôt qu\'acheter tout prêt' },
@@ -200,7 +200,7 @@ export function suivreConseil(s, r) {
 export function recommandations(s, r = scoreFinal(s)) {
   const L = [], jours = Math.max(7, s.nbJours || s.jour || 7);
   for (const [id, a] of Object.entries(ACHATS)) {
-    if (s.possede[id] || a.prix > s.argent - 100 || (a.temps || 0) > Math.max(0, tempsLibre(s))) continue;
+    if (s.possede[id] || horsScenario(id) || a.prix > s.argent - 100 || (a.temps || 0) > Math.max(0, tempsLibre(s))) continue;
     if (!DOM_CAT[a.cat] || !domaineConnu(s, DOM_CAT[a.cat])) continue;   // ni solaire, ni ventilation passive, ni domaine inconnu
     const e = estimationAchat(id); if (!e || e.mois === null || !(e.annuel > 5) || e.mois > CONSEILLER.retourMax) continue;
     if ((id === 'vae' && s.possede.velo) || (id === 'velo' && s.possede.vae)) continue;   // un vélo suffit

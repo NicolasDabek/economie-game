@@ -253,11 +253,11 @@ export const ACHATS = {
                   desc: 'Thermostat et minuterie : le barème (100 °C, 45 min à 1 h 30) est tenu. Sans lui, la grande marmite fait l\'affaire… avec plus de risque. (60-185 €)' },
   potLacto:     { nom: 'Pot à lactofermentation 5 l', prix: 35, temps: 0, invest: true, vie: 20, cat: 'Cuisine',
                   desc: 'Chou, carottes, haricots : du sel, un poids, trois semaines. Aucune énergie, et des légumes d\'hiver bons pour la santé. (25-60 €)' },
-  poele:        { nom: 'Poêle à bois 7 kW (conduit tubé, posé)', prix: 4500, temps: 2, invest: true, vie: 20, cat: 'Chauffage',
+  poele:        { pose: 0.45, nom: 'Poêle à bois 7 kW (conduit tubé, posé)', prix: 4500, temps: 2, invest: true, vie: 20, cat: 'Chauffage',
                   desc: 'Avec l\'accord du propriétaire. Bois à ~0,05-0,07 €/kWh contre ~0,12 € pour le gaz. Ramonage obligatoire chaque année. (3 500-5 500 €)' },
   abriBois:     { nom: 'Abri à bois ventilé', prix: 120, temps: 3, invest: true, vie: 15, cat: 'Chauffage',
                   desc: 'Le bois vert sèche en 18 mois au lieu de 2 ans, à l\'abri de la pluie.' },
-  cet:          { nom: 'Ballon thermodynamique 200 L (posé, artisan RGE)', prix: 3000, temps: 1, invest: true, vie: 15, cat: 'Eau chaude', occasion: 2600,
+  cet:          { pose: 0.3, nom: 'Ballon thermodynamique 200 L (posé, artisan RGE)', prix: 3000, temps: 1, invest: true, vie: 15, cat: 'Eau chaude', occasion: 2600,
                   desc: 'Une pompe à chaleur chauffe l\'eau : ~3 fois moins d\'électricité. Prime CEE si la demande précède le devis. « Occasion » = artisan non RGE, sans prime. (2 000-4 000 €)' },
   toilettesSeches: { nom: 'Toilettes sèches (kit)', prix: 90, temps: 2, invest: true, vie: 15, cat: 'Eau',
                   desc: 'Plus de chasse d\'eau : ~10 à 14 m³ d\'eau par personne et par an. De la sciure (~2 €/100 l), un compost à mûrir 2 ans, et une habitude difficile à prendre.' },
@@ -784,3 +784,42 @@ export const CET = { cop: 3, prix: 3000, ceeModeste: 514, ceeAutre: 294, ceeBase
 export const TOILETTES = { litresJour: 30, sciureJour: 0.33 * 0.02, hygieneDebut: 0.3 };
 export const SECHERESSE = { proba: 0.6, debut: 195, duree: [20, 40], annonce: 3 };
 export const AUTOSUFFISANCE = { titres: [[0, 'Citadin'], [10, 'Jardinier du dimanche'], [25, 'Semi-autonome'], [40, 'Autosuffisant']] };
+
+// ---------- Scénarios de départ (v1.3, passe GD 2, P6) ----------
+// Multiplicateurs appliqués au joueur ET au voisin (même logement, même foyer) : le voisin est recalculé pour chaque scénario.
+// surface : déperditions, inertie, radiateurs et vitrages proportionnels à la surface (référence 45 m²) ;
+// pertes : qualité de l'enveloppe (1 = DPE F) ; solaire : apports par les vitrages (double vitrage à faible émissivité, facteur solaire ~0,55 contre ~0,85 en simple vitrage ; appartement mono-orienté). chauffage : 'gaz' (chaudière, rendement 0,9) ou 'elec' (convecteurs, rendement 1, prix de l'heure).
+// Sources : loyers hors Paris ~15 €/m² pour un studio, ~11 €/m² pour un T4 (Clameur, observatoires locaux des loyers 2025) ;
+// abonnement Base 9 kVA ≈ 4 €/mois de plus que 6 kVA (TRVE, CRE 2025-2026), indispensable avec des convecteurs ;
+// eau chaude d'un foyer de 4 ≈ 2,2 × une personne seule (ADEME : 40-50 l/j à 40 °C par adulte, moins par enfant), ballon 300 l conseillé ;
+// alimentation × 2,1 (échelle d'équivalence Insee-OCDE : 1 + 0,5 + 0,3 + 0,3) ; allocations familiales 2 enfants ≈ 153 €/mois (CAF, avril 2026) ;
+// maison rénovée (DPE C) : environ 40 % de déperditions en moins qu'un DPE F (ADEME, « La rénovation performante »).
+export const SCENARIOS = {
+  standard: { nom: 'Petite maison ancienne au gaz', icone: '🏠', court: 'Maison 45 m² · gaz',
+    desc: '45 m², DPE F, chaudière gaz et ballon électrique. Tu vis seul(e), salaire médian, loyer 640 €.',
+    surface: 1, pertes: 1, chauffage: 'gaz', eauChaude: 1, linge: 1, repas: 1, ballon: 200, salairePlus: 0, loyerPlus: 0, aboElecPlus: 0 },
+  'appartement-elec': { nom: 'Appartement tout électrique', icone: '🏢', court: 'Appart. 30 m² · convecteurs',
+    desc: '30 m² au 2e étage, convecteurs électriques (9 kVA) : chaque degré se paie au prix de l\'électricité, et l\'option Tempo devient un vrai pari. Loyer 450 €.',
+    surface: 30 / 45, pertes: 0.85, solaire: 0.7, chauffage: 'elec', eauChaude: 1, linge: 1, repas: 1, ballon: 150, salairePlus: 0, loyerPlus: -190, aboElecPlus: 4 },
+  'famille-4': { nom: 'Famille de 4', icone: '👨‍👩‍👧‍👦', court: 'Famille de 4 · 80 m²',
+    desc: '80 m² au gaz, 2 adultes et 2 enfants : eau chaude × 2,2, deux fois plus de linge, courses × 2,1. Deux salaires (3 900 €) et les allocations familiales (153 €), loyer 880 €.',
+    surface: 80 / 45, pertes: 0.9, chauffage: 'gaz', eauChaude: 2.2, linge: 2, repas: 2.1, ballon: 300, salairePlus: 1853, loyerPlus: 240, aboElecPlus: 0 },
+  'maison-isolee-credit': { nom: 'Maison rénovée à crédit', icone: '🏡', court: 'Maison isolée · crédit',
+    desc: '45 m² rénovés (DPE C, 40 % de déperditions en moins), mais une mensualité de crédit 350 € plus chère que le loyer : moins de gaz à économiser, moins de marge chaque mois.',
+    surface: 1, pertes: 0.6, solaire: 0.6, chauffage: 'gaz', eauChaude: 1, linge: 1, repas: 1, ballon: 200, salairePlus: 0, loyerPlus: 350, aboElecPlus: 0 },
+};
+export const SCENARIO_DEFAUT = 'standard';
+// équipements sans objet selon le scénario (des convecteurs ne se purgent pas)
+export const horsScenario = (id) => SC.chauffage === 'elec' && id === 'purge';
+const PIECES_REF = Object.fromEntries(Object.entries(PIECES).map(([k, p]) => [k, { ...p }]));
+const BALLON_REF = BALLON.litres;
+// scénario actif (comme INDICES : recopié avant chaque journée et au chargement)
+export const SC = { ...SCENARIOS.standard, id: 'standard' };
+export function appliquerScenario(s) {
+  const id = SCENARIOS[s?.scenario] ? s.scenario : SCENARIO_DEFAUT, x = SCENARIOS[id];
+  if (SC.id === id) return SC;
+  Object.assign(SC, x, { id });
+  for (const [k, p] of Object.entries(PIECES_REF)) Object.assign(PIECES[k], { U: p.U * x.surface * x.pertes, C: p.C * x.surface, pMax: p.pMax * x.surface, fenetre: p.fenetre * x.surface * (x.solaire ?? 1) });
+  BALLON.litres = x.ballon || BALLON_REF;
+  return SC;
+}

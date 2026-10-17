@@ -4,7 +4,7 @@
 import { ELEC, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, MEDIATHEQUE, GRENIER, PRIX, TARIFS, CHANGEMENT_TARIF } from './data.js';
 import { makeRng } from './rng.js';
 import { alimentationAutonome, arrosageJour } from './autonomie.js';
-import { CET, TOILETTES } from './data.js';
+import { CET, TOILETTES, SC } from './data.js';
 
 const KWH_L_K = 1.163 / 1000;          // kWh pour chauffer 1 litre de 1 K
 const EAU_FIXE = 35;                   // l/jour : WC, lavabo, ménage (identique pour tous)
@@ -153,6 +153,7 @@ export function systemesJour(s, ctx) {
   nourriture += au.couts;
   if (recolte > 0) ctx.debloquer('cycles');
   if (s.eco?.jardinDepuis !== undefined && s.jour - s.eco.jardinDepuis >= 365 && faits.jardiner) ctx.debloquer('jardinMurit');
+  nourriture *= SC.repas || 1;   // v1.3 : foyer du scénario (échelle Insee-OCDE)
   ctx.nourritureAvant = nourriture;
   nourriture = Math.max(1, nourriture - recolte);
   ctx.couts.nourriture += nourriture;
@@ -183,6 +184,8 @@ export function systemesJour(s, ctx) {
   let lChaudVaisselle = (V.litresChauds || 0) * (y.vaisselle === 'courante' && s.possede.mousseurs ? 0.6 : 1);
   if (y.vaisselle === 'courante' && s.possede.mousseurs) { const l = V.litresChauds * 0.4; attr(s, 'mousseurs', l * KWH_L_K * (45 - chap.tEauFroide) * 0.2 + l / 1000 * PRIX.eauM3); }
   eauFroide += lvJour ? V.litresFroids : 0;
+  const kEC = SC.eauChaude || 1;   // v1.3 : douches et vaisselle de tout le foyer
+  lMix *= kEC; lChaudVaisselle *= kEC;
   const kwhECS = lMix * KWH_L_K * (38 - tf) + lChaudVaisselle * KWH_L_K * (45 - tf);
   const tAmb = ctx.tCuisine;
   const pertesW = BALLON.UA * (s.possede.jaquette ? 1 - BALLON.jaquette : 1) * Math.max(0, y.ballon.consigne - tAmb);
@@ -248,19 +251,20 @@ export function systemesJour(s, ctx) {
 // tous ses abonnements, 20 €/semaine de plaisirs.
 export function voisinJour(s, jm, chap) {
   const tf = chap.tEauFroide;
-  const kwhECS = 12 * 10 * KWH_L_K * (38 - tf) + 30 * KWH_L_K * (45 - tf);
+  const kEC = SC.eauChaude || 1;
+  const kwhECS = kEC * (12 * 10 * KWH_L_K * (38 - tf) + 30 * KWH_L_K * (45 - tf));
   const kwhBallon = kwhECS + BALLON.UA * (65 - 19) * 24 / 1000;
   const [soir, matin] = chap.lumiere;
   const hLum = (23 - Math.floor(soir)) + Math.max(0, matin - 7);
   const kwhElec = (ELEC.veilles + ELEC.box) * 24 / 1000 + ELEC.eclairageVieux * hLum / 1000
     + (s.jour % 7 < 5 ? ELEC.ordinateur * 9 / 1000 : 0) + ELEC.frigoKwh * 1.2 * (chap.id === 'ete' ? 1.15 : 1)
     + REGIMES.classique.kwh + kwhBallon;
-  const litres = 120 + 30 + EAU_FIXE + 4;
+  const litres = kEC * (120 + 30) + EAU_FIXE + 4;
   let services = 0;
   for (const a of Object.values(ABONNEMENTS)) services += a.mois * 12 / 365;
   return {
     eauChaude: kwhBallon * PRIX.elecKwh, elec: kwhElec * PRIX.elecKwh, eau: litres / 1000 * PRIX.eauM3,
-    nourriture: REGIMES.classique.cout + CUISINE.painBaguette, services, plaisirs: 20 / 7,
+    nourriture: (REGIMES.classique.cout + CUISINE.painBaguette) * (SC.repas || 1), services, plaisirs: 20 / 7,
     kwhBallon, kwhElecHorsBallon: kwhElec - kwhBallon,
   };
 }

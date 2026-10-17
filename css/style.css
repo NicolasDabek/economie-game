@@ -467,3 +467,14 @@ body{padding-bottom:96px}
   .menu{gap:6px}
   .topbar{column-gap:var(--e2)}
 }
+
+/* v1.3 : scénarios de départ */
+fieldset.scenarios{border:1px solid var(--bord);border-radius:var(--r2);padding:var(--e3);margin-bottom:var(--e3)}
+fieldset.scenarios legend{font-weight:700;padding:0 6px}
+.scenarios-liste{display:grid;grid-template-columns:1fr 1fr;gap:var(--e2);margin-bottom:var(--e2)}
+.btn.scenario{display:flex;gap:var(--e2);align-items:flex-start;text-align:left;min-height:44px;padding:10px 12px;white-space:normal;height:auto}
+.btn.scenario .sc-ico{font-size:26px;line-height:1}
+.btn.scenario .sc-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.btn.scenario small{font-size:var(--t-s);color:var(--doux);font-weight:400;line-height:1.35}
+.btn.scenario.actif-btn{box-shadow:0 0 0 2px var(--ok) inset}
+@media (max-width:600px){.scenarios-liste{grid-template-columns:1fr}}

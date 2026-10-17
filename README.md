@@ -94,7 +94,7 @@ Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude él
   - « Avance rapide » 10/20/30 ans : 300 scénarios, fourchettes 10/50/90 %, en euros courants et constants.
   - Les gains nets des placements (valeur de revente après frais et impôts, moins les gains du voisin resté au Livret A) entrent dans le score.
 - **99 principes** dans une encyclopédie filtrable par domaine (quoi, pourquoi, comment, piège, transfert). Les principes verrouillés montrent « ??? » et un indice.
-- **Fin de partie** : économies nettes face au voisin « tout chauffé », économies par domaine, investissements rentabilisés ou non, meilleure découverte, puis un titre : Dépensier, Malin, Optimiseur, Autonome ou Maître de la sobriété.
+- **Fin de partie** : économies nettes face au voisin « tout chauffé », économies par domaine, investissements rentabilisés ou non, meilleure découverte, puis un titre : Dépensier (< 8 %), Malin (< 15 %), Optimiseur (< 22 %), Économe (< 32 %), Autonome (< 45 %), Maître de la sobriété (< 62 %) ou Légende de la sobriété.
 - **Sauvegarde** automatique chaque jour dans le navigateur, plus des boutons Sauvegarder, Charger et Nouvelle partie.
 
 ## Campagne de plusieurs années (v0.6)
@@ -185,7 +185,7 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 ## v0.9 : équilibrage et expérience joueur
 
 - **Conseils qui agissent** : chaque recommandation du tableau de bord a un bouton « Faire » (achat + réglage qui le rend rentable, geste, placement, lessive, lavage à la main, routine, ranger les vêtements chauds…). Une recommandation sans effet possible n'est plus proposée (essai à blanc). Le diagnostic santé distingue linge sale et froid.
-- **Débutant guidé** : suivre uniquement le tableau de bord (une action tous les 3 jours) mène à Optimiseur / Autonome, en bonne santé (testé sur 3 graines).
+- **Débutant guidé** : suivre uniquement le tableau de bord (une action tous les 3 jours) mène à Optimiseur ou Économe, en bonne santé (testé sur 3 graines).
 - **Défis annuels** dès la 2e année (gaz, nourriture, électricité, transport : −5 % de consommation, hausse des prix comprise), récompense moral +8. L'année 1 reste une année d'apprentissage.
 - **Courbes** : dépenses mois par mois et patrimoine, toi contre le voisin (onglet Bilan › Graphiques), avec état vide explicite.
 - **Annuler** (Ctrl+Z ou bouton) les réglages du jour ; **Réglages** (?) : vitesse, animations, taille du texte, pauses de l'avance rapide, aide des raccourcis clavier (J, S, M, E, T, 1–6, Échap).
@@ -212,20 +212,24 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 - Audit complet du code, des chiffres, des textes et de l'interface (détail dans [CHANGELOG.md](CHANGELOG.md)).
 - Page **Aide** (« Comment jouer », jauges, conseiller, raccourcis, à propos et sources).
 - Icône du jeu et balises de partage.
-- Sauvegarde version 8, migrée automatiquement depuis toutes les versions depuis la v0.3. Une sauvegarde abîmée est mise de côté sans bloquer le jeu.
-- Résultats sur 5 ans (graines 2026 / 7 / 1789, économies face au voisin) :
+- Sauvegarde version 10, migrée automatiquement depuis toutes les versions depuis la v0.3 (une partie v1.1-v1.2 continue dans la maison au gaz). Une sauvegarde abîmée est mise de côté sans bloquer le jeu.
+- Résultats sur 5 ans, v1.3 (graines 2026 / 7 / 1789, économies face au voisin) :
 
 | Stratégie | Économies | Titre |
 |---|---|---|
 | Ne rien toucher | −1,5 / −0,6 / +2,7 % | Dépensier |
-| Naïf (tout chauffé) | −46,7 / −48,6 / −43,7 % | Dépensier |
+| Tout à fond (ex-« naïf ») | −46,7 / −48,6 / −43,7 % | Dépensier |
 | Glacial | −33,5 / −29,4 / −23,7 % | Dépensier |
 | Austère extrême | −11,6 / −8,8 / −0,8 % | Dépensier |
-| Bien-être négligé | 12,0 / 10,9 / 16,6 % | Malin |
-| Débutant guidé par le conseiller | 23,0 / 23,0 / 28,7 % | Optimiseur |
-| Moral négligé | 28,1 / 33,8 / 37,3 % | Optimiseur |
-| Malin | 32,9 / 36,4 / 39,5 % | Autonome |
-| Maître | 60,5 / 65,6 / 68,0 % | Maître de la sobriété |
+| Bien-être négligé | 12,2 / 11,7 / 16,6 % | Dépensier (garde-fou dès le rang 1) |
+| Débutant guidé par le conseiller | 23,1 / 22,9 / 28,6 % | Économe |
+| Moral négligé | 27,6 / 33,3 / 37,1 % | Optimiseur |
+| Autosuffisant (jardin, poules, poêle) | 32,0 / 35,2 / 38,4 % | Autonome |
+| Malin | 32,9 / 36,3 / 39,4 % | Autonome |
+| Maître | 60,7 / 66,2 / 68,2 % | Maître / Légende / Légende |
+
+- **Autosuffisance, un pari de long terme** : face au malin, l'autosuffisant perd 1 589 à 1 711 € sur 3 ans et gagne 1 552 à 2 208 € sur 10 ans.
+- **Scénarios de départ** (« ne rien toucher » face au voisin, 3 graines) : maison au gaz −1,5 à +2,7 % ; appartement tout électrique −2,7 à +1,4 % ; famille de 4 −2,9 à +0,1 % ; maison rénovée à crédit −1,1 à +3,2 %.
 
 ## Lancer le jeu
 Aucune dépendance et aucune compilation : HTML, CSS et JavaScript (modules ES) uniquement.

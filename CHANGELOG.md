@@ -2,6 +2,28 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.3.0] — 17 octobre 2026
+
+Seconde passe de game design (`economie-gd-passe2.md`).
+
+- **Titre « Économe »** : la bande Autonome (22-45 %) est coupée en deux. Seuils 8 / 15 / 22 / 32 / 45 / 62 % pour Dépensier, Malin, Optimiseur, **Économe**, Autonome, Maître et Légende. Le débutant guidé devient Économe ; le malin reste Autonome.
+- **Garde-fou du bien-être dès le rang 1** : un bien-être moyen sous 40, ou au moins 8 rechutes sur 5 ans (au prorata de la durée), donne Dépensier. Négliger son bien-être ne rapporte plus le titre « Malin ». Une hygiène sous 45 plafonne toujours à Malin.
+- **Défis sans victoire gratuite** : il faut dépenser 2 % de moins que l'an dernier (prix corrigés) et avoir agi sur le poste : une habitude ou un équipement lié (chauffage et isolation, cuisine et jardin, électricité, transport sans voiture). Sinon le défi est manqué, avec un message qui le dit. « Ne rien toucher » ne gagne plus aucun défi sur les 3 graines.
+- **3 scénarios de départ**, choisis sur l'écran d'accueil. Le voisin vit dans le même logement et il est recalculé :
+  - 🏢 **Appartement tout électrique** : 30 m², convecteurs payés au prix de l'heure (Tempo compris), abonnement 9 kVA, loyer 450 €.
+  - 👨‍👩‍👧‍👦 **Famille de 4** : 80 m² au gaz, eau chaude × 2,2, deux fois plus de linge, courses × 2,1 (échelle Insee-OCDE), ballon de 300 l. Deux salaires (3 900 €), 153 € d'allocations familiales, loyer 880 €.
+  - 🏡 **Maison rénovée à crédit** : 40 % de déperditions en moins, double vitrage peu émissif, mensualité supérieure de 350 € au loyer.
+  - Le scénario du foyer est rappelé dans le menu ⋯.
+- **Poêle à bois réglé comme dans la réalité** : il chauffe le salon jusqu'à la consigne de la pièce, au lieu de pousser 5 kW chaque soir. Avant, le salon montait à 33-37 °C, la santé et le moral s'effondraient.
+- **Valeur résiduelle des installations fixes** : pour le poêle et le ballon thermodynamique, la pose ne se revend pas (45 % et 30 % du prix). Seule la valeur de l'appareil reste au bilan.
+- **Profil de test « autosuffisant »** : c'est le malin, avec en plus le jardin, les poules et un poêle (qui tourne en journée) achetés la première année, sans toucher à l'épargne de précaution. Face au malin, il perd 1 589 à 1 711 € sur 3 ans et gagne 1 552 à 2 208 € sur 10 ans.
+- Le profil de test « naïf » est renommé « tout à fond » : la référence reste « ne rien toucher ».
+- **Sauvegarde v10**, avec migration depuis la v9 : une partie en cours continue dans la maison au gaz.
+- **Tests** :
+  - « ne rien toucher » reste à ± 5 % du voisin dans chaque scénario et sur 3 graines ;
+  - bien-être négligé = Dépensier ;
+  - nouveau `test/captures-v130.cjs` (écran d'accueil mobile, partie en appartement, reprise, migration v9).
+
 ## [1.2.1] — 17 octobre 2026
 
 Seconde passe de design (accessibilité et mobile).

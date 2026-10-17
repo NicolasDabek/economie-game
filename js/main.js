@@ -8,7 +8,7 @@ import { etatUI } from './onglets.js';
 import { recommandations, suivreConseil, conseillerDispo, ACTIVATION } from './tableau.js';
 import { prefs, sauverPrefs, ouvrir, ouvrirSection, apercuAchat, effetAchat, apercuConsigne, demarrerTutoriel, arreterTutoriel, etapeSuivante, coachActif, majCoach, objectifsAtteints, filtrerGlossaire, choisirVue } from './guide.js';
 import { icone } from './icones.js';
-import { ACHATS } from './data.js';
+import { ACHATS, SCENARIOS, SCENARIO_DEFAUT } from './data.js';
 import { eur } from './simulation.js';
 import { chapitreDuJour } from './meteo.js';
 import { CAMPAGNE } from './data.js';
@@ -31,6 +31,17 @@ const $ = (id) => document.getElementById(id);
 let s = nouvellePartie(Number(new URLSearchParams(location.search).get('graine')) || 2026);
 let occupe = false;
 let duree = CAMPAGNE.anneesDefaut, dureeChoisie = false;
+let scenario = SCENARIO_DEFAUT;
+// v1.3 : choix du logement de départ sur l'écran d'accueil
+const PITCH = { standard: 'dans une petite maison ancienne de 45 m², chauffée au gaz', 'appartement-elec': 'dans un appartement de 30 m² tout électrique (convecteurs)',
+  'famille-4': 'avec ta famille (2 adultes, 2 enfants) dans une maison de 80 m² au gaz', 'maison-isolee-credit': 'dans une maison de 45 m² rénovée (DPE C), achetée à crédit' };
+function rendreScenarios() {
+  const l = $('scenariosListe'); if (!l) return;
+  l.innerHTML = Object.entries(SCENARIOS).map(([id, x]) => `<button class="btn scenario${id === scenario ? ' actif-btn' : ''}" data-scenario="${id}" aria-pressed="${id === scenario}">
+    <span class="sc-ico" aria-hidden="true">${x.icone}</span><span class="sc-txt"><b>${x.nom}</b><small>${x.desc}</small></span></button>`).join('');
+  if ($('pitchLogement')) $('pitchLogement').textContent = PITCH[scenario] || PITCH.standard;
+}
+rendreScenarios();
 
 function rafraichir(nbAvant) {
   const nouveaux = s.messages.slice(0, Math.max(0, s.messages.length - nbAvant));
@@ -210,9 +221,10 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnMois') return avancerVite(30, false);
   else if (b.id === 'btnEvenement') return avancerVite(400, true);
   else if (d.routine) { s.auto ??= {}; s.auto[d.routine] = !s.auto[d.routine]; autoSauvegarde(); }
+  else if (d.scenario) { scenario = d.scenario; rendreScenarios(); return; }
   else if (d.duree) { duree = Number(d.duree); dureeChoisie = true; document.querySelectorAll('[data-duree]').forEach(x => { x.classList.toggle('actif-btn', x === b); x.setAttribute('aria-pressed', x === b); }); return; }
   else if (b.id === 'btnJouer' || b.id === 'btnTutoriel' || b.id === 'btnCommencer') {
-    if (dureeChoisie || duree !== Math.round(s.joursTotal / 365)) { s = nouvellePartie(s.seed, duree); autoSauvegarde(); }
+    if (dureeChoisie || duree !== Math.round(s.joursTotal / 365) || scenario !== (s.scenario || SCENARIO_DEFAUT)) { s = nouvellePartie(s.seed, duree, scenario); autoSauvegarde(); }
     $('intro').classList.add('cache'); rafraichir(n);
     if (b.id === 'btnTutoriel') demarrerTutoriel(s); else { prefs.tutoFait = true; sauverPrefs(); }
     return;
@@ -228,7 +240,7 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnCharger') { const c = charger(); if (c && typeof c === 'object') { s = c; if (s.migre) { toast(MESSAGES_MIGRATION[s.migre] || 'Sauvegarde mise à jour.'); delete s.migre; } $('fin').classList.add('cache'); toast('📂 Partie chargée.'); } else signalerChargement(c); }
   else if (b.id === 'btnNouvelle' || b.id === 'btnRejouer') {
     if (b.id === 'btnNouvelle' && !confirm('Recommencer une nouvelle partie ? La partie en cours sera perdue si elle n\'est pas sauvegardée. Cette action est irréversible.')) return;
-    s = nouvellePartie(Math.floor(Math.random() * 1e6), Math.round(s.joursTotal / 365) || duree); $('fin').classList.add('cache'); autoSauvegarde();
+    s = nouvellePartie(Math.floor(Math.random() * 1e6), Math.round(s.joursTotal / 365) || duree, s.scenario || scenario); $('fin').classList.add('cache'); autoSauvegarde();
   } else return;
   rafraichir(n);
 });

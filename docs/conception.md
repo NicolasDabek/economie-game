@@ -148,12 +148,12 @@ Un quartier avec quelques voisins : prêt d'outils (perceuse partagée), troc de
 - **Résilience** : part des besoins couverts sans facture (solaire, jardin, eau de pluie, réparations).
 - **Habitudes acquises** et **principes maîtrisés**.
 - Option : empreinte carbone évitée en bonus.
-- Titres : Dépensier, Malin, Optimiseur, Autonome, Maître de la sobriété, plus des titres spéciaux (« Le Bricoleur », « Le Chef Solaire », « Zéro Gaspi »).
+- Titres (v1.3) : Dépensier < 8 %, Malin < 15 %, Optimiseur < 22 %, Économe < 32 %, Autonome < 45 %, Maître de la sobriété < 62 %, Légende de la sobriété ; bien-être moyen < 40 ou 8 rechutes sur 5 ans : aucun titre. Plus des titres spéciaux (« Le Bricoleur », « Le Chef Solaire », « Zéro Gaspi »).
 
 ## 5. Structure et rejouabilité
-- **Scénarios** : étudiant en studio mal isolé, famille en maison ancienne, retraité à la campagne avec jardin, télétravailleur en appartement en ville. Mêmes règles, stratégies différentes.
+- **Scénarios** (v1.3, choisis à l'accueil, voisin recalculé dans le même logement) : maison ancienne au gaz (45 m², DPE F) ; appartement tout électrique (30 m², convecteurs, 9 kVA, Tempo à risque) ; famille de 4 (80 m², eau chaude × 2,2, linge × 2, courses × 2,1, deux salaires) ; maison rénovée à crédit (−40 % de déperditions, mensualité +350 €/mois). Idées pour plus tard : retraité à la campagne avec jardin, télétravailleur en ville.
 - **Chapitres** par domaine (chauffage d'abord en tutoriel), puis mode libre où tout se combine sur une année.
-- **Défis** : « Hiver à 300 € », « Un mois sans courses », « Zéro sèche-linge ».
+- **Défis** : « Hiver à 300 € », « Un mois sans courses », « Zéro sèche-linge ». Défis annuels (v1.3) : 2 % sous l'an dernier, prix corrigés, ET une habitude ou un équipement lié au poste ; « ne rien toucher » n'en gagne aucun.
 
 ## 6. Prototype recommandé (inchangé dans l'esprit, précisé)
 - Jeu navigateur, une maison de 3 pièces, cycle jour/nuit, une saison (hiver, 8 semaines).

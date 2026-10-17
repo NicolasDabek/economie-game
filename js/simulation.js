@@ -1,5 +1,5 @@
 // Moteur de simulation : modèle thermique et hydrique unique, jauges, habitudes, linge, événements
-import { PRIX, INDICES, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, LESSIVE, JOURS, PIECES, ORDRE_PIECES, PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour, VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND, JOURS_HABITUDE, HABITUDE_OUBLI, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART, LAVAGE_MAIN } from './data.js';
+import { PRIX, INDICES, RENDEMENT_CHAUDIERE, FACTEUR_NON_PURGE, LESSIVE, JOURS, PIECES, ORDRE_PIECES, PART_FENETRE, PART_INFILTRATION, ISOLATION, ECHANGE_PORTE, P_APPOINT, PANNEAU_WC, pieceOccupee, estJour, VETEMENTS, SEUIL_ENCOMBREMENT, TEMPS_REPRISER, TEMPS_AERER_VET, ACHATS, TEMPS_JOUR, TEMPS_WEEKEND, JOURS_HABITUDE, HABITUDE_OUBLI, GESTES, PRINCIPES, EVENEMENTS, ETE, TARIFS, CHAPITRES, STOCKAGE, ROI_ITEMS, ARGENT_DEPART, LAVAGE_MAIN, SC, appliquerScenario, horsScenario } from './data.js';
 import { stockerSurplus, detecterCombos } from './combos.js';
 import { tExt, soleil, chapitreDuJour, FACTEUR_FENETRE } from './meteo.js';
 import { systemesJour, voisinJour, tempsRoutines, prixElec } from './systemes.js';
@@ -11,7 +11,7 @@ import { anneeDuJour, dateDuJour } from './meteo.js';
 import { nouvelEtatMoral, moralJour, santeJour, coutRechute, paliersJour } from './moral.js';
 import { palierMoral, palierBE, EFFETS_PALIERS as EP } from './paliers.js';
 import { makeRng } from './rng.js';
-import { surAchat, poeleJour, autonomieSoir, actionAutonomie, etatAutonomie } from './autonomie.js';
+import { surAchat, poeleJour, poeleConsommer, autonomieSoir, actionAutonomie, etatAutonomie } from './autonomie.js';
 import { instantaneMois } from './tableau.js';
 import { passifHeure, passifCumul, passifJour, debutJourPassif, hasCheminee, typePuits, chantierEnCours, nouvelEtatPassif } from './passif.js';
 
@@ -156,7 +156,7 @@ export function repriser(s, id) {
 export function acheter(s, id, occasion = false) {
   const a = ACHATS[id];
   const prix = occasion && a.occasion ? a.occasion : a.prix;
-  if (s.possede[id] || s.argent < prix) return false;
+  if (s.possede[id] || s.argent < prix || horsScenario(id)) return false;
   if (id === 'housse' && !s.possede.bouillotte) return false;
   if (a.cat === 'Ventilation passive' && id !== 'kitRadon') {
     const famille = id.startsWith('cheminee') ? ['chemineeDIY', 'chemineePro'] : ['puitsDIY', 'puitsPro', 'puitsHydro'];
@@ -292,9 +292,12 @@ export function pasHoraire(pieces, cfg, jm, h) {
     r.hum += src - k * (r.hum - 40) + (cfg.portes === 'ouvertes' ? 0.08 * (hMoy - r.hum) : 0);
     if (cfg.passif) r.hum += cfg.passif.k[id] * (cfg.passif.idxIn - r.hum);
   }
+  const besoin = (id, cons) => (cons - pieces[id].t) * PIECES[id].C - q[id];
+  // poêle à bois (v1.3) : chauffe le salon jusqu'à sa cible, puissance limitée
+  let poele = 0;
+  if (cfg.poele) { poele = Math.min(cfg.poele.p, Math.max(0, besoin('salon', cfg.poele.cible))); q.salon += poele; }
   // radiateurs (chaudière gaz)
   const rad = {};
-  const besoin = (id, cons) => (cons - pieces[id].t) * PIECES[id].C - q[id];
   if (cfg.robinets) {
     for (const id of ORDRE_PIECES) rad[id] = Math.min(PIECES[id].pMax * fact, Math.max(0, besoin(id, Math.max(T_HORS_GEL, cfg.consignes[id]))));
   } else {
@@ -328,7 +331,7 @@ export function pasHoraire(pieces, cfg, jm, h) {
   // une isolation n'économise que si le chauffage tourne
   const chauffe = ORDRE_PIECES.some(id => chauffeRad[id]);
   if (!chauffe) for (const k of Object.keys(attrib)) attrib[k] = 0;
-  return { rad, appoint, attrib, te, irr, climElec };
+  return { rad, appoint, attrib, te, irr, climElec, poele };
 }
 
 export function humiditeRelative(piece) {
@@ -344,6 +347,7 @@ function scoreConfort(ressenti, mini, maxi) {
 // ---------------------------------------------------------------- journée
 export function jourSuivant(s) {
   if (s.fini || s.dilemme) return;
+  appliquerScenario(s);
   appliquerIndices(s);
   instantaneMois(s);   // tableau de bord : dépenses du mois (sans effet sur le jeu)
   routines(s);
@@ -391,7 +395,8 @@ export function jourSuivant(s) {
   ctx.outils = { payer, prendreTemps: () => true, msg: ctx.msg, debloquer: ctx.debloquer };
   systemesJour(s, ctx);
   transportJour(s, ctx);
-  poeleJour(s, ctx, prixGaz(s) / RENDEMENT_CHAUDIERE);
+  poeleJour(s, ctx);
+  let poeleKwh = 0;
 
   // --- lessive du jour ---
   const L = s.lessivePrevue;
@@ -402,20 +407,21 @@ export function jourSuivant(s) {
     const rempli = remplissage(s);
     s.lessives++; s.sommeRemplissage += Math.min(1, rempli);
     if (L.laverie) {
-      payer(s, PRIX.laverieLavage + PRIX.laverieSechage, 'laverie');
-      s.depenses.linge += PRIX.laverieLavage + PRIX.laverieSechage;
+      payer(s, (SC.linge || 1) * (PRIX.laverieLavage + PRIX.laverieSechage), 'laverie');
+      s.depenses.linge += (SC.linge || 1) * (PRIX.laverieLavage + PRIX.laverieSechage);
       msg(s, `🧺 Laverie : ${eur(PRIX.laverieLavage + PRIX.laverieSechage)} et 1 h 30.`, 'info');
     } else {
       const dehors = L.sechage === 'dehors' && s.possede.corde && !hiver;
       if (dehors) debloquer(s, 'airLibre');
       if (L.temp === 30 && ++s.l30 >= 5) debloquer(s, 'trenteDegres');
-      const kwh = LESSIVE.kwh[L.temp] + (L.sechage === 'machine' ? LESSIVE.secheLingeKwh : 0);
+      const kL = SC.linge || 1;   // v1.3 : une famille lave deux fois plus de linge (une « lessive » = kL machines)
+      const kwh = (LESSIVE.kwh[L.temp] + (L.sechage === 'machine' ? LESSIVE.secheLingeKwh : 0)) * kL;
       const heures = L.hc ? [22, 23, 0] : L.midi ? [12, 13, 14] : [19, 20, 21];
-      let reste = kwh * 1000; for (const h of heures) { const x = Math.min(2200, reste); ctx.elecH[h] += x; reste -= x; }
+      let reste = kwh * 1000; for (const h of heures) { const x = Math.min(2200 * kL, reste); ctx.elecH[h] += x; reste -= x; }
       ctx.kwh.lessive = kwh;
-      ctx.couts.eau += LESSIVE.litres / 1000 * PRIX.eauM3;
-      payer(s, PRIX.doseLessive, 'produits');
-      s.depenses.linge += PRIX.doseLessive + LESSIVE.litres / 1000 * PRIX.eauM3 + kwh * PRIX.elecKwh;
+      ctx.couts.eau += kL * LESSIVE.litres / 1000 * PRIX.eauM3;
+      payer(s, kL * PRIX.doseLessive, 'produits');
+      s.depenses.linge += kL * (PRIX.doseLessive + LESSIVE.litres / 1000 * PRIX.eauM3) + kwh * PRIX.elecKwh;
       s.machine.usure += LESSIVE.usureMachine * (L.temp === 60 ? 1.3 : 1);
       sechageInterieur = L.sechage === 'air' || (L.sechage === 'dehors' && !dehors);
       if (L.temp <= 30 && rempli >= 0.75) debloquer(s, 'volume');
@@ -443,7 +449,8 @@ export function jourSuivant(s) {
   const lit = hiver ? 3 : chap.id === 'printemps' ? 2 : 0;
   const ventilo = s.possede.ventilateur && s.ventilateur;
   const clim = s.possede.clim && s.climActive ? s.climConsigne : null;
-  let elecEur = 0, elecKwh = 0;
+  let elecEur = 0, elecKwh = 0, chauffElecEur = 0, chauffElecKwh = 0, radBaseKwh = 0;
+  const elecChauffage = SC.chauffage === 'elec';   // v1.3 : convecteurs, rendement 1, payés au prix de l'heure (Tempo compris)
   const surplusH = new Array(24).fill(0), jourElec = new Array(24);
   s.battSoc ||= 0;
   debutJourPassif(s);
@@ -459,13 +466,16 @@ export function jourSuivant(s) {
     if (invites && s.invites.mode === 'chauffer' && jr) { consignes.salon = Math.max(consignes.salon, 21); central = Math.max(central, 21); }
     const cfg = {
       portes, rideauxFermes, voletsFermes: faits.rideaux && !jr, rideauxTh: s.possede.rideauxTh,
-      calfeutrage: s.possede.calfeutrage, boudin: s.possede.boudin, robinets: s.possede.robinets, purge: s.possede.purge,
+      calfeutrage: s.possede.calfeutrage, boudin: s.possede.boudin, robinets: s.possede.robinets, purge: s.possede.purge || elecChauffage,
       consignes, central, appoint: s.possede.appoint && s.appoint.actif ? s.appoint.consigne : null,
       aeration, recupCuisson: faits.cuisson, sechageInterieur: tirageLinge ? 'tirage' : sechageInterieur, invites, chaleur: ctx.chaleur,
       passif: passifHeure(s, jm, h, chap, ORDRE_PIECES.reduce((a, p) => a + s.pieces[p].t, 0) / 3),
       voletsJour: faits.voletsJour, ventNuit: faits.ventNuit, clim,
+      // le poêle chauffe le salon jusqu'à la consigne voulue pour la pièce (on charge moins de bûches quand il fait doux)
+      poele: ctx.poele && ctx.poele.heures.has(h) ? { p: ctx.poele.p, cible: Math.max(17, s.possede.robinets ? consignes.salon : central) } : null,
     };
     const r = pasHoraire(s.pieces, cfg, jm, h);
+    poeleKwh += r.poele / 1000;
     const pr = cfg.passif;
     if (pr) {
       passifCumul(s, pr, h, Object.fromEntries(ORDRE_PIECES.map(p => [p, humiditeRelative(s.pieces[p])])));
@@ -475,8 +485,9 @@ export function jourSuivant(s) {
       // une chaleur apportée hors chauffe mais sous 22 °C est stockée dans les murs et évite du chauffage plus tard
       const tMoyP = ORDRE_PIECES.reduce((a, p) => a + s.pieces[p].t, 0) / 3;
       const utile = radTot > 0 || (!ete && tMoyP < 22);
-      const gain = (P) => P > 0 && utile ? (radTot > 0 ? Math.min(P, radTot) : P) / 1000 / RENDEMENT_CHAUDIERE * prixGaz(s)
-        : P < 0 && radTot > 0 ? P / 1000 / RENDEMENT_CHAUDIERE * prixGaz(s)
+      const pxC = elecChauffage ? prixElec(s, h, jm.tempo) : prixGaz(s) / RENDEMENT_CHAUDIERE;
+      const gain = (P) => P > 0 && utile ? (radTot > 0 ? Math.min(P, radTot) : P) / 1000 * pxC
+        : P < 0 && radTot > 0 ? P / 1000 * pxC
         : P < 0 && r.climElec > 0 ? -P * pxClim : 0;
       const idC = s.possede.chemineePro ? 'chemineePro' : 'chemineeDIY', idP = typePuits(s);
       if (hasCheminee(s)) s.attribution[idC] = (s.attribution[idC] || 0) + gain(pr.Pch);
@@ -484,9 +495,9 @@ export function jourSuivant(s) {
     }
     for (const p of ORDRE_PIECES) {
       jour.kwhRad[p] += r.rad[p] / 1000;
-      const e = r.rad[p] / 1000 / RENDEMENT_CHAUDIERE * prixGaz(s);
+      const e = elecChauffage ? r.rad[p] / 1000 * prixElec(s, h, jm.tempo) : r.rad[p] / 1000 / RENDEMENT_CHAUDIERE * prixGaz(s);
       jour.eur[p] += e; s.pieces[p].kwhSemaine += r.rad[p] / 1000; s.pieces[p].eurSemaine += e;
-      gazKwh += r.rad[p] / 1000 / RENDEMENT_CHAUDIERE;
+      if (elecChauffage) { chauffElecEur += e; chauffElecKwh += r.rad[p] / 1000; } else gazKwh += r.rad[p] / 1000 / RENDEMENT_CHAUDIERE;
     }
     const occ = pieceOccupee(h);
     for (const a of Object.keys(attrJour)) attrJour[a] += r.attrib[a] / 1000;
@@ -522,7 +533,8 @@ export function jourSuivant(s) {
     // le voisin : 21 °C partout, clim à 25 °C l'été, portes et rideaux ouverts, aère brièvement
     const rb = pasHoraire(s.base.pieces, { portes: 'ouvertes', rideauxFermes: false, voletsFermes: false, robinets: true, purge: true,
       consignes: { salon: 21, chambre: 21, cuisine: 21 }, aeration: 'breve', chaleur: s.base.chaleur, clim: ete ? 25 : null }, jm, h);
-    gazBase += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000 / RENDEMENT_CHAUDIERE;
+    if (elecChauffage) radBaseKwh += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000;   // le voisin reste en option Base
+    else gazBase += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000 / RENDEMENT_CHAUDIERE;
     climBase += rb.climElec / 1000;
 
     // ressenti et confort
@@ -554,6 +566,8 @@ export function jourSuivant(s) {
     jour.heures.push({ h, te: r.te, t: { salon: s.pieces.salon.t, chambre: s.pieces.chambre.t, cuisine: s.pieces.cuisine.t }, ressenti, hr, prix });
   }
 
+  poeleConsommer(s, ctx, poeleKwh, elecChauffage ? PRIX.elecKwh : prixGaz(s) / RENDEMENT_CHAUDIERE);
+
   // --- surplus solaire : bouilloire → eau stockée (Newton), routeur → ballon ---
   const st = stockerSurplus(s, surplusH, jourElec, ctx, faits, chap);
   elecEur -= st.eurEvites; elecKwh -= st.kwhEvites;
@@ -570,7 +584,8 @@ export function jourSuivant(s) {
   if (Object.entries(s.roi || {}).some(([id, r]) => r.dernier >= (s.prixPayes?.[id] ?? ACHATS[id].prix))) debloquer(s, 'mesureReelle');
 
   // --- factures du jour ---
-  payer(s, gazKwh * prixGaz(s), 'gaz');
+  payer(s, gazKwh * prixGaz(s) + chauffElecEur, 'gaz');   // poste « chauffage » (gaz ou convecteurs)
+  s.depenses.chauffElecKwh = (s.depenses.chauffElecKwh || 0) + chauffElecKwh;
   payer(s, elecEur, 'elec');
   payer(s, ctx.couts.eau, 'eau');
   payer(s, ctx.couts.nourriture * INDICES.alim, 'nourriture');
@@ -578,17 +593,17 @@ export function jourSuivant(s) {
   payer(s, ctx.couts.plaisirs * INDICES.general, 'plaisirs');
   payer(s, ctx.couts.transport * INDICES.carburant, 'transport');
   payer(s, ctx.couts.imprevus, 'imprevus');
-  const aboJour = (TARIFS[s.sys.tarif].aboMois * 12 + PRIX.aboGazAn) / 365;
+  const aboJour = ((TARIFS[s.sys.tarif].aboMois + (SC.aboElecPlus || 0) * INDICES.elec) * 12 + (elecChauffage ? 0 : PRIX.aboGazAn)) / 365;
   payer(s, aboJour, 'abonnements');
   s.depenses.eauChaudeEur = (s.depenses.eauChaudeEur || 0) + (ctx.kwh.ballon || 0) * (elecKwh > 0 ? elecEur / elecKwh : PRIX.elecKwh);
-  const coutJour = gazKwh * prixGaz(s) + elecEur + aboJour + ctx.couts.eau;
+  const coutJour = gazKwh * prixGaz(s) + chauffElecEur + elecEur + aboJour + ctx.couts.eau;
   s.factureSemaine += coutJour;
   jour.elecKwh = elecKwh; jour.elecEur = elecEur;
-  const eurGazUtile = prixGaz(s) / RENDEMENT_CHAUDIERE;
+  const eurGazUtile = elecChauffage ? (chauffElecKwh > 0 ? chauffElecEur / chauffElecKwh : PRIX.elecKwh) : prixGaz(s) / RENDEMENT_CHAUDIERE;
   for (const a of Object.keys(attrJour)) s.attribution[a] += attrJour[a] * eurGazUtile;
   if (s.possede.purge) s.attribution.purge += gazKwh * prixGaz(s) * 0.08;
   else if (gazKwh > 0) { const surcout = gazKwh * prixGaz(s) * 0.08; payer(s, surcout, 'gaz'); s.factureSemaine += surcout; mensualiser(s, surcout); }
-  mensualiser(s, gazKwh * prixGaz(s) + elecEur + aboJour);   // v0.6 : l'énergie se paie par mensualités, régularisées en juin
+  mensualiser(s, gazKwh * prixGaz(s) + chauffElecEur + elecEur + aboJour);   // v0.6 : l'énergie se paie par mensualités, régularisées en juin
   if (jm.tempo === 'rouge' && s.sys.tarif === 'tempo') {
     const hpRouge = jour.heures.filter(x => x.prix > 0.5).length;
     if (hpRouge) debloquer(s, 'tempo');
@@ -596,7 +611,7 @@ export function jourSuivant(s) {
 
   // --- voisin ---
   const vz = voisinJour(s, jm, chap);
-  s.base.gaz += gazBase * prixGaz(s);
+  s.base.gaz += gazBase * prixGaz(s) + radBaseKwh * PRIX.elecKwh;
   s.base.elec += vz.elec + climBase * PRIX.elecKwh;
   s.base.clim = (s.base.clim || 0) + climBase * PRIX.elecKwh;
   s.base.eauChaude = (s.base.eauChaude || 0) + vz.eauChaude;
@@ -607,9 +622,10 @@ export function jourSuivant(s) {
   s.base.transport = (s.base.transport || 0) + voisinTransport(s) * INDICES.carburant;
   s.base.abonnements += aboJour;
   if (s.jour % 3 === 2) {
-    const l = (LESSIVE.kwh[40] + LESSIVE.secheLingeKwh) * PRIX.elecKwh + LESSIVE.litres / 1000 * PRIX.eauM3 + PRIX.doseLessive;
-    s.base.elec += (LESSIVE.kwh[40] + LESSIVE.secheLingeKwh) * PRIX.elecKwh;
-    s.base.eau += LESSIVE.litres / 1000 * PRIX.eauM3; s.base.produits += PRIX.doseLessive;
+    const kL = SC.linge || 1;
+    const l = kL * ((LESSIVE.kwh[40] + LESSIVE.secheLingeKwh) * PRIX.elecKwh + LESSIVE.litres / 1000 * PRIX.eauM3 + PRIX.doseLessive);
+    s.base.elec += kL * (LESSIVE.kwh[40] + LESSIVE.secheLingeKwh) * PRIX.elecKwh;
+    s.base.eau += kL * LESSIVE.litres / 1000 * PRIX.eauM3; s.base.produits += kL * PRIX.doseLessive;
     s.base.linge = (s.base.linge || 0) + l;
   }
 
@@ -717,7 +733,7 @@ export function jourSuivant(s) {
 
   // --- autosuffisance (v1.1) : cumul des parts maison / achetées ---
   autonomieSoir(s, { nourritureAchetee: ctx.couts.nourriture, litresReseau: ctx.litres || 0, boisKwh: ctx.boisKwh || 0,
-    gazUtile: gazKwh * RENDEMENT_CHAUDIERE, appoint: jour.appointKwh || 0, solaireAuto: jour.solaire || 0, elecReseau: elecKwh,
+    gazUtile: gazKwh * RENDEMENT_CHAUDIERE + chauffElecKwh, appoint: jour.appointKwh || 0, solaireAuto: jour.solaire || 0, elecReseau: elecKwh,
     msg: (x, ty) => msg(s, x, ty), debloquer: (x) => debloquer(s, x) });
   // --- bilan ---
   jour.confort = confortJour; jour.rechute = rechute; jour.cout = coutJour; jour.gazKwh = gazKwh; jour.kwh = ctx.kwh; jour.gaspillage = ctx.gaspillage; jour.litres = ctx.litres;
@@ -886,7 +902,9 @@ export function amortissement(s) {
   // v0.6 : dépensé en équipements moins la valeur restante (prix × vie restante) de ce qui est encore possédé
   const residuel = Object.entries(ACHATS).filter(([k]) => s.possede[k]).reduce((t, [k, a]) => {
     const age = Math.max(1, s.jour - (s.eco?.achats?.[k] ?? 0)) / 365;
-    return t + (s.prixPayes?.[k] ?? a.prix) * Math.max(0, 1 - age / a.vie);
+    // v1.3 : une installation fixe (poêle, ballon thermodynamique) ne garde que la valeur de l'appareil : la pose, le tubage et
+    // le raccordement ne se revendent pas et restent au logement (part « pose » des devis : poêle ~45 %, CET ~30 %, Effy/Hellowatt 2026)
+    return t + (s.prixPayes?.[k] ?? a.prix) * (1 - (a.pose || 0)) * Math.max(0, 1 - age / a.vie);
   }, 0);
   const equip = Math.max(0, s.depenses.equipement - residuel);
   const vet = Object.values(s.vetements).reduce((t, v) => t + (v.possede ? v.prixPaye * Math.min(1, v.usure / 100) : 0), 0)
@@ -904,6 +922,8 @@ export function moyennes(s) {
   return { confort: m.confort / n, sante: m.sante / n, moral: m.volonte / n, hygiene: m.hygiene / n, bienetre: m.bienetre / n };
 }
 
+// 8 rechutes sur une campagne de 5 ans ; proportionnel à la durée (au moins 5)
+export const seuilRechutes = (ans) => Math.max(5, Math.round(8 * ans / 5));
 export function scoreFinal(s) {
   const d = s.depenses, b = s.base;
   const am = amortissement(s);
@@ -947,16 +967,20 @@ export function scoreFinal(s) {
   const candidats = domaines.filter(x => x.valeur > 0 && !x.nom.startsWith('Autres') && !x.nom.startsWith('Reventes')).map(x => ({ nom: x.nom, gain: x.valeur }));
   const meilleure = candidats.reduce((a, c) => (c.gain > a.gain ? c : a), { nom: '—', gain: 0 });
   // v1.1 (analyse GD, P2) : paliers resserrés en bas, un titre au-dessus de Maître
-  const TITRES = ['Dépensier', 'Malin', 'Optimiseur', 'Autonome', 'Maître de la sobriété', 'Légende de la sobriété'];
-  let rang = pct < 8 ? 0 : pct < 15 ? 1 : pct < 22 ? 2 : pct < 45 ? 3 : pct < 62 ? 4 : 5;
+  // v1.3 (passe GD 2, A) : la bande 22-45 % est scindée en Économe (22-32 %) et Autonome (32-45 %)
+  const TITRES = ['Dépensier', 'Malin', 'Optimiseur', 'Économe', 'Autonome', 'Maître de la sobriété', 'Légende de la sobriété'];
+  const SEUILS = [8, 15, 22, 32, 45, 62];
+  let rang = SEUILS.filter(x => pct >= x).length;
   const notes = [];
   const equilibre = moy.confort >= 70 && moy.sante >= 70 && moy.hygiene >= 60 && moy.bienetre >= 55 && moy.moral >= 40;
-  if (rang >= 3 && !equilibre) { rang = 2; notes.push('Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40.'); }
+  if (rang >= 3 && !equilibre) { rang = 2; notes.push('Économe, Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40.'); }
   const ans = Math.max(1, s.nbJours / 365);
-  if (rang === 5 && (s.principes.length < 40 || habitudes < 10)) { rang = 4; notes.push('La Légende demande 40 principes et 10 habitudes.'); }
-  if (rang === 4 && (s.principes.length < 28 || habitudes < 8)) { rang = 3; notes.push('Maître demande 28 principes et 8 habitudes.'); }
-  if (rang >= 4 && s.fin && (fin.net < 0 || s.fin.stats.joursHorsAutorisation > 10 * ans)) { rang = 3; notes.push('Maître demande aussi une épargne au moins aussi bien gérée que le Livret A du voisin, sans découvert hors autorisation répété.'); }
-  if (rang >= 2 && (moy.hygiene < 45 || moy.bienetre < 40 || s.rechutes > 4 * Math.sqrt(ans))) { rang = 1; notes.push('Économies payées par ton hygiène, ton bien-être ou tes rechutes.'); }
+  if (rang === 6 && (s.principes.length < 40 || habitudes < 10)) { rang = 5; notes.push('La Légende demande 40 principes et 10 habitudes.'); }
+  if (rang === 5 && (s.principes.length < 28 || habitudes < 8)) { rang = 4; notes.push('Maître demande 28 principes et 8 habitudes.'); }
+  if (rang >= 5 && s.fin && (fin.net < 0 || s.fin.stats.joursHorsAutorisation > 10 * ans)) { rang = 4; notes.push('Maître demande aussi une épargne au moins aussi bien gérée que le Livret A du voisin, sans découvert hors autorisation répété.'); }
+  if (rang >= 2 && moy.hygiene < 45) { rang = 1; notes.push('Économies payées par ton hygiène.'); }
+  // v1.3 (passe GD 2, B) : garde-fou dès le rang 1, on ne devient pas « Malin » en sacrifiant son bien-être
+  if (rang >= 1 && (moy.bienetre < 40 || s.rechutes >= seuilRechutes(ans))) { rang = 0; notes.push('Économies payées par ton bien-être ou tes rechutes : aucun titre de sobriété.'); }
   if (moy.sante < 50 || moy.confort < 55 || moy.hygiene < 30 || moy.bienetre < 25) { rang = 0; notes.push('Une sobriété qui abîme : santé, confort, hygiène ou bien-être effondrés.'); }
   return { cout, base, economies, pct, moy, confortMoy: moy.confort, sante: s.sante, habitudes, principes: s.principes.length, titre: TITRES[rang], rang, note: notes.join(' '),
     domaines, invest, meilleure, tresorerie, fin,

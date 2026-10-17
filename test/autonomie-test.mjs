@@ -28,5 +28,5 @@ const s2 = nouvellePartie(7, 1); s2.argent += 4000; acheter(s2, 'cet', true); ch
 const v8 = nouvellePartie(2026, 1); v8.possede.potager = true; v8.sys.potagerDepuis = 0; delete v8.autonomie; v8.version = 8;
 const st = { d: { 'economie-game-sauvegarde': JSON.stringify(v8) }, getItem(k) { return this.d[k] ?? null; }, setItem(k, v) { this.d[k] = v; }, removeItem(k) { delete this.d[k]; } };
 const m = charger(st);
-ch(m && m.version === VERSION_SAUVEGARDE && VERSION_SAUVEGARDE === 9 && m.autonomie?.planches[3].culture === 'haricot' && m.migre === 8, 'migration v8 → v9 : plan conseillé appliqué');
+ch(m && m.version === VERSION_SAUVEGARDE && VERSION_SAUVEGARDE === 10 && m.autonomie?.planches[3].culture === 'haricot' && m.migre === 8, 'migration v8 → v10 : plan conseillé appliqué');
 console.log(ok ? 'OK' : 'ÉCHEC'); process.exit(ok ? 0 : 1);
