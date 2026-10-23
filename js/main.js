@@ -38,7 +38,7 @@ const PITCH = { standard: 'dans une petite maison ancienne de 45 m², chauffée 
 function rendreScenarios() {
   const l = $('scenariosListe'); if (!l) return;
   l.innerHTML = Object.entries(SCENARIOS).map(([id, x]) => `<button class="btn scenario${id === scenario ? ' actif-btn' : ''}" data-scenario="${id}" aria-pressed="${id === scenario}">
-    <span class="sc-ico" aria-hidden="true">${x.icone}</span><span class="sc-txt"><b>${x.nom}</b><small>${x.desc}</small></span></button>`).join('');
+    <span class="sc-ico" aria-hidden="true">${x.icone}</span><span class="sc-txt"><b>${x.nom}</b><small class="sc-desc">${x.desc}</small><small class="sc-court">${x.court}</small></span></button>`).join('');
   if ($('pitchLogement')) $('pitchLogement').textContent = PITCH[scenario] || PITCH.standard;
 }
 rendreScenarios();
@@ -298,3 +298,11 @@ document.addEventListener('keydown', (e) => {
   if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
   else if (!e.shiftKey && (i === -1 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
 });
+
+// v1.3.1 : réserve sous le contenu la hauteur réelle des commandes du temps (fixes), du haut du bloc jusqu'au bas de l'écran
+{
+  const t = document.querySelector('.temps');
+  const reserver = () => { if (!t) return; const r = t.getBoundingClientRect(); document.documentElement.style.setProperty('--reserve-temps', `${Math.ceil(innerHeight - r.top + 16)}px`); };
+  if (t && 'ResizeObserver' in window) new ResizeObserver(reserver).observe(t);
+  addEventListener('resize', reserver); reserver();
+}

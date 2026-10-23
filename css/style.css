@@ -478,3 +478,29 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
 .btn.scenario small{font-size:var(--t-s);color:var(--doux);font-weight:400;line-height:1.35}
 .btn.scenario.actif-btn{box-shadow:0 0 0 2px var(--ok) inset}
 @media (max-width:600px){.scenarios-liste{grid-template-columns:1fr}}
+
+/* v1.3.1 : passe UI/UX 3 */
+.btn.ignorer{min-height:44px;min-width:44px;padding:0 14px;border:1px solid var(--bord);background:var(--surface);color:var(--texte);border-radius:var(--r1)}
+.btn.scenario .sc-court{display:none}
+@media (max-width:600px){
+  /* accueil mobile : Commencer / Jouer visibles sans défiler à 390×844 */
+  .intro{padding:0;align-items:stretch}
+  .intro .modal-contenu{display:flex;flex-direction:column;max-height:none;height:100%;border-radius:0;padding:var(--e3) var(--e4) calc(var(--e3) + env(safe-area-inset-bottom))}
+  .intro-hero{display:none}
+  .intro h2{font-size:var(--t-l);margin-bottom:6px}
+  .intro .pitch{margin:0 0 var(--e2);font-size:var(--t-s)}
+  .intro fieldset{margin:0 0 var(--e2);padding:var(--e2)}
+  .intro fieldset .aide{display:none}
+  .scenarios-liste{grid-template-columns:1fr 1fr;gap:6px;margin-bottom:0}
+  .btn.scenario{padding:8px;gap:6px}
+  .btn.scenario .sc-ico{font-size:20px}
+  .btn.scenario .sc-desc{display:none}
+  .btn.scenario .sc-court{display:block;font-size:12px}
+  .btn.scenario b{font-size:13px;line-height:1.25}
+  .intro-actions{order:1;margin-top:0}
+  .intro-points{order:2;margin-top:var(--e3)}
+  .intro-version{order:3}
+}
+/* .temps reste flottant, mais la place qu'il occupe réellement (ouvert ou fermé) est réservée sous le contenu */
+.app{padding-bottom:max(calc(var(--h-fab) + var(--e4) * 2), var(--reserve-temps, 0px))}
+@media (max-width:1000px){.app{padding-bottom:max(calc(var(--h-fab) + var(--h-onglets) + var(--e4) * 2 + env(safe-area-inset-bottom)), var(--reserve-temps, 0px))}}

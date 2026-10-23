@@ -2,6 +2,17 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.3.1] — 23 octobre 2026
+
+Troisième passe UI/UX (mobile 390×844).
+
+- **Accueil mobile** : « Commencer le tutoriel » et « Jouer directement » sont visibles sans défiler (bas des boutons à 542 px au lieu de 1 434). Les scénarios passent sur 2 colonnes avec leur résumé court, l'illustration est masquée et les 3 points d'explication passent sous les boutons.
+- **Alertes et « Jour suivant »** : vérifié, la place réservée en v1.2.1 suffit ; en bas de page, la dernière carte s'arrête à 688 px et les commandes commencent à 712 px. Rien n'est changé.
+- **Commandes du temps** : elles restent flottantes, mais leur hauteur réelle (⏩ ouvert ou fermé, retour à la ligne) est mesurée et réservée sous le contenu.
+- **⏩** : il a maintenant un `title` en plus de son `aria-label`.
+- **« Ignorer »** : c'est un vrai bouton bordé de 44 px minimum au lieu d'un lien souligné.
+- Tests : nouveau `test/captures-v131.cjs`, ajouté à `npm run test:navigateur`.
+
 ## [1.3.0] — 17 octobre 2026
 
 Seconde passe de game design (`economie-gd-passe2.md`).
