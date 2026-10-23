@@ -1,3 +1,5 @@
+import { appendFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 // Test headless v0.3 : 6 stratégies sur les 126 jours (hiver → printemps → été), plusieurs graines
 import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
@@ -254,6 +256,7 @@ function lancer(graine) {
     HOOK = HOOKS[nom] || null;
     const s = f(); HOOK = null;
     const r = scoreFinal(s); r.defis = (s.eco?.defisReussis || []).map(d => d.fait);
+    if (process.env.EMPREINTE) appendFileSync(process.env.EMPREINTE, `${graine} ${nom} ${createHash('sha256').update(JSON.stringify(s)).digest('hex')}\n`);
     res.push([nom, s, r]);
   }
   return res;

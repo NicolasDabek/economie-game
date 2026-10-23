@@ -2,6 +2,22 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.3.2] — 23 octobre 2026
+
+Refactorisation sans changement de comportement.
+
+- `pasHoraire` et la physique des pièces passent dans `js/thermique.js`. `jourSuivant` enchaîne des étapes nommées, rangées dans `js/journee/` :
+  - `gestes` : moral, rechute et habitudes ;
+  - `lessive` ;
+  - `heures` : météo et chauffage heure par heure, électricité, solaire, ressenti ;
+  - `factures` : consommation payée ;
+  - `voisin` ;
+  - `jauges` : vêtements, humidité, confort, hygiène, bien-être, santé, moral ;
+  - `decouvertes`.
+- `js/data.js` (825 lignes) est découpé en 11 modules par catégorie dans `js/data/`. `data.js` les réexporte, donc aucun import ne change.
+- Résultats identiques au bit près : les empreintes SHA-256 de l'état final des 10 profils sur 5 ans (graines 2026, 7 et 1789) sont les mêmes avant et après, et la sortie complète de `sim-test` (blocs 3 ans, 10 ans et scénarios compris) aussi. `EMPREINTE=fichier node test/sim-test.mjs` écrit ces empreintes.
+- Les sauvegardes v3 à v10 se chargent toujours (tests de migration).
+
 ## [1.3.1] — 23 octobre 2026
 
 Troisième passe UI/UX (mobile 390×844).

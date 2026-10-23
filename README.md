@@ -316,10 +316,10 @@ Ventilation passive (test/passif-test.mjs, chiffres réalistes v0.5 ; méthode e
 Le salon est 2,1 °C plus frais l'après-midi d'été avec le puits et la cheminée. La clim évitée n'est comptée que s'il y a eu une canicule et que le joueur n'a pas de clim.
 
 ## Structure
-- `js/data.js` : constantes et équilibrage
+- `js/data.js` : constantes et équilibrage, réexportées depuis `js/data/` (énergie, maison, vêtements, équipements, vie quotidienne, transport, rentabilité, finance, santé, autosuffisance, scénarios)
 - `js/meteo.js` : météo et prévisions
 - `js/state.js` : état d'une partie
-- `js/simulation.js` : modèle thermique, jauges, habitudes, découvertes et score
+- `js/simulation.js` : enchaînement de la journée, habitudes, achats et score ; `js/thermique.js` : physique horaire des pièces ; `js/journee/` : étapes du jour (gestes, lessive, heures, factures, voisin, jauges, découvertes)
 - `js/systemes.js` : eau chaude, tarifs, cuisine, électricité, jardin, abonnements, plaisirs (v0.3)
 - `js/transport.js` : trajets, modes, voiture, vélo (v0.4)
 - `js/roi.js` et `js/estimations.js` : rentabilité mesurée, projections, estimations avant achat (v0.4)

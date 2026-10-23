@@ -1,6 +1,6 @@
 # Prix utilisés dans le jeu (France, octobre 2026)
 
-Tous les prix sont dans `js/data.js`, avec un commentaire par valeur. Les prix de rayon sont des fourchettes relevées en 2026 dans les grandes enseignes (Leroy Merlin, Castorama, Decathlon, Ikea, Action, pharmacies). Le jeu retient une valeur moyenne.
+Tous les prix sont dans `js/data.js` (rangés par catégorie dans `js/data/`), avec un commentaire par valeur. Les prix de rayon sont des fourchettes relevées en 2026 dans les grandes enseignes (Leroy Merlin, Castorama, Decathlon, Ikea, Action, pharmacies). Le jeu retient une valeur moyenne.
 
 ## Énergie et eau
 | Poste | Valeur | Source |
