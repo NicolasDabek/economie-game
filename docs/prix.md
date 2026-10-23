@@ -429,5 +429,5 @@ Ces montants ont leurs lignes dans le score :
 | Bokashi | 55 € | 50-90 € | Botanic, Leroy Merlin |
 | Stérilisateur + bocaux | 95 € (occasion 40 €) | 59,90-183,99 € | Darty, Le Parfait |
 | Tomate / courgette (prix de référence) | 3,00 € / 2,30 €/kg | 3,06 € / 2,27 €/kg (septembre 2026) | RNM FranceAgriMer |
-| Rendements potager | tomate 6, courgette 5, pdt 3, carotte 4 kg/m² | 3-8 kg/m² selon culture et savoir-faire | Rustica, SNHF |
+| Rendements potager | tomate 6, courgette 5, pdt 3, carotte 4 kg/m², ×1,3 pour un potager soigné (v1.4) | 3-8 kg/m² selon culture et savoir-faire ; un potager familial soigné fait 1,2 à 1,5 fois les moyennes nationales | Rustica, SNHF, Jardiniers de France, Potager du Roi |
 | Arrêté sécheresse | 60 % des étés, 20-40 jours | arrêtés sur une majorité de départements chaque été depuis 2022 | Propluvia |

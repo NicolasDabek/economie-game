@@ -124,6 +124,15 @@ ajoute('malin', () => {
   const s = maligne(); return s;
 });
 ajoute('maître', () => maitre());
+// v1.4 (passe GD 3, §3.3) : « premiers pas » = 3 gestes faciles et gratuits, rien d'autre (palier Malin atteignable vite)
+export function premiersPas() {
+  const s = nouvellePartie(GRAINE, ANNEES, SCEN);
+  return jouer(s, (s) => {
+    if (s.jour === 0) { s.central = { consigneJour: 19, consigneNuit: 17 }; s.transport.repas = 'emporte'; s.sys.liste = true; }
+    if (s.jour % 7 === 6) planifierLessive(s, { temp: 40, sechage: 'air' });
+  });
+}
+ajoute('premiers pas', () => premiersPas());
 // v0.9 : le débutant ne connaît rien mais suit le tableau de bord : deux fois par semaine (tous les 3 jours), il clique « Faire » sur
 // la première recommandation applicable (lessive comprise). Il ne fait rien d'autre de lui-même ; aux choix, il prend le premier.
 export function debutant() {
@@ -256,6 +265,7 @@ function lancer(graine) {
     HOOK = HOOKS[nom] || null;
     const s = f(); HOOK = null;
     const r = scoreFinal(s); r.defis = (s.eco?.defisReussis || []).map(d => d.fait);
+    if (process.env.DETAIL_DEFIS) console.log('DEFIS', graine, nom, JSON.stringify(s.eco?.defisReussis || []));
     if (process.env.EMPREINTE) appendFileSync(process.env.EMPREINTE, `${graine} ${nom} ${createHash('sha256').update(JSON.stringify(s)).digest('hex')}\n`);
     res.push([nom, s, r]);
   }
@@ -267,7 +277,7 @@ let ok = true;
 const graines = [2026, 7, 1789];
 const tous = {};
 const SEUL = process.env.SEUL || '';
-for (const g of (SEUL ? [] : graines)) {
+for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
   console.log(`\n=== graine ${g} ===`);
   for (const [nom, s, r] of lancer(g)) {
     const m = r.moy;
@@ -291,7 +301,7 @@ if (process.env.ROI) {
   for (const [n, a] of Object.entries(agg).sort((x, y) => y[1].mes / y[1].prix - x[1].mes / x[1].prix)) console.log(`  ${n.slice(0, 40).padEnd(40)} ${String(a.n).padStart(2)} strat. · prix moy ${(a.prix / a.n).toFixed(0).padStart(4)} € · ${(a.mes / a.n).toFixed(0).padStart(5)} €/an · ROI ${(a.mes / a.prix * 100).toFixed(0).padStart(5)} %/an · ${a.strats.join(',')}`);
 }
 const R = (n) => tous[n];
-for (let i = 0; i < (SEUL ? 0 : graines.length); i++) {
+for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   const ch = (c, t) => { if (!c) { ok = false; console.log('✗', graines[i], t); } };
   ch(R('maître')[i].rang > R('austère extrême')[i].rang, 'maître > austère (rang)');
   ch(R('maître')[i].rang >= 4, `maître au moins Autonome (obtenu ${R('maître')[i].titre})`);
@@ -306,6 +316,12 @@ for (let i = 0; i < (SEUL ? 0 : graines.length); i++) {
   ch(R('malin')[i].rang === 3 || R('malin')[i].rang === 4, `malin : Économe ou Autonome (obtenu ${R('malin')[i].titre})`);
   // v1.3 (passe GD 2, B et C)
   ch(R('bien-être négligé')[i].rang === 0, `bien-être négligé : Dépensier (obtenu ${R('bien-être négligé')[i].titre})`);
+  // v1.4 (passe GD 3, §3.2) : taux de réussite des défis ciblés par profil
+  { const n = (p) => R(p)[i].defis.filter(Boolean).length;
+    ch(n('malin') >= 1 && n('malin') <= 2, `malin : 1 à 2 défis réussis sur 3 (obtenu ${n('malin')})`);
+    ch(n('maître') >= 2, `maître : au moins 2 défis réussis (obtenu ${n('maître')})`); }
+  // v1.4 (passe GD 3, §3.3) : 3 gestes faciles suffisent pour quitter Dépensier
+  ch(R('premiers pas')[i].rang >= 1, `premiers pas : au moins Malin (obtenu ${R('premiers pas')[i].titre})`);
   { const dn = R('ne rien toucher')[i].defis; ch(dn.length >= 2 && dn.every(x => !x), `ne rien toucher : aucun défi réussi (${dn.map(x => x ? '✓' : '✗').join('')})`); }
   // v0.9.2 : le conseiller aide à débuter, il ne remplace pas le joueur
   ch(d.economies < R('malin')[i].economies, 'débutant guidé < malin');
@@ -346,6 +362,19 @@ if (!SEUL || SEUL === 'scenarios') for (const sc of Object.keys(SCENARIOS)) for 
   GRAINE = g; SCEN = sc; const sd = defaut(); const r = scoreFinal(sd); SCEN = 'standard';
   console.log(`scénario ${sc.padEnd(21)} graine ${String(g).padEnd(4)} : ne rien toucher ${r.pct.toFixed(1)} % (voisin ${Math.round(r.base / (sd.nbJours / 365))} €/an, chauffage voisin ${Math.round(sd.base.gaz / (sd.nbJours / 365))} €/an, ${sd.scenario})`);
   if (!(Math.abs(r.pct) <= 5) || sd.scenario !== sc) { ok = false; console.log(`✗ scénario ${sc} : ne rien toucher hors voisin ± 5 %`); }
+}
+// v1.4 (passe GD 3, §3.4) : la meilleure première action (conseil n°1 au jour 7, gestes gratuits déjà pris) dépend du scénario
+if (!SEUL || SEUL === 'scenarios') for (const g of graines) {
+  const premiers = {};
+  for (const sc of Object.keys(SCENARIOS)) {
+    const s = nouvellePartie(g, 5, sc);
+    for (let i = 0; i < 7; i++) jourSuivant(s);
+    s.transport.repas = 'emporte'; s.sys.prixKiloGeste = true;
+    premiers[sc] = recommandations(s)[0]?.titre || '-';
+  }
+  const n = new Set(Object.values(premiers)).size;
+  console.log(`conseil n°1 par scénario, graine ${g} : ${Object.entries(premiers).map(([k, v]) => `${k} → ${v}`).join(' · ')}`);
+  if (n < 2) { ok = false; console.log(`✗ conseil n°1 identique dans les ${Object.keys(premiers).length} scénarios (graine ${g})`); }
 }
 // sauvegarde aller-retour + ancienne sauvegarde
 const mem = { d: {}, setItem(k, v) { this.d[k] = v; }, getItem(k) { return this.d[k] ?? null; }, removeItem(k) { delete this.d[k]; } };

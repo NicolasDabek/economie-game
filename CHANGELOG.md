@@ -2,6 +2,17 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.4.0] — 23 octobre 2026
+
+Troisième passe de game design.
+
+- **Potager** : rendement ×1,3 (potager familial soigné : 1,2 à 1,5 fois les moyennes nationales, Jardiniers de France, Potager du Roi).
+- **Défis annuels recalibrés** : le défi électricité (jamais réussi, même par le maître) demande désormais de rester à moins de 5 % au-dessus de l'an dernier, au lieu de 2 % en dessous. La cible est corrigée en fin d'année selon la météo, comme la facture du voisin. Réussites : malin 1 sur 3, maître 3 sur 3, ne rien toucher 0 (vérifié par `sim-test`).
+- **Maison rénovée à crédit** : fenêtres neuves, donc plus de joints de fenêtres à poser. Le premier conseil y devient « Purger les radiateurs ».
+- Les clés optionnelles d'un scénario (`solaire`, `fenetresNeuves`) sont remises à zéro quand on change de scénario.
+- **Tests** : nouveau profil « premiers pas » (thermostat 19/17, gamelle, liste de courses) qui doit obtenir au moins Malin ; taux de réussite des défis par profil ; le conseil n°1 doit différer dans au moins 2 des 4 scénarios.
+- Sauvegarde inchangée (v10) : les nouveaux champs du défi sont facultatifs.
+
 ## [1.3.2] — 23 octobre 2026
 
 Refactorisation sans changement de comportement.

@@ -145,7 +145,9 @@ export function debutJourCampagne(s, ctx) {
 export const DEFIS = [
   { poste: 'gaz', nom: 'Un hiver plus sobre', texte: 'dépenser 2 % de moins en chauffage que l\'an dernier (hausse des prix comprise), avec au moins une habitude ou un équipement de chauffage ou d\'isolation' },
   { poste: 'nourriture', nom: 'Le panier malin', texte: 'dépenser 2 % de moins en nourriture que l\'an dernier (hors inflation), avec au moins une habitude ou un équipement de cuisine ou de jardin' },
-  { poste: 'elec', nom: 'La chasse aux watts', texte: 'dépenser 2 % de moins en électricité que l\'an dernier (hausse des prix comprise), avec au moins une habitude ou un équipement électrique' },
+  // v1.4 (passe GD 3) : jamais réussi, même par le maître (veilles, froid et appareils qui vieillissent font monter la facture d'une année sur l'autre) ;
+  // seuil assoupli : au plus 5 % de plus que l'an dernier, météo et prix corrigés
+  { poste: 'elec', effort: 1.05, nom: 'La chasse aux watts', texte: 'garder ta facture d\'électricité à moins de 5 % au-dessus de l\'an dernier (météo et prix corrigés comme pour le voisin), avec au moins une habitude ou un équipement électrique' },
   { poste: 'transport', nom: 'Bouger autrement', texte: 'dépenser 2 % de moins en transport que l\'an dernier (hors hausse du carburant), avec une habitude, un équipement ou un mode de transport sans voiture' },
 ];
 export const DEFI_EFFORT = 0.98;
@@ -169,22 +171,25 @@ export function actionDefi(s, poste) {
 function defiAnnuel(s, ctx, an) {
   const e = s.eco, D = s.depenses;
   if (e.defi) {   // bilan du défi précédent
-    const f = e.defi, chiffre = (D[f.poste] - f.debut) <= f.cible, action = actionDefi(s, f.poste), fait = chiffre && !!action;
-    (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait, chiffre, action: !!action });
+    const f = e.defi;
+    // v1.4 (passe GD 3) : la cible suit l'évolution de la facture du voisin, dans le même logement (météo et prix corrigés : le défi ne dépend plus de la graine)
+    if (f.voisinDernier > 0) { const vN = (s.base[f.poste] || 0) - f.debutVoisin; f.cible = Math.round(f.dernier * vN / f.voisinDernier * (f.effort ?? DEFI_EFFORT)); }
+    const chiffre = (D[f.poste] - f.debut) <= f.cible, action = actionDefi(s, f.poste), fait = chiffre && !!action;
+    (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait, chiffre, action: !!action, ratio: Math.round((D[f.poste] - f.debut) / f.cible * 1000) / 1000 });
     if (fait) { s.volonte = Math.min(100, s.volonte + 8); ctx.msg(`🏅 Défi ${f.an} réussi : « ${f.nom} ». Moral +8.`, 'alerte'); }
     else if (chiffre) ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». La dépense a baissé toute seule (météo, prix), mais aucune habitude ni aucun équipement lié : un défi se gagne en agissant.`, 'info');
     else ctx.msg(`🎯 Défi ${f.an} manqué de ${eur0(D[f.poste] - f.debut - f.cible)} : « ${f.nom} ».`, 'info');
     e.defi = null;
   }
-  const prec = e.depJan, idxPrec = e.idxJan; e.depJan = { ...D }; e.idxJan = { ...e.idx };
+  const prec = e.depJan, idxPrec = e.idxJan; e.depJan = { ...D }; e.idxJan = { ...e.idx }; const basePrec = e.baseJan; e.baseJan = { ...s.base };
   if (!prec) return;    // première année : apprentissage
   const d = DEFIS[(an - 2027) % DEFIS.length], dernier = D[d.poste] - (prec[d.poste] || 0);
   if (dernier < 50) return;
   // cible : 2 % sous l'an dernier corrigé de la hausse des prix (v1.1 : −5 % était hors d'atteinte ; v1.3 : « ne rien toucher » ne doit pas gagner)
   const k = { gaz: s.scenario && SCENARIOS[s.scenario]?.chauffage === 'elec' ? 'elec' : 'gaz', nourriture: 'alim', elec: 'elec', transport: 'carburant' }[d.poste];
   const hausse = idxPrec && e.idx[k] ? e.idx[k] / idxPrec[k] : 1;
-  e.defi = { ...d, an, jour: s.jour, debut: D[d.poste], cible: Math.round(dernier * hausse * DEFI_EFFORT) };
-  ctx.msg(`🎯 Défi ${an} : « ${d.nom} » — ${d.texte} (moins de ${eur0(e.defi.cible)} sur l'année). Récompense : moral +8.`, 'alerte');
+  e.defi = { ...d, an, jour: s.jour, debut: D[d.poste], debutVoisin: s.base[d.poste] || 0, dernier, voisinDernier: basePrec ? (s.base[d.poste] || 0) - (basePrec[d.poste] || 0) : 0, cible: Math.round(dernier * hausse * (d.effort ?? DEFI_EFFORT)) };
+  ctx.msg(`🎯 Défi ${an} : « ${d.nom} » — ${d.texte} (moins de ${eur0(e.defi.cible)} sur l'année). Récompense : moral +8. La cible sera ajustée en fin d'année selon la météo, comme la facture du voisin.`, 'alerte');
 }
 
 /** Facture d'énergie du jour : comptée en dépense comme avant, mais payée par mensualités (trésorerie). */

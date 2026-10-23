@@ -224,11 +224,14 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 | Bien-être négligé | 12,2 / 11,7 / 16,6 % | Dépensier (garde-fou dès le rang 1) |
 | Débutant guidé par le conseiller | 23,1 / 22,9 / 28,6 % | Économe |
 | Moral négligé | 27,6 / 33,3 / 37,1 % | Optimiseur |
-| Autosuffisant (jardin, poules, poêle) | 32,0 / 35,2 / 38,4 % | Autonome |
+| Premiers pas (3 gestes gratuits, v1.4) | 10,0 / 12,3 / 16,2 % | Malin / Malin / Optimiseur |
+| Autosuffisant (jardin, poules, poêle) | 32,4 / 35,7 / 38,8 % | Autonome |
 | Malin | 32,9 / 36,3 / 39,4 % | Autonome |
-| Maître | 60,7 / 66,2 / 68,2 % | Maître / Légende / Légende |
+| Maître | 60,9 / 66,5 / 68,5 % | Maître / Légende / Légende |
 
-- **Autosuffisance, un pari de long terme** : face au malin, l'autosuffisant perd 1 589 à 1 711 € sur 3 ans et gagne 1 552 à 2 208 € sur 10 ans.
+- **Autosuffisance, un pari de long terme** : face au malin, l'autosuffisant perd 1 407 à 1 588 € sur 3 ans et gagne 2 331 à 3 058 € sur 10 ans (taux d'autosuffisance 18 % à 10 ans).
+- **Défis annuels (v1.4)** : malin 1 sur 3, débutant guidé 1 sur 3, autosuffisant 2 sur 3, maître 3 sur 3, ne rien toucher 0. La cible du défi électricité est corrigée de la météo de l'année, comme la facture du voisin.
+- **Premier conseil selon le scénario (v1.4)** : joints de fenêtres dans la maison au gaz, l'appartement électrique et la famille ; purge des radiateurs dans la maison rénovée (fenêtres neuves).
 - **Scénarios de départ** (« ne rien toucher » face au voisin, 3 graines) : maison au gaz −1,5 à +2,7 % ; appartement tout électrique −2,7 à +1,4 % ; famille de 4 −2,9 à +0,1 % ; maison rénovée à crédit −1,1 à +3,2 %.
 
 ## Lancer le jeu

@@ -20,6 +20,9 @@ export const CULTURES = {
 export const ASSOCIATIONS = [['carotte', 'poireau'], ['haricot', 'courge'], ['tomate', 'salade'], ['chou', 'salade'], ['ail', 'carotte']];
 export const POTAGER = {
   m2Planche: 2, planchesBase: 4, planchesGrand: 4,
+  // v1.4 (passe GD 3) : ×1,3 sur les moyennes de crops.ts, rendement d'un potager amateur bien conduit (compost, paillage, planches permanentes ;
+  // les fiches Jardiniers de France et les relevés du Potager du Roi donnent 1,2 à 1,5 fois les moyennes nationales en culture intensive sur planches)
+  rendement: 1.3,
   rotation: 0.8,           // même famille que l'an dernier au même endroit : −20 %
   association: 0.1,        // par voisin favorable
   horsFenetre: 0.5,        // semé hors fenêtre conseillée

@@ -78,7 +78,7 @@ export function previsionPlanche(s, i, d = doy(s.jour)) {
   const A = etatAutonomie(s), p = A.planches[i], C = CULTURES[p.culture]; if (!C) return null;
   const n = nbPlanches(s);
   const ans = Math.min(3, Math.max(0, Math.floor((s.jour - (s.eco?.jardinDepuis ?? s.jour)) / 365)));
-  const f = { base: C.kgm2 * POTAGER.m2Planche, rotation: p.famillePrec === C.famille ? POTAGER.rotation : 1, assoc: 1 + POTAGER.association * associations(A, i, n),
+  const f = { base: C.kgm2 * POTAGER.m2Planche * (POTAGER.rendement || 1), rotation: p.famillePrec === C.famille ? POTAGER.rotation : 1, assoc: 1 + POTAGER.association * associations(A, i, n),
     fenetre: dansFenetre(C, d) ? 1 : POTAGER.horsFenetre, compost: facteurCompost(s), savoir: 1 + 0.12 * ans, precoce: C.gel && d < POTAGER.saintsGlace ? 1.15 : 1 };
   return { kg: f.base * f.rotation * f.assoc * f.fenetre * f.compost * f.savoir * f.precoce, f, eur: 0 };
 }

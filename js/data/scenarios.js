@@ -22,12 +22,13 @@ export const SCENARIOS = {
     desc: '80 m² au gaz, 2 adultes et 2 enfants : eau chaude × 2,2, deux fois plus de linge, courses × 2,1. Deux salaires (3 900 €) et les allocations familiales (153 €), loyer 880 €.',
     surface: 80 / 45, pertes: 0.9, chauffage: 'gaz', eauChaude: 2.2, linge: 2, repas: 2.1, ballon: 300, salairePlus: 1853, loyerPlus: 240, aboElecPlus: 0 },
   'maison-isolee-credit': { nom: 'Maison rénovée à crédit', icone: '🏡', court: 'Maison isolée · crédit',
-    desc: '45 m² rénovés (DPE C, 40 % de déperditions en moins), mais une mensualité de crédit 350 € plus chère que le loyer : moins de gaz à économiser, moins de marge chaque mois.',
-    surface: 1, pertes: 0.6, solaire: 0.6, chauffage: 'gaz', eauChaude: 1, linge: 1, repas: 1, ballon: 200, salairePlus: 0, loyerPlus: 350, aboElecPlus: 0 },
+    desc: '45 m² rénovés (DPE C, 40 % de déperditions en moins, fenêtres neuves à joints d\'usine), mais une mensualité de crédit 350 € plus chère que le loyer : moins de gaz à économiser, moins de marge chaque mois.',
+    surface: 1, pertes: 0.6, solaire: 0.6, chauffage: 'gaz', eauChaude: 1, linge: 1, repas: 1, ballon: 200, salairePlus: 0, loyerPlus: 350, aboElecPlus: 0, fenetresNeuves: true },
 };
 export const SCENARIO_DEFAUT = 'standard';
-// équipements sans objet selon le scénario (des convecteurs ne se purgent pas)
-export const horsScenario = (id) => SC.chauffage === 'elec' && id === 'purge';
+// équipements sans objet selon le scénario (des convecteurs ne se purgent pas ; v1.4 : des fenêtres neuves
+// d'une rénovation ont des joints d'usine, garantis 10 ans au titre de la garantie décennale)
+export const horsScenario = (id) => (SC.chauffage === 'elec' && id === 'purge') || (SC.fenetresNeuves && id === 'calfeutrage');
 const PIECES_REF = Object.fromEntries(Object.entries(PIECES).map(([k, p]) => [k, { ...p }]));
 const BALLON_REF = BALLON.litres;
 // scénario actif (comme INDICES : recopié avant chaque journée et au chargement)
@@ -35,7 +36,7 @@ export const SC = { ...SCENARIOS.standard, id: 'standard' };
 export function appliquerScenario(s) {
   const id = SCENARIOS[s?.scenario] ? s.scenario : SCENARIO_DEFAUT, x = SCENARIOS[id];
   if (SC.id === id) return SC;
-  Object.assign(SC, x, { id });
+  Object.assign(SC, { solaire: 1, fenetresNeuves: false }, x, { id });   // clés optionnelles remises à zéro
   for (const [k, p] of Object.entries(PIECES_REF)) Object.assign(PIECES[k], { U: p.U * x.surface * x.pertes, C: p.C * x.surface, pMax: p.pMax * x.surface, fenetre: p.fenetre * x.surface * (x.solaire ?? 1) });
   BALLON.litres = x.ballon || BALLON_REF;
   return SC;
