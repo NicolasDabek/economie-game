@@ -504,3 +504,55 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
 /* .temps reste flottant, mais la place qu'il occupe réellement (ouvert ou fermé) est réservée sous le contenu */
 .app{padding-bottom:max(calc(var(--h-fab) + var(--e4) * 2), var(--reserve-temps, 0px))}
 @media (max-width:1000px){.app{padding-bottom:max(calc(var(--h-fab) + var(--h-onglets) + var(--e4) * 2 + env(safe-area-inset-bottom)), var(--reserve-temps, 0px))}}
+
+/* ---------------------------------------------------------------- v1.5.1 : passe UI/UX 4 */
+/* 1. accueil sur bureau : les boutons passent juste après le choix du départ et restent collés en bas de la fenêtre */
+@media (min-width:601px){
+  .intro .modal-contenu{display:flex;flex-direction:column;max-width:780px;padding:var(--e4) var(--e5)}
+  .intro-hero{font-size:28px;margin-bottom:0}
+  .intro h2{margin-bottom:6px}
+  .intro .pitch{margin:0 0 var(--e3)}
+  .intro fieldset.scenarios{margin-bottom:var(--e2)}
+  .intro fieldset.duree{padding:var(--e2) var(--e3)}
+  .intro-actions{order:1;position:sticky;bottom:calc(-1 * var(--e4));margin:var(--e2) calc(-1 * var(--e5)) calc(-1 * var(--e4));padding:var(--e3) var(--e5) var(--e4);background:var(--surface);border-top:1px solid var(--bord);z-index:1}
+  .intro-points{order:2;margin-top:var(--e3)}
+  .intro-version{order:3}
+}
+/* 2. bureau : la page défile dans <main>, les commandes du temps forment une barre en bas, hors du contenu : plus rien ne passe dessous */
+@media (min-width:1001px){
+  body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;padding-bottom:0}
+  .topbar{position:relative;flex:none}
+  #annonces{flex:none}
+  main.app{flex:1 1 auto;min-height:0;overflow-y:auto;max-width:none;margin:0;width:100%;box-sizing:border-box;padding:var(--e4) max(var(--e4), calc((100% - 1440px) / 2 + var(--e4)));scroll-padding-top:var(--e4)}
+  .temps{position:static;flex:none;background:var(--surface);border-top:1px solid var(--bord);padding:var(--e2) var(--e4);box-shadow:0 -2px 10px rgba(16,24,40,.06)}
+  .temps-int{max-width:none;justify-content:flex-start}
+  .temps button{box-shadow:none}
+  #toasts{bottom:96px}
+}
+/* 3. Recommencer : dernier item du menu ⋯, séparé et marqué comme destructif */
+.menu-liste button.danger{color:var(--mal);font-weight:700;border-top:1px solid var(--bord);border-radius:0 0 var(--r1) var(--r1);margin-top:var(--e1);padding-top:6px;padding-bottom:6px}
+.menu-liste button.danger:hover,.menu-liste button.danger:focus-visible{background:var(--mal-doux)}
+.menu-liste button.danger>span:last-child{display:flex;flex-direction:column;line-height:1.25}
+.menu-liste button.danger small{font-weight:400;font-size:var(--t-xs);color:var(--doux)}
+/* 4. bandeau mobile compact (~120 px) : date + menu, puis les 3 jauges et un bouton « +5 » sur une seule ligne */
+.pj-alerte{white-space:nowrap}
+@media (max-width:600px){
+  .topbar{position:relative;row-gap:6px;padding:6px var(--e3)}
+  .jauges{grid-template-columns:repeat(3,minmax(0,1fr)) 44px;gap:6px}
+  .jauges .jauge{padding:4px 6px}
+  .jauges .jauge .lib{gap:0;line-height:1.2}
+  .jauges .jauge .lib>span{font-size:12px}
+  .jauges .jauge .lib b{font-size:var(--t-m)}
+  .jauges .jauge .barre{margin-top:3px}
+  .jauge .palier{position:absolute;top:3px;right:4px;width:1.3em;overflow:hidden;text-overflow:clip;font-size:13px}
+  details.plus-jauges{grid-column:auto}
+  details.plus-jauges>summary{height:100%;min-height:44px;justify-content:center;flex-direction:column;gap:0;padding:0;border-radius:10px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);font-weight:700;font-size:var(--t-m);box-sizing:border-box}
+  details.plus-jauges>summary::before{display:none}
+  details.plus-jauges>summary .pj-long{display:none}
+  details[open].plus-jauges>summary{background:rgba(0,0,0,.2)}
+  details.plus-jauges .jauges-sec{position:absolute;left:0;right:0;top:100%;z-index:16;margin:0;padding:6px var(--e3) var(--e2);background:var(--ciel-jour);box-shadow:var(--ombre-haute);grid-template-columns:repeat(auto-fit,minmax(100px,1fr))}
+  .topbar.nuit details.plus-jauges .jauges-sec{background:var(--ciel-nuit)}
+}
+/* 5. curseurs du thermostat : colonne du libellé fixe, tous les curseurs ont la même largeur */
+.thermo{grid-template-columns:minmax(0,8.5em) minmax(0,1fr) 4em}
+.thermo .val{min-width:0}

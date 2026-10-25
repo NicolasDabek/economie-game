@@ -2,6 +2,17 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.5.1] — 25 octobre 2026
+
+Quatrième passe UI/UX (mesures : `test/captures-v151.cjs`, bureau 1280×800 et mobile 390×844).
+
+- **Accueil sur bureau** : « Commencer le tutoriel » et « Jouer directement » passent juste après le choix du point de départ et de la durée, dans un pied de fenêtre collé en bas ; à 1280×800 ils finissent à 697 px au lieu de 999 px (mobile inchangé : 542 px).
+- **Commandes du temps sur bureau** : la page défile désormais dans la zone de jeu et « Jour suivant », Semaine, Mois et Prochain événement forment une barre en bas, hors du contenu : plus aucun texte dessous, en haut, au milieu ou en bas du défilement (avant : « Coût caché de la sobriété », « santé, revenus perdus, imprévus »… étaient recouverts).
+- **Recommencer** quitte le bandeau : c'est le dernier item du menu ⋯, séparé par un trait, en rouge, avec la mention « irréversible, demande confirmation » ; la confirmation est conservée.
+- **Bandeau mobile compact** : 210 → 117 px à 390×844. Les 3 jauges clés et un bouton « +5 » tiennent sur une ligne ; le palier du moral devient une icône ; les 5 autres jauges s'ouvrent en panneau sous le bandeau, sans pousser la page.
+- **Curseurs du thermostat** : colonne du libellé de largeur fixe, les deux curseurs ont la même largeur (164 / 212 → 160 / 160 px sur mobile, 367 / 435 → 363 / 363 px sur bureau).
+- **Tests** : `captures-v151.cjs` (ajouté à `npm run test:navigateur`) mesure les 5 points.
+
 ## [1.5.0] — 25 octobre 2026
 
 Quatrième passe de game design.

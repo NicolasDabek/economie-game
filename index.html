@@ -29,7 +29,7 @@
   <div id="jauges" class="jauges" role="list" aria-label="Jauges"></div>
   <div class="menu" aria-label="Partie">
     <details class="menu-partie" id="menuPartie">
-      <summary id="btnMenu" aria-label="Menu de la partie (annuler, réglages, aide, thème, sauvegarde)"><span aria-hidden="true">⋯</span><span class="lib-menu">Menu</span></summary>
+      <summary id="btnMenu" aria-label="Menu de la partie (annuler, sauvegarde, thème, réglages, aide, recommencer)"><span aria-hidden="true">⋯</span><span class="lib-menu">Menu</span></summary>
       <div class="menu-liste">
         <p class="menu-annee" id="menuAnnee"></p>
         <button id="btnAnnuler" aria-label="Annuler le dernier réglage (Ctrl+Z)" disabled><span class="m-ico"></span><span>Annuler</span></button>
@@ -38,9 +38,9 @@
         <button id="btnTheme" aria-label="Thème clair ou sombre"><span class="m-ico"></span><span>Thème clair / sombre</span></button>
         <button id="btnReglages" aria-label="Réglages et raccourcis"><span class="m-ico"></span><span>Réglages et raccourcis</span></button>
         <button id="btnAide" aria-label="Rejouer le tutoriel"><span class="m-ico"></span><span>Rejouer le tutoriel</span></button>
+        <button class="danger" id="btnNouvelle" aria-label="Recommencer une nouvelle partie (irréversible, demande confirmation)"><span class="m-ico"></span><span>Recommencer la partie…<small>irréversible, demande confirmation</small></span></button>
       </div>
     </details>
-    <button class="btn-danger" id="btnNouvelle" aria-label="Recommencer une nouvelle partie (demande confirmation)"><span class="m-ico"></span><span>Recommencer</span></button>
   </div>
 </header>
 <div id="annonces" class="annonces cache" role="status"></div>

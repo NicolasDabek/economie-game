@@ -95,7 +95,7 @@ Une maison ancienne de 45 m², chauffée au gaz, avec un ballon d'eau chaude él
   - Les gains nets des placements (valeur de revente après frais et impôts, moins les gains du voisin resté au Livret A) entrent dans le score.
 - **99 principes** dans une encyclopédie filtrable par domaine (quoi, pourquoi, comment, piège, transfert). Les principes verrouillés montrent « ??? » et un indice.
 - **Fin de partie** : économies nettes face au voisin « tout chauffé », économies par domaine, investissements rentabilisés ou non, meilleure découverte, puis un titre : Dépensier (< 8 %), Malin (< 15 %), Optimiseur (< 22 %), Économe (< 32 %), Autonome (< 45 %), Maître de la sobriété (< 62 %) ou Légende de la sobriété.
-- **Sauvegarde** automatique chaque jour dans le navigateur, plus des boutons Sauvegarder, Charger et Nouvelle partie.
+- **Sauvegarde** automatique chaque jour dans le navigateur ; le menu ⋯ propose Sauvegarder, Charger et, en dernier, « Recommencer la partie… » (marqué comme irréversible, avec confirmation).
 
 ## Campagne de plusieurs années (v0.6)
 - **Calendrier réel** : du 1er décembre 2026 au 1er décembre 2029, 2031 ou 2036. Chaque année a un hiver, un printemps, un été et un automne, avec une météo propre à chaque année (normales Météo-France, vagues de froid, canicules).

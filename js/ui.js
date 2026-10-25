@@ -67,7 +67,7 @@ export function rendreJauges(s) {
   });
   // v1.2 : 3 jauges clés (argent, moral, santé), les 5 autres repliables ; une jauge en alerte reste signalée dans le résumé
   const SEC = [1, 4, 5, 6, 7], alerteSec = SEC.filter(i => /niv-mal/.test(html[i])).length;
-  $('jauges').innerHTML = [0, 3, 2].map(i => html[i]).join('') + `<details class="plus-jauges"${etatJauges.ouvert ? ' open' : ''}><summary>+5 jauges (confort, hygiène, bien-être, temps, équipements)${alerteSec ? ` · ⚠️ ${alerteSec} en alerte` : ''}</summary><div class="jauges-sec" role="list">${SEC.map(i => html[i]).join('')}</div></details>`;
+  $('jauges').innerHTML = [0, 3, 2].map(i => html[i]).join('') + `<details class="plus-jauges"${etatJauges.ouvert ? ' open' : ''}><summary aria-label="5 autres jauges : confort, hygiène, bien-être, temps, équipements${alerteSec ? `, ${alerteSec} en alerte` : ''}"><span>+5</span><span class="pj-long"> jauges (confort, hygiène, bien-être, temps, équipements)</span>${alerteSec ? `<span class="pj-alerte"><span class="pj-long"> ·</span> ⚠️<span class="pj-long"> ${alerteSec} en alerte</span></span>` : ''}</summary><div class="jauges-sec" role="list">${SEC.map(i => html[i]).join('')}</div></details>`;
   $('jauges').querySelector('details').addEventListener('toggle', (e) => { etatJauges.ouvert = e.target.open; });
   if (etatJauges.jour !== s.jour) { etatJauges.prec = etatJauges.cur; etatJauges.cur = mem; etatJauges.jour = s.jour; }
   const tot = s.joursTotal || 365, nAns = Math.round(tot / 365);
