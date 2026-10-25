@@ -121,7 +121,7 @@ Changer d'option est gratuit, mais l'effet arrive à la relève suivante : le je
 | Marmite norvégienne (maison) | 12 € | | 5 |
 | Lentille de Fresnel A3 | 39 € | | 10 |
 | Lunettes teintées | 12 € | | 10 |
-| Four solaire | 129 € | 60 € | 10 |
+| Cuiseur solaire pliable (v1.5) | 100 € | 60 € | 10 |
 | Séchoir solaire (maison) | 20 € | | 5 |
 | Pierres de masse thermique | 15 € | | 20 |
 | Multiprise à interrupteur | 12 € | | 10 |
@@ -133,7 +133,7 @@ Changer d'option est gratuit, mais l'effet arrive à la relève suivante : le je
 | Herbes aromatiques | 9 € | | 2 |
 | Composteur 300 L | 25 € | | 10 |
 | Potager | 28 € | | 1 |
-| Récupérateur d'eau de pluie 300 L | 69 € | | 15 |
+| Récupérateur d'eau de pluie 300 L (v1.5) | 44 € | | 15 |
 
 ### Budget
 | Poste | Prix |
@@ -416,10 +416,12 @@ Ces montants ont leurs lignes dans le score :
 | Séchage du bois | 720 j (540 j sous abri) | 18 à 24 mois | ADEME, Flamme Verte |
 | Ramonage | 80 €, au moins 1 fois par an | médiane ~80 € ; obligation : CSP R.1331-71 (décret 2023-641), amende jusqu'à 450 €, refus d'indemnisation possible | Ramonia (13/10/2026), Légifrance |
 | Poêle à bois 7 kW posé | 4 500 € | 3 500-5 500 € | Hellowatt, Quelle Énergie 2026 |
+| Poêle à bois : durée de vie (v1.5) | 22 ans (avant : 20) | 15-20 ans bien entretenu, jusqu'à 30 ans | Proxi TotalEnergies, Kbane (2026) |
 | Ballon thermodynamique 200 L posé | 3 000 € (non RGE 2 600 €) ; COP 3 | 2 000-4 000 € ; COP 2,8-3,8 | ADEME, Effy 2026 |
 | Prime CEE (BAR-TH-148) | 514 € modestes, 294 € autres jusqu'au 31/12/2026, 100 € ensuite | bonification ×7 / ×4 pour les opérations engagées du 01/09 au 31/12/2026 ; base ~74-128 € | arrêté du 25/08/2026, ministère de la Transition écologique |
 | MaPrimeRénov' ballon seul | 0 € | supprimée pour un CET seul depuis le 1er septembre 2026 | France Rénov' |
-| Œuf plein air | 0,40 € | 0,31-0,53 € | RNM / relevés GMS 2026 |
+| Œuf plein air | 0,40 € (v1.5 : inchangé, pas de +20 %) | GMS 15/10/2026 : bio 0,42 €, label rouge 0,35 €, sans label 0,27 € ; magasins bio 0,49 € | RNM FranceAgriMer (détail, 15/10/2026) |
+| Poulailler et 3 poules : durée de vie (v1.5) | 8 ans (avant : 6) | 5-10 ans pour un poulailler en bois entretenu, 10-15 ans traité et surélevé | trouver-mon-poulailler.fr, fermeduchene.fr (2026) |
 | Poules : aliment | 130 g/jour à 0,92 €/kg | 120-160 g/jour ; 22,90 € le sac de 25 kg | Gamm Vert, Jardiland 2026 |
 | Poules : ponte | 220 œufs/an, presque rien l'hiver | 200-280 selon la race | ITAVI |
 | Déclaration de basse-cour | 15 min, prévient en cas d'influenza aviaire | obligatoire selon le département (Cerfa 15472) | agriculture.gouv.fr |
@@ -431,3 +433,16 @@ Ces montants ont leurs lignes dans le score :
 | Tomate / courgette (prix de référence) | 3,00 € / 2,30 €/kg | 3,06 € / 2,27 €/kg (septembre 2026) | RNM FranceAgriMer |
 | Rendements potager | tomate 6, courgette 5, pdt 3, carotte 4 kg/m², ×1,3 pour un potager soigné (v1.4) | 3-8 kg/m² selon culture et savoir-faire ; un potager familial soigné fait 1,2 à 1,5 fois les moyennes nationales | Rustica, SNHF, Jardiniers de France, Potager du Roi |
 | Arrêté sécheresse | 60 % des étés, 20-40 jours | arrêtés sur une majorité de départements chaque été depuis 2022 | Propluvia |
+
+## Passe GD 4 (v1.5.0, vérifié le 25 octobre 2026)
+
+| Élément | Valeur dans le jeu | Fourchette relevée | Source |
+|---|---|---|---|
+| Récupérateur d'eau 300 L | 44 € (avant : 69 €) | 43,90 € (Garantia 300 L) à 54,90 € (modèle déco 300 L) | Castorama, octobre 2026 |
+| Récupérateur : 39 € et rendement ×3 (proposés) | non appliqués | aucune cuve de 300 L à 39 € relevée ; le rendement vient désormais de la pluie réelle (ci-dessous), pas d'un multiplicateur | — |
+| Pluie à Paris | 634,3 mm/an ; hiver 151, printemps 160, été 169, automne 154 mm | normales 1991-2020 | Météo-France, Paris-Montsouris |
+| Toit collecté par la cuve | 20 m² (une descente de gouttière), ruissellement 0,9 | tuiles et ardoises : coefficient 0,8 à 0,9 | Graie ; arrêté du 21 août 2008 (récupération des eaux de pluie) |
+| Cuiseur solaire | 100 € (avant : 129 € pour un caisson) | Solar Brother SunGood pliable 99,95 € ; caissons rigides 150-550 € (Sunplicity 550 €) | Solar Brother, Sunplicity, octobre 2026 |
+| Œufs +20 % (proposé) | non appliqué | +20 % (0,48 €) ne correspond qu'aux œufs bio en magasin spécialisé (0,49 €) ; un œuf de poules nourries à l'aliment standard se compare au plein air de GMS | RNM FranceAgriMer, 15/10/2026 |
+| Bois sec / vert | 95 € / 70 € le stère (inchangé) | CEEB T2 2026 : 85,8 € HT sec, 72,5 € HT humide (33-40 cm, vrac) ; 1 m humide 66 € HT au T1 | CEEB / France Bois Forêt, Doux Foyer |
+

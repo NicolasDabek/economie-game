@@ -166,7 +166,8 @@ export function systemesJour(s, ctx) {
   const tf = chap.tEauFroide;
   const doucheAuj = y.douche.frequence === 'quotidienne' || s.jour % 2 === 0;
   let lMix = 0, eauFroide = EAU_FIXE;
-  if (s.possede.toilettesSeches && s.autonomie?.toilettes) { eauFroide -= TOILETTES.litresJour; attr(s, 'toilettesSeches', TOILETTES.litresJour / 1000 * PRIX.eauM3 - TOILETTES.sciureJour); ctx.couts.eau += TOILETTES.sciureJour;
+  ctx.litresEvites = 0;   // v1.5 : litres de réseau évités (toilettes sèches, récupération, mousseurs, jardin), comptés comme autonomie en eau
+  if (s.possede.toilettesSeches && s.autonomie?.toilettes) { eauFroide -= TOILETTES.litresJour; ctx.litresEvites += TOILETTES.litresJour; attr(s, 'toilettesSeches', TOILETTES.litresJour / 1000 * PRIX.eauM3 - TOILETTES.sciureJour); ctx.couts.eau += TOILETTES.sciureJour;
     if (!faits.toilettesSeches) ctx.d.hygiene -= TOILETTES.hygieneDebut; }
   if (doucheAuj) {
     if (y.douche.seau && s.possede.seau) lMix = DOUCHE.seau;
@@ -175,14 +176,14 @@ export function systemesJour(s, ctx) {
       lMix = debit * y.douche.minutes * (faits.couperEau ? 1 - DOUCHE.coupureSavon : 1);
       if (s.possede.pommeau) { const l = (DOUCHE.debitVieux - DOUCHE.debitEco) * y.douche.minutes * (faits.couperEau ? 1 - DOUCHE.coupureSavon : 1);
         attr(s, 'pommeau', l * KWH_L_K * (38 - chap.tEauFroide) * TARIFS[y.tarif].prix(y.ballon.mode === 'hc' ? 2 : 13, jm.tempo || 'bleu') + l / 1000 * PRIX.eauM3); }
-      if (faits.recupEau && s.possede.seau) { eauFroide -= DOUCHE.recupFroide; attr(s, 'seau', 2 * DOUCHE.recupFroide / 1000 * PRIX.eauM3); }
+      if (faits.recupEau && s.possede.seau) { eauFroide -= DOUCHE.recupFroide; ctx.litresEvites += 2 * DOUCHE.recupFroide; attr(s, 'seau', 2 * DOUCHE.recupFroide / 1000 * PRIX.eauM3); }
       else eauFroide += DOUCHE.recupFroide;
     }
   }
   const V = VAISSELLE[y.vaisselle];
   const lvJour = y.vaisselle === 'lvQuotidien' || (y.vaisselle === 'lvPleinEco' && s.jour % 2 === 0);
   let lChaudVaisselle = (V.litresChauds || 0) * (y.vaisselle === 'courante' && s.possede.mousseurs ? 0.6 : 1);
-  if (y.vaisselle === 'courante' && s.possede.mousseurs) { const l = V.litresChauds * 0.4; attr(s, 'mousseurs', l * KWH_L_K * (45 - chap.tEauFroide) * 0.2 + l / 1000 * PRIX.eauM3); }
+  if (y.vaisselle === 'courante' && s.possede.mousseurs) { const l = V.litresChauds * 0.4; ctx.litresEvites += l * (SC.eauChaude || 1); attr(s, 'mousseurs', l * KWH_L_K * (45 - chap.tEauFroide) * 0.2 + l / 1000 * PRIX.eauM3); }
   eauFroide += lvJour ? V.litresFroids : 0;
   const kEC = SC.eauChaude || 1;   // v1.3 : douches et vaisselle de tout le foyer
   lMix *= kEC; lChaudVaisselle *= kEC;

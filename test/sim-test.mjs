@@ -5,7 +5,7 @@ import { nouvellePartie, sauvegarder, charger } from '../js/state.js';
 import { reparerVelo, verifierPression, vendreVoiture, calculerCoutReel } from '../js/transport.js';
 import { tableauROI } from '../js/roi.js';
 import { recommandations, suivreConseil, CORVEES } from '../js/tableau.js';
-import { PRINCIPES, ACHATS, SCENARIOS } from '../js/data.js';
+import { PRINCIPES, ACHATS, SCENARIOS, ROI_ITEMS } from '../js/data.js';
 import { chapitreDuJour } from '../js/meteo.js';
 import { deposer, retirer } from '../js/finance.js';
 import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from '../js/systemes.js';
@@ -77,6 +77,8 @@ export function maitre() {
   }, { invites: 'preter', promo: 'attendre', panne: 'diy', vacances: 'econome' });
 }
 // --- saisons (v0.6 : chaque année) : alléger les vêtements, stratégies d'été, retour du froid, vêtements usés rachetés
+// le jour j de la partie (qui commence le 1er décembre 2026) tombe-t-il le d du mois m (0-11) ?
+const estLe = (j, m, d) => { const x = new Date(Date.UTC(2026, 11, 1) + j * 864e5); return x.getUTCMonth() === m && x.getUTCDate() === d; };
 const deb = (s, sa, idx = 0) => { const c = chapitreDuJour(s.jour); return c.saison === sa && c.index === idx; };
 const CHAUDS = ['souscouche', 'sweat', 'polaire', 'pilou', 'plaid', 'chaussettes'];
 function saisons(s, malin, qualite = 'eco') {
@@ -206,6 +208,8 @@ const HOOKS = {
     if (j === 140) acheter(s, 'guideCueillette');
     if (j >= 200 && !s.possede.potagerGrand && s.argent > 300) acheter(s, 'potagerGrand');
     if (j > 60 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); }
+    // v1.5 : choucroute maison. Le pot n'a rien à fermenter si le potager n'a pas de choux (les haricots partent en bocaux) : on achète les choux d'automne.
+    if (s.possede.potLacto && estLe(j, 9, 15) && actionAutonomie(s, 'acheterSaison', 'choux', oA)) actionAutonomie(s, 'lacto', null, oA);   // 10 kg une fois par an (2 pots de 5 kg)
     if (j > 140 && j % 7 === 5 && tempsLibre(s) > 3) actionAutonomie(s, 'cueillette', null, oA);
     if (j >= 230 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
     saisons(s, true, 'durable'); rafraichirVet(s);
@@ -228,14 +232,22 @@ HOOKS.autosuffisant = (s) => {
   if (an1 && j >= 280 && !s.possede.poele && s.argent >= ACHATS.poele.prix + 1200) { if (acheter(s, 'poele')) { etatAutonomie(s).poele.mode = 'jour';   /* 2 jours de télétravail : il tourne en journée, réglé sur la consigne */ actionAutonomie(s, 'bois', 'sec', oA); actionAutonomie(s, 'bois', 'sec', oA); } }
   if (an1 && s.possede.poele && !s.possede.abriBois) acheter(s, 'abriBois');
   if (an1 && j >= 70) for (const id of ['composteur', 'potager', 'herbes', 'cuve']) if (!s.possede[id]) acheter(s, id);
+  if (an1 && j >= 90 && !s.possede.toilettesSeches) acheter(s, 'toilettesSeches');   // v1.5 : l'eau aussi (chasse d'eau évitée)
+  if (an1 && j >= 120 && !s.possede.solaire && s.argent >= ACHATS.solaire.prix + 1200) acheter(s, 'solaire');   // v1.5 (passe GD 4) : panneau plug-and-play au printemps de la 1re année
   if (an1 && j >= 100 && !s.possede.poules) acheter(s, 'poules', true);
   // usure : graines et plants chaque année, poules réformées au bout de quelques années… on renouvelle ce qui arrive en fin de vie
   if (!an1) for (const id of ['potager', 'herbes', 'composteur', 'cuve', 'poules', 'abriBois']) if (!s.possede[id] && s.eco?.finVie?.[id]) acheter(s, id, id === 'poules');
   if (s.possede.poules && !s.possede.cloture) acheter(s, 'cloture');
   if (s.possede.poules) actionAutonomie(s, 'declarer', null, oA);
-  if (j >= 200 && s.possede.potager && !s.possede.potagerGrand) acheter(s, 'potagerGrand');
+  if (j >= 120 && s.possede.potager && !s.possede.potagerGrand) acheter(s, 'potagerGrand');   // v1.5 : agrandi dès le printemps
   if (j >= 230 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
-  if (j > 70 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); }
+  if (j > 70 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); }
+  // v1.5 (passe GD 4) : ce que fait un vrai foyer autosuffisant, comme le maître : cueillette (guide), choucroute d'automne, arrosage économe
+  if (an1 && j >= 90) for (const id of ['oyas', 'goutte', 'lombri', 'silo']) if (!s.possede[id]) acheter(s, id, id === 'oyas' || id === 'lombri');
+  if (an1 && j >= 140) for (const id of ['guideCueillette', 'potLacto', 'sechoir']) if (!s.possede[id]) acheter(s, id);
+  if (!an1 && !s.possede.sechoir && s.eco?.finVie?.sechoir) acheter(s, 'sechoir');   // séchoir maison : à refaire tous les ~5 ans
+  if (j > 140 && j % 7 === 5 && tempsLibre(s) > 3) actionAutonomie(s, 'cueillette', null, oA);
+  if (s.possede.potLacto && estLe(j, 9, 15) && actionAutonomie(s, 'acheterSaison', 'choux', oA)) actionAutonomie(s, 'lacto', null, oA);   // 10 kg une fois par an (2 pots de 5 kg)
   // bois : on achète vert au printemps (sèche 18 mois sous l'abri), du sec en dépannage si le stock manque en saison de chauffe
   if (s.possede.poele) {
     const A = etatAutonomie(s), stock = A.bois.reduce((t, l) => t + l.st, 0);
@@ -277,6 +289,11 @@ let ok = true;
 const graines = [2026, 7, 1789];
 const tous = {};
 const SEUL = process.env.SEUL || '';
+// v1.5 (passe GD 4) : rentabilité des équipements du maître (graine 2026, 5 ans), lue par test/reco-test.mjs
+if (SEUL === 'roi-maitre') {
+  GRAINE = 2026; HOOK = HOOKS['maître'] || null; const s = maitre(); HOOK = null;
+  console.log('ROI_MAITRE ' + JSON.stringify(tableauROI(s).map(x => ({ id: x.id, nom: x.nom, prix: x.prix, mesure: Math.round(x.mesure), net5: Math.round(x.net5), indirect: !!ROI_ITEMS[x.id].indirect, confort: !!ROI_ITEMS[x.id].confort }))));
+}
 for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
   console.log(`\n=== graine ${g} ===`);
   for (const [nom, s, r] of lancer(g)) {
@@ -319,7 +336,9 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   // v1.4 (passe GD 3, §3.2) : taux de réussite des défis ciblés par profil
   { const n = (p) => R(p)[i].defis.filter(Boolean).length;
     ch(n('malin') >= 1 && n('malin') <= 2, `malin : 1 à 2 défis réussis sur 3 (obtenu ${n('malin')})`);
-    ch(n('maître') >= 2, `maître : au moins 2 défis réussis (obtenu ${n('maître')})`); }
+    // v1.5 (passe GD 4) : le maître les réussit tous, l'austère n'en réussit aucun (il n'agit sur rien : il se prive)
+    ch(n('maître') === 3, `maître : 3 défis réussis sur 3 (obtenu ${n('maître')})`);
+    ch(n('austère extrême') === 0, `austère extrême : aucun défi réussi (obtenu ${n('austère extrême')})`); }
   // v1.4 (passe GD 3, §3.3) : 3 gestes faciles suffisent pour quitter Dépensier
   ch(R('premiers pas')[i].rang >= 1, `premiers pas : au moins Malin (obtenu ${R('premiers pas')[i].titre})`);
   { const dn = R('ne rien toucher')[i].defis; ch(dn.length >= 2 && dn.every(x => !x), `ne rien toucher : aucun défi réussi (${dn.map(x => x ? '✓' : '✗').join('')})`); }
@@ -353,9 +372,12 @@ if (!SEUL || SEUL === 'auto') for (const g of graines) for (const an of [3, 10])
   HOOK = HOOKS.malin; const sm = maligne(); const m = scoreFinal(sm);
   HOOK = HOOKS.autosuffisant; const sa = maligne(); const a = scoreFinal(sa); HOOK = null; ANNEES = 5;
   const t = tauxAutosuffisance(sa), roi = Object.fromEntries(tableauROI(sa).map(x => [x.nom.slice(0, 12), Math.round(x.mesure)]));
-  console.log(`autosuffisant ${an} ans, graine ${g} : ${a.economies.toFixed(0)} € (${a.pct.toFixed(1)} %, ${a.titre}) vs malin ${m.economies.toFixed(0)} € (${m.pct.toFixed(1)} %) → écart ${(a.economies - m.economies).toFixed(0)} € · autosuffisance ${Math.round(t.global)} % · mesuré : ${JSON.stringify(roi)}`);
-  const okA = an === 3 ? a.economies < m.economies : a.economies > m.economies;
-  if (!okA) { ok = false; console.log(`✗ autosuffisant ${an === 3 ? '< malin sur 3 ans' : '> malin sur 10 ans'} (graine ${g})`); }
+  console.log(`autosuffisant ${an} ans, graine ${g} : ${a.economies.toFixed(0)} € (${a.pct.toFixed(1)} %, ${a.titre}) vs malin ${m.economies.toFixed(0)} € (${m.pct.toFixed(1)} %) → écart ${(a.economies - m.economies).toFixed(0)} € · autosuffisance ${Math.round(t.global)} % (alim ${Math.round(t.alim)}, eau ${Math.round(t.eau)}, chaleur ${Math.round(t.chaleur)}, élec ${Math.round(t.elec)}) · mesuré : ${JSON.stringify(roi)}`);
+  // v1.5 (passe GD 4) : le pari doit payer nettement (≥ +5 k€ à 10 ans) et rester un pari (derrière le malin à 3 ans)
+  const okA = an === 3 ? a.economies < m.economies : a.economies - m.economies >= 5000;
+  if (!okA) { ok = false; console.log(`✗ autosuffisant ${an === 3 ? '< malin sur 3 ans' : '≥ malin + 5 k€ sur 10 ans'} (graine ${g})`); }
+  if (an === 10 && !(t.global >= 25)) { ok = false; console.log(`✗ autosuffisance ${t.global.toFixed(1)} % < 25 % à 10 ans (graine ${g})`); }
+  if (an === 10 && !(t.eau >= 10)) { ok = false; console.log(`✗ pilier eau ${t.eau.toFixed(1)} % < 10 % à 10 ans (graine ${g})`); }
 }
 // v1.3 (passe GD 2, P6) : pour chaque scénario de départ, « ne rien toucher » ≈ voisin ± 5 %
 if (!SEUL || SEUL === 'scenarios') for (const sc of Object.keys(SCENARIOS)) for (const g of graines) {

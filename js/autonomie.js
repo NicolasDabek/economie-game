@@ -2,7 +2,7 @@
 // poules, cueillette, eau du jardin (paillage, oyas, goutte-à-goutte, arrêté sécheresse), poêle et bois sec,
 // ballon thermodynamique et prime CEE, toilettes sèches, taux d'autosuffisance.
 // Aucune dépendance vers simulation.js : la journée passe par le contexte (ctx) et les actions par des « outils ».
-import { CULTURES, ASSOCIATIONS, POTAGER, GARDE, CONSERVES, ACHATS_SAISON, POULES, BOIS, CUEILLETTE, CET, TOILETTES, SECHERESSE, AUTOSUFFISANCE, REGIMES, PRIX, CUISINE } from './data.js';
+import { CULTURES, ASSOCIATIONS, POTAGER, GARDE, CONSERVES, ACHATS_SAISON, POULES, BOIS, CUEILLETTE, CET, TOILETTES, SECHERESSE, AUTOSUFFISANCE, REGIMES, PRIX, CUISINE, PLUIE } from './data.js';
 import { makeRng } from './rng.js';
 import { dateDuJour, anneeDuJour, chapitreDuJour } from './meteo.js';
 import { mensualiser } from './annee.js';
@@ -25,7 +25,7 @@ export function nouvelEtatAutonomie() {
     cueillette: { derniere: -99, sorties: 0, pharmacie: true },
     absentJusqua: -1,
     alertes: {},
-    stats: { alimMaison: 0, alimAchat: 0, pluie: 0, reseau: 0, boisKwh: 0, chaleurKwh: 0, solaire: 0, elecReseau: 0,
+    stats: { alimMaison: 0, alimAchat: 0, pluie: 0, evites: 0, reseau: 0, boisKwh: 0, chaleurKwh: 0, solaire: 0, elecReseau: 0,
       produitKg: 0, gaspilleKg: 0, gaspilleEur: 0, oeufs: 0, bocaux: 0, cueilliKg: 0, intox: 0 },
   };
 }
@@ -218,17 +218,20 @@ export function arrosageJour(s, ctx) {
   const m2 = ctx.autonomie?.m2 || 0;
   const sec = secheresseActive(s);
   ctx.stressEau = false;
+  // v1.5 : la cuve se remplit toute l'année selon la pluie réellement tombée sur le toit (avant : +60 l les seuls jours très couverts)
+  if (s.possede.cuve) { const sa = chap.saison, mm = PLUIE.mmJour[sa] * Math.max(0, jm.nuage - PLUIE.seuilNuage) / PLUIE.poids[sa];
+    y.pluie = Math.min(PLUIE.cuveL, (y.pluie || 0) + PLUIE.toitM2 * PLUIE.ruissellement * mm); }
   if (!m2 || chap.id === 'hiver') return { reseau: 0, pluie: 0 };
   let besoin = m2 * (POTAGER.arrosage[chap.saison] ?? 0) * (jm.canicule ? 1.4 : 1) * (jm.nuage > 0.75 ? 0.3 : 1);
   if (s.jour < A.paillageJusqua) besoin *= POTAGER.paillage;
   if (s.possede.oyas) besoin *= POTAGER.oyas;
   if (s.possede.goutte && s.possede.cuve) besoin *= POTAGER.goutte;
-  if (jm.nuage > 0.75 && s.possede.cuve) y.pluie = Math.min(300, y.pluie + 60);
   const dePluie = s.possede.cuve ? Math.min(y.pluie, besoin) : 0;
   y.pluie -= dePluie;
   let reste = besoin - dePluie;
-  if (ctx.faits.recupEau && s.possede.seau) reste = Math.max(0, reste - 8);
+  if (ctx.faits.recupEau && s.possede.seau) { ctx.litresEvites = (ctx.litresEvites || 0) + Math.min(8, reste); reste = Math.max(0, reste - 8); }
   const ref = m2 * (POTAGER.arrosage[chap.saison] ?? 0) * (jm.canicule ? 1.4 : 1) * (jm.nuage > 0.75 ? 0.3 : 1);
+  ctx.litresEvites = (ctx.litresEvites || 0) + Math.max(0, ref - besoin);
   const evite = Math.max(0, ref - besoin) / 1000 * PRIX.eauM3, part = (s.possede.oyas ? 1 : 0) + (s.possede.goutte && s.possede.cuve ? 1 : 0);
   if (part) { if (s.possede.oyas) s.attribution.oyas = (s.attribution.oyas || 0) + evite / part; if (s.possede.goutte && s.possede.cuve) s.attribution.goutte = (s.attribution.goutte || 0) + evite / part; }
   s.attribution.cuve = (s.attribution.cuve || 0) + dePluie / 1000 * PRIX.eauM3;
@@ -297,7 +300,7 @@ export function poeleConsommer(s, ctx, chaleur, prixGazUtile) {
 // ---------------------------------------------------------------- fin de journée : taux d'autosuffisance
 export function autonomieSoir(s, j) {
   const A = etatAutonomie(s), st = A.stats;
-  st.alimAchat += j.nourritureAchetee; st.reseau += j.litresReseau; st.boisKwh += j.boisKwh;
+  st.alimAchat += j.nourritureAchetee; st.reseau += j.litresReseau; st.evites = (st.evites || 0) + (j.litresEvites || 0); st.boisKwh += j.boisKwh;
   st.chaleurKwh += j.boisKwh + j.gazUtile + j.appoint; st.solaire += j.solaireAuto; st.elecReseau += j.elecReseau;
   if (A.cet.primeJour !== null && s.jour >= A.cet.primeJour) { s.argent += A.cet.prime; s.depenses.equipement -= A.cet.prime; s.prixPayes.cet = (s.prixPayes.cet ?? CET.prix) - A.cet.prime; A.cet.primeJour = null; j.msg(`💶 Prime CEE versée : +${A.cet.prime} € pour le ballon thermodynamique.`, 'info'); }
   // annonce de l'arrêté sécheresse
@@ -308,7 +311,7 @@ export function autonomieSoir(s, j) {
 export function tauxAutosuffisance(s) {
   const st = etatAutonomie(s).stats;
   const pc = (a, b) => (a + b > 0 ? 100 * a / (a + b) : 0);
-  const t = { alim: pc(st.alimMaison, st.alimAchat), eau: pc(st.pluie, st.reseau), chaleur: st.chaleurKwh > 0 ? 100 * st.boisKwh / st.chaleurKwh : 0, elec: pc(st.solaire, st.elecReseau) };
+  const t = { alim: pc(st.alimMaison, st.alimAchat), eau: pc(st.pluie + (st.evites || 0), st.reseau), chaleur: st.chaleurKwh > 0 ? 100 * st.boisKwh / st.chaleurKwh : 0, elec: pc(st.solaire, st.elecReseau) };
   t.global = (t.alim + t.eau + t.chaleur + t.elec) / 4;
   t.titre = AUTOSUFFISANCE.titres.filter(([m]) => t.global >= m).at(-1)[1];
   return t;

@@ -2,6 +2,8 @@
 // Un débutant clique « Faire » sur la première recommandation CHAQUE JOUR pendant 2 ans.
 // Assertions : aucun levier A → B → A en moins de 14 jours, jauges saines, et jamais deux conseils
 // contradictoires sur le même levier le même jour.
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { nouvellePartie } from '../js/state.js';
 import { jourSuivant, choixDilemme, resoudreDilemme, scoreFinal } from '../js/simulation.js';
 import { recommandations, appliquerConseil, suivreConseil, conseillerDispo, CORVEES } from '../js/tableau.js';
@@ -73,6 +75,19 @@ for (const graine of [2026, 7]) {
     const cle = cleConseil(cible);
     for (let j = 0; j < 29; j++) { if (recommandations(s).some(r => cleConseil(r) === cle)) { ko(`ignorer : « ${cible.titre} » revient au bout de ${j} j`); break; } if (s.dilemme) resoudreDilemme(s, choixDilemme(s).filter(o => o.possible !== false)[0].id); jourSuivant(s); }
     console.log('ignorer :', cible.titre, '→ masqué 30 j');
+  }
+}
+// v1.5 (passe GD 4) : aucun petit équipement (< 60 €) ne doit faire perdre plus de 20 € nets sur 5 ans au maître.
+// Hors champ : les objets dont le gain n'est pas monétaire et l'annonce le dit (« indirect » : sécurité, confort sous la pluie,
+// bouillotte ; « confort » : le ventilateur, qui coûte son électricité contre la chaleur d'été).
+{
+  const out = execFileSync(process.execPath, [fileURLToPath(new URL('./sim-test.mjs', import.meta.url))], { env: { ...process.env, SEUL: 'roi-maitre' }, encoding: 'utf8', maxBuffer: 1 << 26 });
+  const ligne = out.split('\n').find(l => l.startsWith('ROI_MAITRE '));
+  if (!ligne) ko('rentabilité maître : sortie introuvable');
+  else {
+    const T = JSON.parse(ligne.slice(11)), petits = T.filter(x => x.prix < 60 && !x.indirect && !x.confort);
+    for (const x of petits) if (x.net5 < -20) ko(`rentabilité maître : ${x.nom} (${x.prix} €) perd ${-x.net5} € nets sur 5 ans (mesuré ${x.mesure} €)`);
+    console.log('rentabilité maître, équipements < 60 € :', petits.map(x => `${x.nom.slice(0, 24)} ${x.net5} €`).join(' · '));
   }
 }
 console.log(ok ? 'OK' : 'ÉCHEC'); process.exit(ok ? 0 : 1);

@@ -1,5 +1,5 @@
 // Étape du jour : météo et chauffage heure par heure (joueur et voisin), électricité, solaire, ressenti
-import { RENDEMENT_CHAUDIERE, ORDRE_PIECES, PANNEAU_WC, pieceOccupee, estJour, SEUIL_ENCOMBREMENT, ETE, STOCKAGE, SC } from '../data.js';
+import { RENDEMENT_CHAUDIERE, ORDRE_PIECES, PIECES, PANNEAU_WC, pieceOccupee, estJour, SEUIL_ENCOMBREMENT, ETE, STOCKAGE, SC } from '../data.js';
 import { prixElec } from '../systemes.js';
 import { passifHeure, passifCumul, debutJourPassif, hasCheminee, typePuits } from '../passif.js';
 import { encombrement, eur, isolationVetements, prixGaz } from '../simulation.js';
@@ -62,6 +62,14 @@ export function heuresDuJour(s, v) {
       const idC = s.possede.chemineePro ? 'chemineePro' : 'chemineeDIY', idP = typePuits(s);
       if (hasCheminee(s)) s.attribution[idC] = (s.attribution[idC] || 0) + gain(pr.Pch);
       if (idP) s.attribution[idP] = (s.attribution[idP] || 0) + gain(pr.Ppuits) - pr.fanW / 1000 * prixElec(s, h, jm.tempo);
+    }
+    // v1.5 : gain des robinets thermostatiques (jamais mesuré avant : « 0 € » dans la rentabilité). Sans eux, le thermostat du salon
+    // pousse toutes les pièces à sa consigne : chaque pièce plus fraîche perd en plus U × (consigne salon − sa température).
+    // 80 % seulement : une partie de cette chaleur passe déjà du salon aux autres pièces à travers les cloisons.
+    if (s.possede.robinets && !ete && jm.tMoy < 15) {
+      const ref = consignes.salon; let w = 0;
+      for (const p of ORDRE_PIECES) if (p !== 'salon') w += PIECES[p].U * Math.max(0, ref - Math.max(consignes[p], s.pieces[p].t));
+      if (w > 0) s.attribution.robinets = (s.attribution.robinets || 0) + 0.8 * w / 1000 * (elecChauffage ? prixElec(s, h, jm.tempo) : prixGaz(s) / RENDEMENT_CHAUDIERE);
     }
     for (const p of ORDRE_PIECES) {
       jour.kwhRad[p] += r.rad[p] / 1000;

@@ -308,7 +308,7 @@ export function jourSuivant(s) {
   decouvertesDuJour(s, { jm, hiver, ete, faits, jour, confortJour });
 
   // --- autosuffisance (v1.1) : cumul des parts maison / achetées ---
-  autonomieSoir(s, { nourritureAchetee: ctx.couts.nourriture, litresReseau: ctx.litres || 0, boisKwh: ctx.boisKwh || 0,
+  autonomieSoir(s, { nourritureAchetee: ctx.couts.nourriture, litresReseau: ctx.litres || 0, litresEvites: ctx.litresEvites || 0, boisKwh: ctx.boisKwh || 0,
     gazUtile: gazKwh * RENDEMENT_CHAUDIERE + chauffElecKwh, appoint: jour.appointKwh || 0, solaireAuto: jour.solaire || 0, elecReseau: elecKwh,
     msg: (x, ty) => msg(s, x, ty), debloquer: (x) => debloquer(s, x) });
   // --- bilan ---

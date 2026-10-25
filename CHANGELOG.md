@@ -2,6 +2,21 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.5.0] — 25 octobre 2026
+
+Quatrième passe de game design.
+
+- **Pilier eau de l'autosuffisance** : les litres évités comptent comme autonomes (toilettes sèches, eau froide de la douche récupérée, mousseurs, seau et oyas au jardin) : eau = (pluie + évités) / (pluie + évités + réseau). Le récupérateur se remplit maintenant avec la pluie réelle (normales Météo-France Paris-Montsouris 1991-2020, 634 mm/an, 20 m² de toit, ruissellement 0,9) au lieu d'un apport de 60 l les jours très nuageux, qui ne tombait presque jamais au printemps et en été. Profil autosuffisant à 10 ans : eau 35 à 37 %, global 33 % (au lieu de 1 % et 18 %).
+- **Profil autosuffisant** (tests) : panneau solaire plug-and-play, toilettes sèches, oyas et goutte-à-goutte, lombricomposteur, silo, séchoir solaire, cueillette guidée et choucroute d'automne dès la 1re année. Face au malin : −333 à −386 € à 3 ans, +6 338 à +7 500 € à 10 ans. Assertions : global ≥ 25 %, eau ≥ 10 % et écart ≥ +5 000 € à 10 ans, écart < 0 à 3 ans, sur les 3 graines.
+- **Durées de vie** : poêle à bois 20 → 22 ans (15-20 ans, jusqu'à 30 ans bien entretenu), poulailler 6 → 8 ans (5-10 ans pour un poulailler en bois entretenu).
+- **Défis annuels** : nourriture et transport demandent de dépenser au moins 3 % de moins que le voisin de l'année (et plus 2 % de moins que soi-même l'an dernier, ce qui punissait le joueur déjà sobre). Électricité : face au voisin aussi, au moins 40 % de moins (à effort 1,00 face à soi-même, tous les profils tombaient entre 0,97 et 1,02 selon la graine). Un défi gagné en s'abîmant (moyennes de l'année : santé < 50, confort < 55, hygiène < 30 ou bien-être < 25) ne compte pas. Le tableau de bord suit la cible du voisin à date. Réussites : maître 3, malin 2, austère extrême 0, ne rien toucher 0.
+- **Prix** : récupérateur d'eau 300 L 69 → 44 € (Castorama, 43,90 €) ; four solaire caisson 129 € → cuiseur solaire pliable 100 € (Solar Brother SunGood, 99,95 €). Œufs inchangés à 0,40 € : +20 % ne correspond qu'au bio de magasin spécialisé (RNM, 15/10/2026).
+- **Rentabilité mesurée** :
+  - robinets thermostatiques : n'avaient aucun calcul d'économie (« 0 € mesuré ») ; ils sont crédités de la chaleur évitée dans les pièces réglées plus bas que le salon (maître : +530 € nets sur 5 ans) ;
+  - lactofermentation : pas un bug de calcul, le profil ne fermentait jamais (les haricots partent en bocaux, pas de choux au potager) ; les profils achètent 10 kg de choux en octobre (maître : +82 € nets sur 5 ans).
+- **Tests** : `reco-test` vérifie qu'aucun équipement à moins de 60 € ne fait perdre plus de 20 € nets sur 5 ans au maître (hors objets au gain non monétaire, signalés comme tels : sécurité, tenue de pluie, bouillotte, ventilateur). `SEUL=roi-maitre node test/sim-test.mjs` affiche ce tableau.
+- Sauvegarde inchangée (v10) : les nouveaux champs (`evites`, données du défi) sont facultatifs.
+
 ## [1.4.0] — 23 octobre 2026
 
 Troisième passe de game design.

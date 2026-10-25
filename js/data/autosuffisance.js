@@ -71,6 +71,12 @@ export const CUEILLETTE = {
   intox: { sante: 25, moral: 10, cout: 30 },
 };
 export const CET = { cop: 3, prix: 3000, ceeModeste: 514, ceeAutre: 294, ceeBase: 100, finBonif: 31, delaiPrime: 60, delaiDossier: 14 };
+// v1.5 : pluie captée par la cuve = surface de toit × pluie du jour × coefficient de ruissellement.
+// Pluie : normales Météo-France 1991-2020, Paris-Montsouris (634 mm/an ; DJF 151, MAM 160, JJA 169, SON 154 mm), répartie sur
+// les jours couverts de la saison (poids = moyenne de max(0, nuage − 0,3) sur 5 graines × 10 ans). Une descente de gouttière
+// draine ~20 m² de toit ; tuiles : coefficient 0,9 (Graie, guide de l'eau de pluie ; arrêté du 21 août 2008).
+export const PLUIE = { mmJour: { hiver: 1.68, printemps: 1.74, ete: 1.83, automne: 1.69 }, poids: { hiver: 0.312, printemps: 0.170, ete: 0.057, automne: 0.200 },
+  seuilNuage: 0.3, toitM2: 20, ruissellement: 0.9, cuveL: 300 };
 export const TOILETTES = { litresJour: 30, sciureJour: 0.33 * 0.02, hygieneDebut: 0.3 };
 export const SECHERESSE = { proba: 0.6, debut: 195, duree: [20, 40], annonce: 3 };
 export const AUTOSUFFISANCE = { titres: [[0, 'Citadin'], [10, 'Jardinier du dimanche'], [25, 'Semi-autonome'], [40, 'Autosuffisant']] };
