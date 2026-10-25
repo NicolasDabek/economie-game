@@ -320,7 +320,7 @@ export function rendreTableau(s, etat = {}) {
   // 4. recommandations
   const reco = recommandations(s, r);
   // v1.5 : défi face au voisin → cible vivante (ce que le voisin a dépensé depuis le début du défi, moins la marge)
-  const dfV = df?.mode === 'voisin', dfC = df ? (dfV ? Math.max(1, ((s.base[df.poste] || 0) - df.debutVoisin) * df.effort) : df.cible) : 1;
+  const df = s.eco?.defi, dfV = df?.mode === 'voisin', dfC = df ? (dfV ? Math.max(1, ((s.base[df.poste] || 0) - df.debutVoisin) * df.effort) : df.cible) : 1;
   const dfFait = df ? s.depenses[df.poste] - df.debut : 0, dfP = df ? Math.min(100, dfFait / (dfV ? dfC / ((s.jour - df.jour + 1) / 365) : dfC) * 100) : 0;
   const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — ${eur(dfFait)} / ${eur(dfC)}${dfV ? ` (voisin −${Math.round((1 - df.effort) * 100)} %, à date)` : ''}</span><div class="progres ${dfV ? (dfFait > dfC ? 'alerte' : '') : (dfP > 100 * (s.jour - df.jour + 1) / 365 ? 'alerte' : '')}" role="progressbar" aria-valuenow="${Math.round(dfP)}" aria-valuemin="0" aria-valuemax="100" aria-label="Budget du défi consommé"><div style="width:${dfP}%"></div></div></div>` : '';
   const dispo = conseillerDispo(s), arrondi = (v) => Math.max(5, Math.round(v / 5) * 5);
