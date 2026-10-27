@@ -180,12 +180,13 @@ function defiAnnuel(s, ctx, an) {
     if (f.mode === 'voisin') f.cible = Math.round(((s.base[f.poste] || 0) - f.debutVoisin) * f.effort);
     else if (f.voisinDernier > 0) { const vN = (s.base[f.poste] || 0) - f.debutVoisin; f.cible = Math.round(f.dernier * vN / f.voisinDernier * (f.effort ?? DEFI_EFFORT)); }
     // v1.5 (passe GD 4) : un défi gagné en s'abîmant ne compte pas (mêmes seuils que le titre « Une sobriété qui abîme », moyennes de l'année)
+    // v1.5.3 (passe GD 5) : le moral compte aussi (moyenne de l'année < 35 : la sobriété tient à la force du poignet, pas à des habitudes)
     const n = Math.max(1, s.nbJours - (f.nbJours ?? s.nbJours)), sm = s.sommes, ps = f.sommes || sm;
-    const m = (k) => (sm[k] - (ps[k] || 0)) / n, abime = !!f.sommes && (m('sante') < 50 || m('confort') < 55 || m('hygiene') < 30 || m('bienetre') < 25);
+    const m = (k) => (sm[k] - (ps[k] || 0)) / n, abime = !!f.sommes && (m('sante') < 50 || m('confort') < 55 || m('hygiene') < 30 || m('bienetre') < 25 || m('volonte') < 35);
     const chiffre = (D[f.poste] - f.debut) <= f.cible, action = actionDefi(s, f.poste), fait = chiffre && !!action && !abime;
-    (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait, chiffre, action: !!action, abime, ratio: Math.round((D[f.poste] - f.debut) / f.cible * 1000) / 1000, vsVoisin: Math.round((D[f.poste] - f.debut) / Math.max(1, (s.base[f.poste] || 0) - f.debutVoisin) * 1000) / 1000 });
+    (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait, chiffre, action: !!action, abime, moral: f.sommes ? Math.round(m('volonte')) : null, ratio: Math.round((D[f.poste] - f.debut) / f.cible * 1000) / 1000, vsVoisin: Math.round((D[f.poste] - f.debut) / Math.max(1, (s.base[f.poste] || 0) - f.debutVoisin) * 1000) / 1000 });
     if (fait) { s.volonte = Math.min(100, s.volonte + 8); ctx.msg(`🏅 Défi ${f.an} réussi : « ${f.nom} ». Moral +8.`, 'alerte'); }
-    else if (chiffre && action) ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». Le chiffre y est, mais pas à n'importe quel prix : santé, confort, hygiène ou bien-être se sont effondrés cette année.`, 'info');
+    else if (chiffre && action) ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». Le chiffre y est, mais pas à n'importe quel prix : santé, confort, hygiène, bien-être ou moral se sont effondrés cette année.`, 'info');
     else if (chiffre) ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». La dépense a baissé toute seule (météo, prix), mais aucune habitude ni aucun équipement lié : un défi se gagne en agissant.`, 'info');
     else ctx.msg(`🎯 Défi ${f.an} manqué de ${eur0(D[f.poste] - f.debut - f.cible)} : « ${f.nom} ».`, 'info');
     e.defi = null;

@@ -1,6 +1,6 @@
 {
   "name": "economie-game",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Jeu de gestion en français : dépenser moins que le voisin sans s'abîmer, prix réels 2026",
   "private": true,
   "type": "module",

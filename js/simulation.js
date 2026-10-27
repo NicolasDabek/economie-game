@@ -196,6 +196,9 @@ export function acheter(s, id, occasion = false) {
   if (id === 'calfeutrage' || id === 'boudin') debloquer(s, 'calfeutrer');
   if (id === 'rideauxTh' || id === 'housse') debloquer(s, 'prolonger');
   if (id === 'purge') debloquer(s, 'purge');
+  // v1.5.3 : l'habitude liée est activée d'office (sinon l'objet ne sert à rien et affiche 0 €), on peut la couper dans les gestes
+  if (id === 'multiprise') { s.sys.multipriseGeste = true; msg(s, '🔌 Multiprise éteinte chaque soir : habitude activée (Maison › Électricité pour la couper).', 'info'); }
+  if (id === 'bouillotte') { s.utiliserBouillotte = true; msg(s, '🫖 Bouillotte du soir activée en saison de chauffe (Maison › Gestes pour la couper). Baisse la chambre la nuit : c\'est là qu\'elle rapporte.', 'info'); }
   if (id === 'robinets') debloquer(s, 'zones');
   if (id === 'solaire') { debloquer(s, 'rentabilite'); s.solaireDepuis = s.jour; }
   if (id === 'appoint') debloquer(s, 'local');

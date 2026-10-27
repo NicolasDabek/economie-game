@@ -138,6 +138,15 @@ export function dureeGarde(s, cat) {
 export const valeurStock = (A) => A.stock.reduce((t, l) => t + l.kg * l.valeurKg, 0);
 export const argentImmobilise = (A) => A.stock.reduce((t, l) => t + l.kg * (l.coutKg || 0), 0);
 export const kgStock = (A) => A.stock.reduce((t, l) => t + l.kg, 0);
+const PUITS = ['puitsPro', 'puitsDIY', 'puitsHydro'];
+function creditGarde(s, l, kg) {
+  const age = s.jour - l.entre, base = GARDE[l.cat] ?? 7;
+  if (age <= base) return;
+  const puits = s.passif?.cave ? PUITS.find(k => s.possede[k]) : null, v = kg * l.valeurKg;
+  // silo seul : de base à base × 3 ; cave seule : de base à base × 1,4 ; silo + cave : le silo jusqu'à base × 3, la cave au-delà
+  if (s.possede.silo && (!puits || age <= base * GARDE.silo)) s.attribution.silo = (s.attribution.silo || 0) + v;
+  else if (puits) s.attribution[puits] = (s.attribution[puits] || 0) + v;
+}
 // consommation : les lots qui périment le plus tôt d'abord, jusqu'à la part fruits-légumes-œufs des courses
 function garderMangerJour(s, ctx, A, R) {
   for (const l of A.stock) if (l.entre === s.jour && (l.cat === 'racines' || l.cat === 'courges')) l.fin = l.entre + dureeGarde(s, l.cat);
@@ -154,6 +163,8 @@ function garderMangerJour(s, ctx, A, R) {
       ctx.debloquer('douteJeter');
     }
     l.kg -= kg; besoin -= kg * l.valeurKg;
+    // v1.5.3 : silo et cave sont crédités des kg mangés au-delà de la garde de base (sans eux, ces kg auraient pourri et été rachetés)
+    if (kg > 0 && (l.cat === 'racines' || l.cat === 'courges')) creditGarde(s, l, kg);
     if (l.maison) maison += kg * l.valeurKg; else achat += kg * l.valeurKg;
     if (l.cat === 'lacto') { lacto = true; if (l.nom.startsWith('Chou')) chou = true; }
   }

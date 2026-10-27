@@ -446,3 +446,15 @@ Ces montants ont leurs lignes dans le score :
 | Œufs +20 % (proposé) | non appliqué | +20 % (0,48 €) ne correspond qu'aux œufs bio en magasin spécialisé (0,49 €) ; un œuf de poules nourries à l'aliment standard se compare au plein air de GMS | RNM FranceAgriMer, 15/10/2026 |
 | Bois sec / vert | 95 € / 70 € le stère (inchangé) | CEEB T2 2026 : 85,8 € HT sec, 72,5 € HT humide (33-40 cm, vrac) ; 1 m humide 66 € HT au T1 | CEEB / France Bois Forêt, Doux Foyer |
 
+## Passe GD 5 (v1.5.3, vérifié le 27 octobre 2026)
+
+Aucun prix modifié. Les nouvelles valeurs sont des calculs à partir de chiffres déjà sourcés plus haut.
+
+| Élément | Valeur dans le jeu | Base | Source |
+|---|---|---|---|
+| Ventilateur, coût d'usage | ~20 €/an (19,9 € mesurés sur un an) | 45 W en été et pendant les canicules × 0,2001 €/kWh | Fiche ventilateur sur pied 45 W (ci-dessus) ; EDF Tarif Bleu Base, CRE 1er août 2026 |
+| Clim évitée par le ventilateur | (clim du voisin − 45 W) × prix du kWh, heures de canicule, clim possédée mais éteinte | clim mobile 1 000 W électriques, consigne du voisin 25 °C | Climatiseur mobile 1 000 W (ci-dessus) |
+| Bouillotte et housse | U chambre 31 W/K × degrés baissés sous 21 °C la nuit × prix du kWh de chauffage (électricité, ou gaz / rendement chaudière) | modèle thermique du logement (`js/data/maison.js`) | Prix du kWh : CRE (ci-dessus) |
+| Silo et cave | kg mangés après la garde de base × valeur au kg du lot | garde silo × 3, cave × 1,4 (inchangées) | Section Autosuffisance (v1.1) |
+| Défis : seuil de moral | moyenne de l'année < 35 | moral négligé 31-33 l'année de l'électricité, malin 56-57, maître 61-66 | Calibrage de jeu (sim-test, 3 graines) |
+

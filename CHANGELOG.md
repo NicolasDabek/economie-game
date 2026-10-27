@@ -2,6 +2,16 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.5.3] — 27 octobre 2026
+
+Cinquième passe de game design.
+
+- **Silo et cave rentabilisés** : chaque kilo de racines ou de courges mangé au-delà de sa garde de base est crédité au silo (jusqu'à 3 fois la garde) puis à la cave du puits climatique, à sa valeur au kilo. Autosuffisant sur 5 ans : silo 197,6 / 198,7 / 167,0 € (graines 2026 / 7 / 1789) ; il n'a pas de puits, donc rien pour la cave.
+- **Plus d'objet à 0 €** : la multiprise active « éteindre chaque soir » dès l'achat, la bouillotte active « bouillotte du soir » en saison de chauffe (avec un message). Bouillotte et housse sont désormais mesurées : déperdition de la chambre (31 W/K) × degrés baissés sous les 21 °C du voisin la nuit, au prix du kWh de chauffage. Maître sur 5 ans : bouillotte 34 €, housse 33 €, multiprise 312 €. Test : à 3 ans, aucun objet acheté par le malin ou l'autosuffisant n'est à 0 €, hors liste explicite de confort pur (ventilateur, clim, moustiquaire, kit sécurité, tenue de pluie, lunettes, appoint, corde).
+- **Défis et moral** : un défi gagné avec un moral moyen de l'année < 35 ne compte pas (en plus de santé < 50, confort < 55, hygiène < 30, bien-être < 25). Réussites sur les 3 graines : maître 3, autosuffisant 3, malin 2, débutant guidé 2, premiers pas 2, moral négligé 0 (avant : 1, l'année de l'électricité, avec un moral de 31 à 33), bien-être négligé 0, austère extrême 0, ne rien toucher 0. Le seuil 30 proposé laissait passer ce défi ; 35 reste loin du malin (56-57) et du maître (61-66).
+- **Ventilateur** : « Achat de confort : ~20 €/an d'électricité » dans la boutique, la rentabilité et le classement, en gris au lieu du rouge. S'il y a une clim, chaque heure de canicule où elle reste éteinte grâce au ventilateur lui est créditée (clim 1 000 W du voisin à 25 °C moins 45 W) : sur un an, 19,9 € de coût sans clim, 13,0 € avec.
+- **Résultats sur 5 ans** : malin 33,3 / 36,8 / 39,8 %, maître 61,5 / 66,7 / 68,5 %, autosuffisant 35,4 / 38,6 / 41,6 % ; face au malin, l'autosuffisant perd 371 à 457 € à 3 ans et gagne 6 210 à 7 469 € à 10 ans. Aucun prix modifié.
+
 ## [1.5.2] — 27 octobre 2026
 
 - **Menu ⋯ sur mobile** : « Sauvegarder » et « Charger la sauvegarde » réapparaissent (une ancienne règle CSS, du temps où c'étaient des icônes du bandeau, les masquait sous 600 px). Libellés visibles, 240×44 px à 390×844.

@@ -298,6 +298,9 @@ for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
   console.log(`\n=== graine ${g} ===`);
   for (const [nom, s, r] of lancer(g)) {
     const m = r.moy;
+    // v1.5.3 (passe GD 5) : silo et cave crédités des kg mangés au-delà de la garde de base
+    if (nom === 'autosuffisant') { const sil = s.attribution.silo || 0, cav = ['puitsPro', 'puitsDIY', 'puitsHydro'].reduce((x, k) => x + (s.possede[k] ? s.attribution[k] || 0 : 0), 0);
+      console.log(`   SILO graine ${g} : silo ${sil.toFixed(1)} € · puits (cave comprise) ${cav.toFixed(1)} €`); if (!(sil > 0)) { ok = false; console.log(`✗ ${g} silo de l'autosuffisant à 0 € sur 5 ans`); } }
     console.log(`${pad(nom, 16)} coût ${r.cout.toFixed(0)} € | voisin ${r.base.toFixed(0)} € | éco ${r.economies.toFixed(0)} € (${r.pct.toFixed(1)} %) | confort ${m.confort.toFixed(0)} santé ${m.sante.toFixed(0)} moral ${m.moral.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} | rechutes ${s.rechutes} hab ${r.habitudes} princ ${r.principes} | défis ${(s.eco?.defisReussis || []).map(d => d.fait ? '✓' : '✗').join('') || '-'} | ${r.titre}${r.note ? ' (' + r.note + ')' : ''}`);
     console.log(`   coûts v0.7 : santé ${Math.round(s.depenses.sante || 0)} € · moisissures ${Math.round(s.depenses.logement || 0)} € · revenus perdus ${Math.round(s.depenses.revenus || 0)} € · imprévus ${Math.round(s.depenses.imprevus || 0)} € · ${s.mor.episodes} épisodes, ${s.mor.joursArret} j d'arrêt, salaire ×${s.mor.facteurSalaire.toFixed(3)}`);
     (tous[nom] ||= []).push(r);
@@ -338,6 +341,9 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
     ch(n('malin') >= 1 && n('malin') <= 2, `malin : 1 à 2 défis réussis sur 3 (obtenu ${n('malin')})`);
     // v1.5 (passe GD 4) : le maître les réussit tous, l'austère n'en réussit aucun (il n'agit sur rien : il se prive)
     ch(n('maître') === 3, `maître : 3 défis réussis sur 3 (obtenu ${n('maître')})`);
+    // v1.5.3 (passe GD 5) : le moral compte dans « abîmé » : moral négligé n'en réussit aucun ; l'autosuffisant les réussit tous
+    ch(n('moral négligé') === 0, `moral négligé : aucun défi réussi (obtenu ${n('moral négligé')})`);
+    ch(n('autosuffisant') === 3, `autosuffisant : 3 défis réussis sur 3 (obtenu ${n('autosuffisant')})`);
     ch(n('austère extrême') === 0, `austère extrême : aucun défi réussi (obtenu ${n('austère extrême')})`); }
   // v1.4 (passe GD 3, §3.3) : 3 gestes faciles suffisent pour quitter Dépensier
   ch(R('premiers pas')[i].rang >= 1, `premiers pas : au moins Malin (obtenu ${R('premiers pas')[i].titre})`);
@@ -366,6 +372,8 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   ch(R('bien-être négligé')[i].economies < R('malin')[i].economies, `bien-être négligé ${R('bien-être négligé')[i].economies.toFixed(0)} € < malin`);
 }
 
+// v1.5.3 : objets de confort pur ou de sécurité, sans économie à mesurer (liste explicite)
+const CONFORT_PUR = ['ventilateur', 'clim', 'moustiquaire', 'kitSecu', 'tenuePluie', 'lunettes', 'appoint', 'corde'];
 // v1.3 (passe GD 2, D) : jardin + poules + poêle achetés la 1re année = pari de long terme (moins bien que le malin sur 3 ans, mieux sur 10 ans)
 if (!SEUL || SEUL === 'auto') for (const g of graines) for (const an of [3, 10]) {
   GRAINE = g; ANNEES = an;
@@ -375,6 +383,12 @@ if (!SEUL || SEUL === 'auto') for (const g of graines) for (const an of [3, 10])
   console.log(`autosuffisant ${an} ans, graine ${g} : ${a.economies.toFixed(0)} € (${a.pct.toFixed(1)} %, ${a.titre}) vs malin ${m.economies.toFixed(0)} € (${m.pct.toFixed(1)} %) → écart ${(a.economies - m.economies).toFixed(0)} € · autosuffisance ${Math.round(t.global)} % (alim ${Math.round(t.alim)}, eau ${Math.round(t.eau)}, chaleur ${Math.round(t.chaleur)}, élec ${Math.round(t.elec)}) · mesuré : ${JSON.stringify(roi)}`);
   // v1.5 (passe GD 4) : le pari doit payer nettement (≥ +5 k€ à 10 ans) et rester un pari (derrière le malin à 3 ans)
   const okA = an === 3 ? a.economies < m.economies : a.economies - m.economies >= 5000;
+  // v1.5.3 (passe GD 5) : à 3 ans, aucun objet acheté par le malin ou l'autosuffisant ne rapporte 0 € (hors confort pur, liste explicite)
+  if (an === 3) for (const [qui, sx] of [['malin', sm], ['autosuffisant', sa]]) {
+    const zero = tableauROI(sx).filter(x => Math.abs(x.mesure) < 0.5 && !CONFORT_PUR.includes(x.id)).map(x => x.id);
+    if (zero.length) { ok = false; console.log(`✗ ${qui} (graine ${g}) : objets à 0 € mesuré à 3 ans : ${zero.join(', ')}`); }
+    else console.log(`✓ ${qui} (graine ${g}) : aucun objet à 0 € à 3 ans (confort pur exclu : ${tableauROI(sx).filter(x => CONFORT_PUR.includes(x.id)).map(x => x.id).join(', ') || 'aucun'})`);
+  }
   if (!okA) { ok = false; console.log(`✗ autosuffisant ${an === 3 ? '< malin sur 3 ans' : '≥ malin + 5 k€ sur 10 ans'} (graine ${g})`); }
   if (an === 10 && !(t.global >= 25)) { ok = false; console.log(`✗ autosuffisance ${t.global.toFixed(1)} % < 25 % à 10 ans (graine ${g})`); }
   if (an === 10 && !(t.eau >= 10)) { ok = false; console.log(`✗ pilier eau ${t.eau.toFixed(1)} % < 10 % à 10 ans (graine ${g})`); }

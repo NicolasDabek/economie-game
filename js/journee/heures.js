@@ -81,7 +81,7 @@ export function heuresDuJour(s, v) {
     for (const a of Object.keys(attrJour)) attrJour[a] += r.attrib[a] / 1000;
 
     // électricité de l'heure : systèmes + appoint + clim + ventilateur + bouillotte, moins le solaire autoconsommé
-    let demande = (pr ? pr.fanW : 0) + ctx.elecH[h] + r.appoint + r.climElec + (ventilo && (ete || jm.canicule) ? ETE.ventilateur : 0) + (faits.bouillotte && h === 22 ? 120 : 0);
+    let demande = (pr ? pr.fanW : 0) + ctx.elecH[h] + r.appoint + r.climElec + (ventilo && (ete || jm.canicule) ? ETE.ventilateur : 0) + (faits.bouillotte && hiver && h === 22 ? 120 : 0);
     let auto = 0, prod = 0, surplus = 0, decharge = 0;
     const prix = prixElec(s, h, jm.tempo);
     if (s.possede.solaire) {
@@ -114,6 +114,8 @@ export function heuresDuJour(s, v) {
     if (elecChauffage) radBaseKwh += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000;   // le voisin reste en option Base
     else gazBase += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000 / RENDEMENT_CHAUDIERE;
     climBase += rb.climElec / 1000;
+    // v1.5.3 : avec une clim à la maison, chaque heure de canicule passée au ventilateur, clim éteinte, évite ce que la clim aurait consommé (repère : clim du voisin à 25 °C)
+    if (ventilo && jm.canicule && s.possede.clim && !r.climElec && rb.climElec > 0) s.attribution.ventilateur = (s.attribution.ventilateur || 0) + Math.max(0, rb.climElec - ETE.ventilateur) / 1000 * prix;
 
     // ressenti et confort
     const P = s.pieces[occ];
@@ -124,7 +126,17 @@ export function heuresDuJour(s, v) {
     let ressenti, sc;
     if (!jr) {
       let bonusLit = lit;
-      if (faits.bouillotte && hiver) { const n = (h + 1) % 24; bonusLit += s.possede.housse ? 3 : (n < 3 ? 3.5 : 0.5); }
+      if (faits.bouillotte && hiver) {
+        const n = (h + 1) % 24, sans = n < 3 ? 3.5 : 0.5, avec = s.possede.housse ? 3 : sans;
+        bonusLit += avec;
+        // v1.5.3 : la chaleur au lit permet une chambre plus fraîche que les 21 °C du voisin ; gain = déperditions de la chambre (U) × degrés réellement baissés, plafonnés par le bonus
+        const baisse = Math.max(0, 21 - (s.possede.robinets ? s.pieces.chambre.consigneNuit : s.central.consigneNuit));
+        if (baisse > 0) {
+          const px = (elecChauffage ? prixElec(s, h, jm.tempo) : prixGaz(s) / RENDEMENT_CHAUDIERE) / 1000, U = PIECES.chambre.U;
+          s.attribution.bouillotte = (s.attribution.bouillotte || 0) + U * Math.min(baisse, sans) * px;
+          if (s.possede.housse && avec > sans) s.attribution.housse = (s.attribution.housse || 0) + U * Math.max(0, Math.min(baisse, avec) - Math.min(baisse, sans)) * px;
+        }
+      }
       ressenti = P.t + bonusLit - pHum - vent;
       sc = scoreConfort(ressenti, 18, 24.5);
       sommeil += sc; nS++;
