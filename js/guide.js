@@ -173,6 +173,8 @@ export const filtrerGlossaire = (q) => { etatUI.rechercheGlossaire = q; rendreGl
 
 // ---------------------------------------------------------------- bilan courant
 function rendreResume(s, r) {
+  // v1.5.4 (passe UI/UX 5) : au jour 1, rien à comparer : pas de titre « Dépensier » ni de jauges moyennes à 0 % en rouge
+  if (!s.jour) { $('resume').innerHTML = `<p class="vide resume-vide"><b>📊 Bilan disponible à partir de demain</b><br>Il faut au moins une journée jouée pour comparer tes dépenses à celles du voisin, calculer les moyennes des jauges et estimer ton titre.</p>`; return; }
   const doms = r.domaines.filter(d => Math.abs(d.valeur) >= 1).sort((a, b) => b.valeur - a.valeur);
   const mx = Math.max(1, ...doms.map(d => Math.abs(d.valeur)));
   const m = r.moy, g = (l, v) => `<div>${l}<b style="color:var(--${v >= 60 ? 'ok' : v >= 40 ? 'warn' : 'mal'})">${Math.round(v)} %</b></div>`;

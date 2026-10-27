@@ -2,6 +2,16 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.5.4] — 27 octobre 2026
+
+Cinquième passe UI/UX (mesures : `test/captures-v154.cjs`, bureau 1280×800 et mobile 390×844, ajouté à `npm run test:navigateur`).
+
+- **Bilan du jour 1** : au lieu de « Titre si la partie finissait : Dépensier » et de jauges moyennes à 0 % en rouge, un état vide « Bilan disponible à partir de demain » explique ce qui manque. Le bilan complet revient dès le jour 2.
+- **Petits textes des cartes du bilan** (`.stats small`) : 10,83 → 12 px (.75rem).
+- **Onglets au clavier** (motif WAI-ARIA) : un seul arrêt Tab par liste d'onglets (tabindex itinérant : vue principale, sections, sous-onglets), ← / → passent à l'onglet voisin et l'activent, Début / Fin au premier / dernier ; le focus suit l'onglet actif même quand la liste est redessinée.
+- **Sous-onglets sur mobile** : ils passent à la ligne au lieu d'être coupés (« Aide » était tronqué) et sont un peu plus compacts ; à 390×844, les 4 sous-onglets du Bilan tiennent sur une ligne de 52 px (366 / 366 px), aucun n'est coupé dans les 5 sections.
+- **Bas de page sous « Jour suivant » / ⏩** : la réserve sous le contenu (156 px sur mobile) dépasse la hauteur réelle des commandes du temps et de la barre de navigation (132 px) ; vérifié en bas de chaque section et de chaque sous-onglet, sur mobile et sur bureau : aucun texte dessous.
+
 ## [1.5.3] — 27 octobre 2026
 
 Cinquième passe de game design.

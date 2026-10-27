@@ -299,6 +299,26 @@ document.addEventListener('keydown', (e) => {
   else if (!e.shiftKey && (i === -1 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
 });
 
+// v1.5.4 (passe UI/UX 5) : onglets role=tab au clavier (motif WAI-ARIA « tabs ») : un seul arrêt Tab par liste (tabindex mobile),
+// ← / → (↑ / ↓ si la liste est verticale) passent à l'onglet voisin et l'activent, Début / Fin au premier / dernier
+{
+  const onglets = (l) => [...l.querySelectorAll('[role="tab"]')].filter(b => b.offsetParent !== null && !b.disabled);
+  const roving = () => { for (const l of document.querySelectorAll('[role="tablist"]')) { const t = [...l.querySelectorAll('[role="tab"]')]; const sel = t.find(b => b.getAttribute('aria-selected') === 'true') || t[0];
+    for (const b of t) { const v = b === sel ? '0' : '-1'; if (b.getAttribute('tabindex') !== v) b.setAttribute('tabindex', v); } } };
+  let attente = false; new MutationObserver(() => { if (attente) return; attente = true; requestAnimationFrame(() => { attente = false; roving(); }); }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-selected'] }); roving();
+  document.addEventListener('keydown', (e) => {
+    const b = e.target.closest?.('[role="tab"]'), l = b?.closest('[role="tablist"]'); if (!l || e.altKey || e.ctrlKey || e.metaKey) return;
+    const vert = l.getAttribute('aria-orientation') === 'vertical', t = onglets(l), i = t.indexOf(b); if (i < 0) return;
+    const k = { ArrowRight: vert ? null : 1, ArrowLeft: vert ? null : -1, ArrowDown: vert ? 1 : null, ArrowUp: vert ? -1 : null }[e.key];
+    let j = null; if (k) j = (i + k + t.length) % t.length; else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = t.length - 1;
+    if (j === null) return; e.preventDefault();
+    const cible = t[j], cle = Object.entries(cible.dataset)[0], idL = l.id;
+    cible.click();
+    // le rendu peut remplacer les boutons : on remet le focus sur le nouvel onglet actif
+    requestAnimationFrame(() => { const l2 = idL ? document.getElementById(idL) : l; const n = cle ? l2?.querySelector(`[role="tab"][data-${cle[0].replace(/[A-Z]/g, c => '-' + c.toLowerCase())}="${CSS.escape(cle[1])}"]`) : cible; (n || cible).focus(); roving(); });
+  });
+}
+
 // v1.3.1 : réserve sous le contenu la hauteur réelle des commandes du temps (fixes), du haut du bloc jusqu'au bas de l'écran
 {
   const t = document.querySelector('.temps');

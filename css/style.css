@@ -181,7 +181,7 @@ canvas{width:100%;height:auto;background:#f8fafc;border-radius:var(--r1)}
 .barre-dom .b.neg>div{background:var(--mal)}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--e2);margin:var(--e3) 0}
 .stats div{background:var(--surface2);border-radius:var(--r1);padding:var(--e2) var(--e3);font-size:var(--t-s)}
-.stats b{display:block;font-size:var(--t-l)}.stats small{display:block;color:var(--doux)}
+.stats b{display:block;font-size:var(--t-l)}.stats small{display:block;color:var(--doux);font-size:.75rem}
 .domaines td{font-size:var(--t-s)}
 
 /* toasts */
@@ -555,3 +555,13 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
 /* 5. curseurs du thermostat : colonne du libellé fixe, tous les curseurs ont la même largeur */
 .thermo{grid-template-columns:minmax(0,8.5em) minmax(0,1fr) 4em}
 .thermo .val{min-width:0}
+
+/* ---------------------------------------------------------------- v1.5.4 : passe UI/UX 5 */
+/* 1. bilan du jour 1 */
+.resume-vide{margin:var(--e3) 0;line-height:1.5}
+.resume-vide b{color:var(--texte)}
+/* 4. sous-onglets mobiles : ils passent à la ligne au lieu d'être coupés */
+@media (max-width:1000px){
+  .sous-onglets{flex-wrap:wrap;overflow-x:visible;row-gap:var(--e1)}
+  .sous-onglets button{padding:6px 10px}
+}

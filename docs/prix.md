@@ -458,3 +458,7 @@ Aucun prix modifié. Les nouvelles valeurs sont des calculs à partir de chiffre
 | Silo et cave | kg mangés après la garde de base × valeur au kg du lot | garde silo × 3, cave × 1,4 (inchangées) | Section Autosuffisance (v1.1) |
 | Défis : seuil de moral | moyenne de l'année < 35 | moral négligé 31-33 l'année de l'électricité, malin 56-57, maître 61-66 | Calibrage de jeu (sim-test, 3 graines) |
 
+
+## Passe UI/UX 5 (v1.5.4, 27 octobre 2026)
+
+Aucun prix ni chiffre de jeu modifié : interface seulement.
