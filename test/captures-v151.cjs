@@ -50,6 +50,20 @@ const defiler = (p, f) => p.evaluate((f) => { const s = [document.querySelector(
     if (nom === 'mobile') { await p.click('#btnPlusTemps'); await p.waitForTimeout(150); await defiler(p, 1); res.push(...await p.evaluate(CHEVAUCHE)); await p.click('#btnPlusTemps'); }
     ch(res.length === 0, `[${nom}] 2. aucun texte sous « Jour suivant » / Semaine / Mois / Prochain événement (${nom === 'bureau' ? 'haut, milieu, bas' : 'bas de page, ⏩ fermé et ouvert'})${res.length ? ' : ' + [...new Set(res)].join(' | ') : ''}`);
     await defiler(p, 0);
+    // v1.5.2 : Sauvegarder et Charger présents dans le menu ⋯ (≥ 44 px, avec libellé), la sauvegarde écrit, le chargement restaure
+    await p.click('#btnMenu'); await p.waitForTimeout(150);
+    const sc = await p.$$eval('#btnSauver,#btnCharger', x => x.map(e => { const r = e.getBoundingClientRect(); return { vis: e.checkVisibility(), h: Math.round(r.height), w: Math.round(r.width), txt: e.textContent.trim() }; }));
+    ch(sc.length === 2 && sc.every(x => x.vis && x.h >= 44 && x.w >= 44 && x.txt), `[${nom}] menu ⋯ : ${sc.map(x => `« ${x.txt} » ${x.w}×${x.h}`).join(', ')}`);
+    if (nom === 'mobile') await p.screenshot({ path: `${out}/v152_mobile_menu.png` });
+    await p.evaluate(() => localStorage.removeItem('economie-game-sauvegarde'));
+    await p.click('#btnSauver'); await p.waitForTimeout(200);
+    const sauve = await p.evaluate(() => localStorage.getItem('economie-game-sauvegarde')), dSauve = await p.textContent('#date');
+    ch(!!sauve && sauve.length > 1000, `[${nom}] « Sauvegarder » écrit la partie (${sauve ? Math.round(sauve.length / 1024) + ' ko' : 'rien'}, ${dSauve.trim()})`);
+    await jouer(p, 1); const dApres = await p.textContent('#date');
+    await p.evaluate((v) => localStorage.setItem('economie-game-sauvegarde', v), sauve);
+    await p.click('#btnMenu'); await p.waitForTimeout(150); await p.click('#btnCharger'); await p.waitForTimeout(400);
+    const dCharge = await p.textContent('#date');
+    ch(dApres !== dSauve && dCharge === dSauve, `[${nom}] « Charger » restaure la sauvegarde : ${dApres.trim()} → ${dCharge.trim()}`);
     // 3. Recommencer dans le menu ⋯, destructif, confirmation conservée
     const hors = await p.$eval('#btnNouvelle', e => !!e.closest('.menu-liste') && !e.checkVisibility());
     await p.click('#btnMenu'); await p.waitForTimeout(150);

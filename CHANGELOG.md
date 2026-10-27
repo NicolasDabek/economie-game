@@ -2,6 +2,11 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.5.2] — 27 octobre 2026
+
+- **Menu ⋯ sur mobile** : « Sauvegarder » et « Charger la sauvegarde » réapparaissent (une ancienne règle CSS, du temps où c'étaient des icônes du bandeau, les masquait sous 600 px). Libellés visibles, 240×44 px à 390×844.
+- **Tests** : `captures-v151.cjs` vérifie, sur bureau et sur mobile, que les deux items sont visibles et ≥ 44 px, que « Sauvegarder » écrit la partie dans le navigateur et que « Charger » la restaure (retour au jour sauvegardé).
+
 ## [1.5.1] — 25 octobre 2026
 
 Quatrième passe UI/UX (mesures : `test/captures-v151.cjs`, bureau 1280×800 et mobile 390×844).

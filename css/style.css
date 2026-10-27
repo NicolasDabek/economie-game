@@ -245,7 +245,6 @@ fieldset.duree legend{font-weight:700;padding:0 6px}
   .logo{display:none}
   .tb-date{font-size:var(--t-s);white-space:normal}
   .btn-icone{width:32px;height:32px}
-  #btnCharger,#btnSauver{display:none}
   .jauge{flex-basis:30%;padding:3px 6px}
   .topbar{position:static}
   .app{padding:var(--e3);gap:var(--e3)}
