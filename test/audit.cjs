@@ -83,7 +83,7 @@ function controle(ctx) {
   { const [ctx, p] = await page({ width: 1280, height: 800 }, 'bureau');
     for (const x of await p.evaluate(controle, {})) note(`bureau › accueil : ${x}`);
     if (CAP) await p.screenshot({ path: `${out}/v1_accueil.png` });
-    await clic(p, '[data-duree="3"]'); await clic(p, '#btnTutoriel'); let etapes = 0;
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '[data-duree="3"]'); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnTutoriel'); let etapes = 0;
     while (await p.isVisible('.coach') && etapes < 30) { etapes++; if (CAP && etapes === 2) await p.screenshot({ path: `${out}/v1_tutoriel.png` }); for (const x of await p.evaluate(controle, {})) note(`bureau › tutoriel ${etapes} : ${x}`); if (!await clic(p, '#coachSuiv')) break; await p.waitForTimeout(100); }
     console.log('tutoriel', etapes, 'étapes');
     console.time('j0');
@@ -110,13 +110,13 @@ function controle(ctx) {
   // 2. mobile 390 px
   { const [ctx, p] = await page({ width: 390, height: 844 }, 'mobile');
     for (const x of await p.evaluate(controle, { mobile: true })) note(`mobile › accueil : ${x}`);
-    await clic(p, '#btnJouer'); await tous(p, 'mobile j0', true); await avancer(p, 120); await tous(p, 'mobile j120', true);
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer'); await tous(p, 'mobile j0', true); await avancer(p, 120); await tous(p, 'mobile j120', true);
     if (CAP) { await clic(p, '[data-vue="tableau"]'); await p.screenshot({ path: `${out}/v1_mobile.png` }); await p.screenshot({ path: `${out}/v1_mobile_long.png`, fullPage: true }); }
     await ctx.close(); }
 
   // 3. thème sombre
   { const [ctx, p] = await page({ width: 1280, height: 800 }, 'sombre', { sombre: true });
-    await clic(p, '#btnJouer'); await avancer(p, 60); await tous(p, 'sombre', false);
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer'); await avancer(p, 60); await tous(p, 'sombre', false);
     if (CAP) { await clic(p, '[data-vue="tableau"]'); await p.screenshot({ path: `${out}/v1_sombre.png`, fullPage: true }); }
     await ctx.close(); }
 
@@ -124,6 +124,10 @@ function controle(ctx) {
   { const [ctx, p] = await page({ width: 1280, height: 800 }, 'clavier');
     const actif = () => p.evaluate(() => { const e = document.activeElement; const st = getComputedStyle(e); return { tag: e.tagName, id: e.id, txt: (e.getAttribute('aria-label') || e.innerText || '').slice(0, 30), visible: st.outlineStyle !== 'none' && parseFloat(st.outlineWidth) > 0 || st.boxShadow !== 'none', dans: (sel) => 0 }; });
     // l'accueil : Tab jusqu'à « Jouer » puis Entrée
+    // v1.5.5 : accueil en 2 étapes : Tab jusqu'à « Suivant », Entrée, puis Tab jusqu'à « Jouer »
+    let suiv = false;
+    for (let i = 0; i < 25; i++) { await p.keyboard.press('Tab'); const a = await actif(); if (a.tag !== 'BODY' && !a.visible) note(`clavier : focus invisible sur ${a.tag}#${a.id} « ${a.txt} »`); if (a.id === 'introSuivant') { suiv = true; break; } }
+    if (!suiv) note('clavier : « Suivant » de l\'accueil inatteignable au clavier'); else { await p.keyboard.press('Enter'); await p.waitForTimeout(150); }
     let trouve = false;
     for (let i = 0; i < 25; i++) { await p.keyboard.press('Tab'); const a = await actif(); if (a.tag !== 'BODY' && !a.visible) note(`clavier : focus invisible sur ${a.tag}#${a.id} « ${a.txt} »`); if (a.id === 'btnJouer') { trouve = true; break; } }
     if (!trouve) note('clavier : « Jouer » inatteignable au clavier'); else await p.keyboard.press('Enter');
@@ -153,8 +157,8 @@ function controle(ctx) {
   // 5. sauvegarde abîmée : le jeu démarre quand même
   { const [ctx, p] = await page({ width: 1280, height: 800 }, 'corrompue');
     await p.evaluate(() => { localStorage.setItem('economie-game-sauvegarde', '{"version":8,"jour":'); localStorage.setItem('economie-game-ui', '{"vus":null,'); }); await p.reload(); await p.waitForTimeout(300);
-    if (!await p.isVisible('#btnJouer')) note('sauvegarde abîmée : l\'accueil ne s\'affiche pas');
-    await clic(p, '#btnJouer'); await p.waitForTimeout(200);
+    if (!await p.isVisible('#intro')) note('sauvegarde abîmée : l\'accueil ne s\'affiche pas');
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer'); await p.waitForTimeout(200);
     const ok = await p.evaluate(() => typeof window.__jeu().jour === 'number'); if (!ok) note('sauvegarde abîmée : partie non démarrée');
     await ctx.close(); }
 

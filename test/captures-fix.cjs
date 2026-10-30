@@ -12,7 +12,7 @@ const clic = async (p, sel) => { try { await p.click(sel, { timeout: 2000 }); re
     const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage();
     p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && errs.push(m.text())); p.on('dialog', d => d.accept());
     await p.goto('http://localhost:8768/'); await p.waitForTimeout(400);
-    await clic(p, '#btnJouer'); await p.waitForTimeout(400);
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer'); await p.waitForTimeout(400);
     // gauges au départ (7 h : aube, pas la lune)
     await p.screenshot({ path: `${out}/fix_${nom}jauges.png`, clip: { x: 0, y: 0, width: vp.width, height: nom ? 260 : 140 } });
     console.log(nom || 'bureau', 'astre à 7 h :', await p.textContent('#astre'));

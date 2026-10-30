@@ -30,10 +30,10 @@ const defiler = (p, f) => p.evaluate((f) => { const s = [document.querySelector(
     p.on('dialog', d => { p._conf = d.message(); d.dismiss(); });
     await p.goto('http://localhost:8787/'); await p.waitForTimeout(400);
     // 1. boutons de l'accueil au-dessus de la ligne de flottaison
-    const bas = await p.$$eval('#btnTutoriel,#btnJouer', x => x.map(e => Math.round(e.getBoundingClientRect().bottom)));
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); const bas = await p.$$eval('#btnTutoriel,#btnJouer', x => x.map(e => Math.round(e.getBoundingClientRect().bottom)));
     ch(bas.every(v => v <= vp.height), `[${nom}] 1. « Commencer le tutoriel » / « Jouer directement » : bas à ${bas.join(' / ')} px ≤ ${vp.height}`);
     await p.screenshot({ path: `${out}/v151_${nom}_accueil.png` });
-    await p.click('#btnJouer'); await p.waitForTimeout(500); await jouer(p, 5);
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await p.click('#btnJouer'); await p.waitForTimeout(500); await jouer(p, 5);
     await p.addStyleTag({ content: '#toasts{display:none!important}' });
     // 4. hauteur du bandeau (#ciel)
     const hCiel = await p.$eval('#ciel', e => Math.round(e.getBoundingClientRect().height));

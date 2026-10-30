@@ -2,6 +2,15 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.5.5] — 30 octobre 2026
+
+Sixième passe UX (mesures : `test/captures-v155.cjs`, bureau 1280×800 et mobile 390×844, ajouté à `npm run test:navigateur`).
+
+- **Accueil en 2 étapes** avec indicateur « Étape 1/2 » puis « 2/2 » : d'abord le point de départ (présentation et 4 cartes, bouton « Suivant : la durée → »), puis la durée, les 3 règles du jeu, « ← Retour », « Commencer le tutoriel » et « Jouer directement ». Le scénario choisi est conservé au retour ; le focus va sur la durée à l'étape 2. À 1280×800 : étape 1 639 px sans défilement (avant : 720 px et 36 px à faire défiler), étape 2 405 px.
+- **Accessibilité** : le dialogue d'accueil est titré par son `<h2>` (`aria-labelledby`, déjà présent) et décrit par l'indicateur d'étape ; un `<h1>` « Économie Game » visuellement masqué ouvre la page.
+- **Tactile** : les 9 règles `:hover` sont dans `@media (hover:hover)` (plus d'état de survol collé après un tap).
+- **Tests** : les scripts navigateur passent par l'étape 1 avant de choisir la durée ou de lancer la partie.
+
 ## [1.5.4] — 27 octobre 2026
 
 Cinquième passe UI/UX (mesures : `test/captures-v154.cjs`, bureau 1280×800 et mobile 390×844, ajouté à `npm run test:navigateur`).

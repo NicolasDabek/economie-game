@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<h1 class="sr-only">Économie Game</h1>
 <a class="sauter" href="#scene">Aller au jeu</a>
 <header id="ciel" class="topbar">
   <div class="tb-gauche">
@@ -165,25 +166,28 @@
     <div class="coach-actions"><button class="btn" id="coachPasser">Passer le tutoriel</button><span></span><button class="btn" id="coachPrec">Précédent</button><button class="btn primaire" id="coachSuiv">Suivant</button></div></div>
 </div>
 
-<div id="intro" class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTitre"><div class="modal-contenu">
+<div id="intro" class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTitre" aria-describedby="introEtape" data-etape="1"><div class="modal-contenu">
+  <p class="intro-etape" id="introEtape" aria-live="polite"><span class="intro-pas" aria-hidden="true"><i class="actif"></i><i></i></span> <span>Étape <b id="introNum">1</b>/2 · <span id="introNomEtape">ton point de départ</span></span></p>
   <div class="intro-hero" aria-hidden="true">❄️ 🌱 ☀️ 🍂</div>
   <h2 id="introTitre">Dépense moins que ton voisin, vis aussi bien que lui</h2>
-  <p class="pitch">Tu emménages le 1er décembre 2026 <span id="pitchLogement">dans une petite maison ancienne de 45 m², chauffée au gaz</span>. Ton voisin, dans le même logement, vit sans réfléchir. À toi de dépenser beaucoup moins que lui <b>sans sacrifier</b> ton confort, ta santé ni ton moral.</p>
-  <ul class="intro-points">
+  <p class="pitch intro-e1">Tu emménages le 1er décembre 2026 <span id="pitchLogement">dans une petite maison ancienne de 45 m², chauffée au gaz</span>. Ton voisin, dans le même logement, vit sans réfléchir. À toi de dépenser beaucoup moins que lui <b>sans sacrifier</b> ton confort, ta santé ni ton moral.</p>
+  <ul class="intro-points intro-e2">
     <li><b>Règle</b> le chauffage, les gestes, les achats : chaque choix se voit sur la facture.</li>
     <li><b>Apprends</b> : chaque découverte devient un principe dans l'encyclopédie.</li>
     <li><b>Garde l'équilibre</b> : l'austérité totale finit par coûter cher (santé, moral, arrêts maladie).</li>
   </ul>
-  <fieldset class="scenarios" id="scenarios"><legend>Ton point de départ</legend><div class="scenarios-liste" id="scenariosListe"></div>
+  <fieldset class="scenarios intro-e1" id="scenarios"><legend>Ton point de départ</legend><div class="scenarios-liste" id="scenariosListe"></div>
     <small class="aide">Le voisin vit dans le même logement : la comparaison reste juste dans chaque scénario.</small></fieldset>
-  <fieldset class="duree"><legend>Durée de la campagne</legend>
+  <div class="intro-e1-actions actions"><button id="introSuivant" class="primaire">Suivant : la durée →</button></div>
+  <fieldset class="duree intro-e2"><legend>Durée de la campagne</legend>
     <button class="btn" data-duree="3">3 ans</button><button class="btn actif-btn" data-duree="5" aria-pressed="true">5 ans</button><button class="btn" data-duree="10">10 ans</button>
     <small class="aide">Avec l'avance rapide, une année se joue en 20 à 40 minutes.</small></fieldset>
-  <div class="actions intro-actions">
+  <div class="actions intro-actions intro-e2">
+    <button id="introRetour" class="btn-retour">← Retour</button>
     <button id="btnTutoriel" class="primaire">Commencer le tutoriel</button>
     <button id="btnJouer">Jouer directement</button>
-    <button id="btnReprendre" class="cache">Reprendre la partie sauvegardée</button>
   </div>
+  <div class="actions intro-reprendre"><button id="btnReprendre" class="cache">Reprendre la partie sauvegardée</button></div>
   <p class="aide intro-version">Économie Game <span class="version-jeu"></span> · prix réels 2026 · tout reste dans ton navigateur</p>
 </div></div>
 <script type="module" src="js/main.js"></script>

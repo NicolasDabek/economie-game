@@ -18,7 +18,7 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   ch((await p.textContent('#pitchLogement')).includes('30 m²'), `accroche : « ${await p.textContent('#pitchLogement')} »`);
   await p.evaluate(() => document.querySelector('#scenarios').scrollIntoView({ block: 'start' })); await p.waitForTimeout(150);
   await p.screenshot({ path: `${out}/v130_mobile_scenarios.png` });
-  await p.click('#btnJouer'); await p.waitForTimeout(500);
+  await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await p.click('#btnJouer'); await p.waitForTimeout(500);
   const etat = await p.evaluate(() => JSON.parse(localStorage.getItem('economie-game-sauvegarde') || '{}'));
   ch(etat.scenario === 'appartement-elec' && etat.version === 10, `partie lancée et sauvegardée : scénario ${etat.scenario}, format v${etat.version}`);
   ch((await p.textContent('#menuAnnee')).includes('Appart'), `menu : « ${await p.textContent('#menuAnnee')} »`);

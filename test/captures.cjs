@@ -13,8 +13,8 @@ const clic = async (p, sel) => { try { await p.click(sel, { timeout: 1500 }); re
     p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
     await p.goto('http://localhost:8767/'); await p.waitForTimeout(500);
     if (nom === '') await p.screenshot({ path: `${out}/${pre}_onboarding.png` });
-    if (pre === 'after' && nom === '') { await clic(p, '#btnTutoriel'); await p.waitForTimeout(600); await p.screenshot({ path: `${out}/${pre}_tutoriel.png` }); await clic(p, '#coachPasser'); }
-    else { (await clic(p, '#btnJouer')) || (await clic(p, '#btnCommencer')); }
+    if (pre === 'after' && nom === '') { await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnTutoriel'); await p.waitForTimeout(600); await p.screenshot({ path: `${out}/${pre}_tutoriel.png` }); await clic(p, '#coachPasser'); }
+    else { await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); (await clic(p, '#btnJouer')) || (await clic(p, '#btnCommencer')); }
     await p.waitForTimeout(400);
     // un peu de jeu pour remplir les écrans
     for (let i = 0; i < 3; i++) { if (await p.isVisible('#dilemme')) await clic(p, '.choixDilemme:not([disabled]) >> nth=-1'); await clic(p, '#btnSemaine'); await p.waitForTimeout(3500); }

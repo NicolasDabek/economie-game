@@ -42,7 +42,7 @@ button{font:inherit;color:inherit}
 #astre{font-size:18px}
 .menu{display:flex;gap:var(--e1)}
 .btn-icone{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;cursor:pointer;transition:background var(--anim)}
-.btn-icone:hover{background:rgba(255,255,255,.3)}
+@media (hover:hover){.btn-icone:hover{background:rgba(255,255,255,.3)}}
 .jauges{grid-column:1/-1;order:3;display:flex;flex-wrap:wrap;gap:var(--e2);padding:2px}
 .jauge{position:relative;flex:1 1 120px;min-width:0;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:5px 8px;cursor:help}
 .jauge .lib{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:var(--t-xs);white-space:nowrap}
@@ -59,8 +59,8 @@ button{font:inherit;color:inherit}
 
 /* infobulles */
 [data-tip]{position:relative}
-[data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:max-content;max-width:260px;white-space:normal;background:#111827;color:#fff;font-size:var(--t-xs);font-weight:400;line-height:1.35;padding:6px 8px;border-radius:6px;z-index:40;box-shadow:var(--ombre-haute);pointer-events:none;text-align:left}
-.temps [data-tip]:hover::after{top:auto;bottom:calc(100% + 6px)}
+[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:max-content;max-width:260px;white-space:normal;background:#111827;color:#fff;font-size:var(--t-xs);font-weight:400;line-height:1.35;padding:6px 8px;border-radius:6px;z-index:40;box-shadow:var(--ombre-haute);pointer-events:none;text-align:left}@media (hover:hover){[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:max-content;max-width:260px;white-space:normal;background:#111827;color:#fff;font-size:var(--t-xs);font-weight:400;line-height:1.35;padding:6px 8px;border-radius:6px;z-index:40;box-shadow:var(--ombre-haute);pointer-events:none;text-align:left}}
+@media (hover:hover){.temps [data-tip]:hover::after{top:auto;bottom:calc(100% + 6px)}}
 abbr.terme,span.terme{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
 
 /* mise en page */
@@ -80,7 +80,7 @@ abbr.terme,span.terme{text-decoration:underline dotted;text-underline-offset:3px
 #scene{position:relative}
 #maison svg{width:100%;height:auto;display:block;border-radius:var(--r1)}
 .piece-svg{cursor:pointer;transition:filter var(--anim)}
-.piece-svg:hover,.piece-svg:focus-visible{filter:brightness(1.06) drop-shadow(0 0 4px rgba(36,87,214,.55));outline:none}
+.piece-svg:focus-visible{filter:brightness(1.06) drop-shadow(0 0 4px rgba(36,87,214,.55));outline:none}@media (hover:hover){.piece-svg:hover{filter:brightness(1.06) drop-shadow(0 0 4px rgba(36,87,214,.55));outline:none}}
 .piece-svg .fondP{transition:fill .8s ease}
 .piece-svg text{font-family:var(--police);pointer-events:none}
 .legende-temp{display:flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--doux);margin-top:var(--e2)}
@@ -89,7 +89,7 @@ abbr.terme,span.terme{text-decoration:underline dotted;text-underline-offset:3px
 /* sections et sous-onglets */
 .sections{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--e1);background:var(--surface);border:1px solid var(--bord);border-radius:var(--r2);padding:var(--e1)}
 .sections button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:8px 2px;border-radius:var(--r1);cursor:pointer;font-size:var(--t-xs);font-weight:600;color:var(--doux);transition:background var(--anim),color var(--anim)}
-.sections button:hover{background:var(--surface2);color:var(--texte)}
+@media (hover:hover){.sections button:hover{background:var(--surface2);color:var(--texte)}}
 .sections button[aria-selected="true"]{background:var(--accent-doux);color:var(--accent)}
 .badge{position:absolute;top:2px;right:4px;background:var(--mal);color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:1px 5px;line-height:1.3;animation:apparait .3s}
 .badge.nouveau{background:var(--ok)}
@@ -110,7 +110,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 /* contrôles génériques (rendus par ui.js / onglets.js) */
 .btn{padding:6px 12px;border-radius:var(--r1);border:1px solid var(--bord);background:var(--surface);cursor:pointer;font-size:var(--t-s);transition:border-color var(--anim),background var(--anim)}
-.btn:hover:not(:disabled){border-color:var(--accent)}
+@media (hover:hover){.btn:hover:not(:disabled){border-color:var(--accent)}}
 .actif-btn{background:var(--ok-doux);border-color:var(--ok);color:var(--ok)}
 .ligne{display:flex;align-items:center;gap:var(--e2);margin:var(--e2) 0;flex-wrap:wrap}
 .ligne label{min-width:84px;font-weight:600;font-size:var(--t-s)}
@@ -445,12 +445,12 @@ body{padding-bottom:96px}
 .menu-partie[open]>summary{background:rgba(0,0,0,.2)}
 .menu-liste{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:250px;background:var(--surface);color:var(--texte);border:1px solid var(--bord);border-radius:var(--r2);box-shadow:var(--ombre-haute);padding:var(--e1);display:flex;flex-direction:column}
 .menu-liste button{display:flex;align-items:center;gap:10px;min-height:44px;border:0;background:none;text-align:left;padding:0 12px;border-radius:var(--r1);cursor:pointer;color:var(--texte)}
-.menu-liste button:hover:not(:disabled),.menu-liste button:focus-visible{background:var(--surface2)}
+.menu-liste button:focus-visible{background:var(--surface2)}@media (hover:hover){.menu-liste button:hover:not(:disabled){background:var(--surface2)}}
 .menu-liste button:disabled{opacity:.55;cursor:default}
 .menu-annee{margin:0;padding:8px 12px;font-size:var(--t-s);color:var(--doux);border-bottom:1px solid var(--bord)}
 .m-ico{display:inline-flex}
 .btn-danger{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;background:var(--surface);color:var(--mal);border:2px solid var(--mal);font-weight:700;cursor:pointer}
-.btn-danger:hover{background:var(--mal-doux)}
+@media (hover:hover){.btn-danger:hover{background:var(--mal-doux)}}
 
 /* 4. lien d'évitement */
 .sauter{min-height:44px;display:inline-flex;align-items:center}
@@ -530,7 +530,7 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
 }
 /* 3. Recommencer : dernier item du menu ⋯, séparé et marqué comme destructif */
 .menu-liste button.danger{color:var(--mal);font-weight:700;border-top:1px solid var(--bord);border-radius:0 0 var(--r1) var(--r1);margin-top:var(--e1);padding-top:6px;padding-bottom:6px}
-.menu-liste button.danger:hover,.menu-liste button.danger:focus-visible{background:var(--mal-doux)}
+.menu-liste button.danger:focus-visible{background:var(--mal-doux)}@media (hover:hover){.menu-liste button.danger:hover{background:var(--mal-doux)}}
 .menu-liste button.danger>span:last-child{display:flex;flex-direction:column;line-height:1.25}
 .menu-liste button.danger small{font-weight:400;font-size:var(--t-xs);color:var(--doux)}
 /* 4. bandeau mobile compact (~120 px) : date + menu, puis les 3 jauges et un bouton « +5 » sur une seule ligne */
@@ -565,3 +565,14 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
   .sous-onglets{flex-wrap:wrap;overflow-x:visible;row-gap:var(--e1)}
   .sous-onglets button{padding:6px 10px}
 }
+
+/* ---------------------------------------------------------------- v1.5.5 : passe UX 6 */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.intro-etape{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 var(--e2);font-size:var(--t-s);color:var(--doux)}
+.intro-pas{display:inline-flex;gap:4px}.intro-pas i{width:22px;height:6px;border-radius:3px;background:var(--surface2);border:1px solid var(--bord)}
+.intro-pas i.actif{background:var(--accent);border-color:var(--accent)}
+.intro[data-etape="1"] .intro-e2,.intro[data-etape="2"] .intro-e1,.intro[data-etape="2"] .intro-e1-actions,.intro[data-etape="2"] .intro-hero{display:none!important}
+.intro-e1-actions{justify-content:center;margin-top:var(--e3)}
+.intro[data-etape="2"] .duree{margin-top:var(--e3)}
+.intro-reprendre{justify-content:center}.intro-reprendre:has(.cache:only-child){display:none}
+.intro[data-etape="2"] .intro-points{order:0;margin:0 0 var(--e2)}

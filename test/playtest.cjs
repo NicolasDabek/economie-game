@@ -15,7 +15,7 @@ const ANNEES = Number(process.argv[2] || 1);
   const fin = (p) => p.evaluate((A) => window.__jeu().jour >= 365 * A || window.__jeu().fini, ANNEES);
 
   // 1. débutant : « Faire » sur la première recommandation, puis une semaine
-  { const [ctx, p] = await page({ width: 1280, height: 800 }); await clic(p, '[data-duree="3"]'); await clic(p, '#btnJouer');
+  { const [ctx, p] = await page({ width: 1280, height: 800 }); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '[data-duree="3"]'); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer');
     let clics = 2, faits = 0, vains = 0, dil = 0;
     let ignoreTeste = false;
     while (!(await fin(p))) {
@@ -39,7 +39,7 @@ const ANNEES = Number(process.argv[2] || 1);
     await ctx.close(); }
 
   // 2. joueur pressé : « Prochain événement » en boucle, on mesure les pauses
-  { const [ctx, p] = await page({ width: 1280, height: 800 }); await clic(p, '[data-duree="3"]'); await clic(p, '#btnJouer');
+  { const [ctx, p] = await page({ width: 1280, height: 800 }); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '[data-duree="3"]'); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer');
     const arrets = []; let dil = 0, j0 = 0;
     while (!(await fin(p))) { dil += await dilemmes(p); await clic(p, '#btnEvenement'); await p.waitForFunction(() => !document.getElementById('btnEvenement').disabled, null, { timeout: 30000 }).catch(() => {}); const j = await p.evaluate(() => window.__jeu().jour); arrets.push(j - j0); j0 = j; }
     const courts = arrets.filter(x => x <= 2).length;
@@ -48,7 +48,7 @@ const ANNEES = Number(process.argv[2] || 1);
     await ctx.close(); }
 
   // 3. curieux : chaque section et sous-onglet après un mois et après un an
-  { const [ctx, p] = await page({ width: 1280, height: 800 }); await clic(p, '#btnJouer');
+  { const [ctx, p] = await page({ width: 1280, height: 800 }); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer');
     for (const etape of [30, 365]) {
       await p.evaluate((J) => { const s = window.__jeu(); }, etape);
       while ((await p.evaluate(() => window.__jeu().jour)) < etape) { await dilemmes(p); await clic(p, '#btnMois'); await p.waitForFunction(() => !document.getElementById('btnMois').disabled, null, { timeout: 30000 }).catch(() => {}); }
@@ -76,7 +76,7 @@ const ANNEES = Number(process.argv[2] || 1);
     await ctx.close(); }
 
   // 4. mobile : tailles de cibles, débordements
-  { const [ctx, p] = await page({ width: 390, height: 844 }); await clic(p, '#btnJouer');
+  { const [ctx, p] = await page({ width: 390, height: 844 }); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await clic(p, '#btnJouer');
     for (let i = 0; i < 4; i++) { await dilemmes(p); await clic(p, '#btnSemaine'); await p.waitForFunction(() => !document.getElementById('btnSemaine').disabled, null, { timeout: 30000 }).catch(() => {}); }
     await dilemmes(p);
     const m = await p.evaluate(() => ({ deborde: document.documentElement.scrollWidth > innerWidth + 1, petits: [...document.querySelectorAll('button')].filter(x => { const r = x.getBoundingClientRect(); return r.width && r.height && (r.height < 28 || r.width < 28) && getComputedStyle(x).visibility !== 'hidden'; }).map(x => (x.textContent || x.getAttribute('aria-label') || '').trim().slice(0, 20)).slice(0, 8) }));

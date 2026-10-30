@@ -11,10 +11,10 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   const ch = (c, t) => { console.log((c ? '✓ ' : '✗ ') + t); if (!c) ok = false; };
   p.on('pageerror', e => { ok = false; console.log('ERREUR', e.message); });
   await p.goto('http://localhost:8786/'); await p.waitForTimeout(400);
-  const bas = await p.$$eval('#btnTutoriel,#btnJouer', x => x.map(e => Math.round(e.getBoundingClientRect().bottom)));
+  await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); const bas = await p.$$eval('#btnTutoriel,#btnJouer', x => x.map(e => Math.round(e.getBoundingClientRect().bottom)));
   ch(bas.every(v => v <= 844), `1. boutons de l'accueil au-dessus de la ligne de flottaison (bas à ${bas.join(' / ')} px ≤ 844)`);
   await p.screenshot({ path: `${out}/v131_mobile_accueil.png` });
-  await p.click('#btnJouer'); await p.waitForTimeout(500);
+  await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await p.click('#btnJouer'); await p.waitForTimeout(500);
   for (let i = 0; i < 5; i++) { await p.click('#btnJour'); await p.waitForTimeout(900); while (await p.isVisible('#dilemme')) { await p.click('.choixDilemme:not([disabled]) >> nth=-1'); await p.waitForTimeout(300); } }
   await p.evaluate(() => document.getElementById('toasts')?.style.setProperty('display', 'none'));
   const couvre = async () => p.evaluate(() => { scrollTo(0, document.body.scrollHeight); const t = document.querySelector('.temps').getBoundingClientRect();

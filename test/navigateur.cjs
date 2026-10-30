@@ -14,7 +14,7 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   const jour = async () => { await p.click('#btnJour'); await p.waitForTimeout(1200); while (await p.isVisible('#dilemme')) { await p.click('.choixDilemme:not([disabled]) >> nth=-1'); await p.waitForTimeout(300); } };
   const go = async (o) => { const sec = o.startsWith('b-') ? 'achats' : SEC[o]; await p.click(`[data-section="${sec}"]`); for (let i = 0; i < 25 && !(await p.isVisible(`[data-onglet="${o}"]`)); i++) { await jour(); await p.click(`[data-section="${sec}"]`); } await p.click(`[data-onglet="${o}"]`); };
   const ach = async (sel) => { for (const tab of ['b-maison', 'b-eau', 'b-cuisine', 'b-elec', 'b-transport', 'b-jardin']) { await go(tab); if (await p.isVisible(sel)) { await p.click(sel); if (await p.isVisible('#confOui')) await p.click('#confOui'); return; } } throw new Error('introuvable ' + sel); };
-  await p.click('[data-duree="3"]'); await p.click('#btnJouer');
+  await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await p.click('[data-duree="3"]'); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await p.click('#btnJouer');
   console.log('campagne', await p.evaluate(() => window.__jeu().joursTotal));
   // v0.8.1 : tableau de bord par défaut, « Y aller » ouvre le bon réglage
   console.log('tableau de bord', await p.isVisible('#vueTableau'), (await p.textContent('#tableau')).includes('Que faire maintenant'), (await p.textContent('#tableau')).includes('Dépenses du mois'));

@@ -8,7 +8,7 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   const b = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
   const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 }); let ok = true;
   p.on('pageerror', e => { ok = false; console.log('ERREUR', e.message); });
-  await p.goto('http://localhost:8783/'); await p.click('#btnJouer'); await p.waitForTimeout(500);
+  await p.goto('http://localhost:8783/'); await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await p.click('#btnJouer'); await p.waitForTimeout(500);
   await p.screenshot({ path: `${out}/v121_mobile_accueil_j1.png` });
   // 1. rien sous le bouton flottant en bas de page
   await p.evaluate(() => scrollTo(0, document.body.scrollHeight)); await p.waitForTimeout(200);

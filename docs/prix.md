@@ -462,3 +462,7 @@ Aucun prix modifié. Les nouvelles valeurs sont des calculs à partir de chiffre
 ## Passe UI/UX 5 (v1.5.4, 27 octobre 2026)
 
 Aucun prix ni chiffre de jeu modifié : interface seulement.
+
+## Passe UX 6 (v1.5.5, 30 octobre 2026)
+
+Aucun prix ni chiffre de jeu modifié : interface seulement.

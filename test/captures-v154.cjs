@@ -28,7 +28,7 @@ const defiler = (p, f) => p.evaluate((f) => { const s = [document.querySelector(
     const p = await b.newPage({ viewport: vp, deviceScaleFactor: 1 });
     p.on('pageerror', e => { ok = false; console.log('ERREUR', e.message); });
     await p.goto('http://localhost:8787/'); await p.waitForTimeout(400);
-    await p.click('#btnJouer'); await p.waitForTimeout(500);
+    await p.evaluate(() => { const b = document.getElementById('introSuivant'); if (b && b.offsetParent) b.click(); }); await p.click('#btnJouer'); await p.waitForTimeout(500);
     await p.addStyleTag({ content: '#toasts{display:none!important}' });
     // 1. Bilan du jour 1 : état vide, ni titre « Dépensier » ni jauges à 0 %
     await p.click('[data-section="bilan"]'); await p.waitForTimeout(250);

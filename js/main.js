@@ -221,6 +221,11 @@ document.addEventListener('click', (e) => {
   else if (b.id === 'btnMois') return avancerVite(30, false);
   else if (b.id === 'btnEvenement') return avancerVite(400, true);
   else if (d.routine) { s.auto ??= {}; s.auto[d.routine] = !s.auto[d.routine]; autoSauvegarde(); }
+  // v1.5.5 (passe UX 6) : accueil en 2 étapes (point de départ, puis durée)
+  else if (b.id === 'introSuivant' || b.id === 'introRetour') { const e = b.id === 'introSuivant' ? 2 : 1, m = $('intro'); m.dataset.etape = String(e);
+    $('introNum').textContent = e; $('introNomEtape').textContent = e === 2 ? 'durée de la campagne' : 'ton point de départ';
+    m.querySelectorAll('.intro-pas i').forEach((x, i) => x.classList.toggle('actif', i < e)); m.querySelector('.modal-contenu').scrollTop = 0;
+    (e === 2 ? m.querySelector('[data-duree][aria-pressed="true"]') : $('introSuivant'))?.focus(); return; }
   else if (d.scenario) { scenario = d.scenario; rendreScenarios(); return; }
   else if (d.duree) { duree = Number(d.duree); dureeChoisie = true; document.querySelectorAll('[data-duree]').forEach(x => { x.classList.toggle('actif-btn', x === b); x.setAttribute('aria-pressed', x === b); }); return; }
   else if (b.id === 'btnJouer' || b.id === 'btnTutoriel' || b.id === 'btnCommencer') {
