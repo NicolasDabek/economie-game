@@ -37,11 +37,19 @@ const PITCH = { standard: 'dans une petite maison ancienne de 45 m², chauffée 
   'famille-4': 'avec ta famille (2 adultes, 2 enfants) dans une maison de 80 m² au gaz', 'maison-isolee-credit': 'dans une maison de 45 m² rénovée (DPE C), achetée à crédit' };
 function rendreScenarios() {
   const l = $('scenariosListe'); if (!l) return;
-  l.innerHTML = Object.entries(SCENARIOS).map(([id, x]) => `<button class="btn scenario${id === scenario ? ' actif-btn' : ''}" data-scenario="${id}" aria-pressed="${id === scenario}">
-    <span class="sc-ico" aria-hidden="true">${x.icone}</span><span class="sc-txt"><b>${x.nom}</b><small class="sc-desc">${x.desc}</small><small class="sc-court">${x.court}</small></span></button>`).join('');
+  // v1.5.6 (passe UX 7) : groupe de boutons radio (aria-checked, un seul arrêt Tab, flèches) et coche ✓ visible, pas seulement la couleur
+  const focus = l.contains(document.activeElement);
+  l.innerHTML = Object.entries(SCENARIOS).map(([id, x]) => `<button type="button" class="btn scenario${id === scenario ? ' actif-btn' : ''}" data-scenario="${id}" role="radio" aria-checked="${id === scenario}" tabindex="${id === scenario ? 0 : -1}">
+    <span class="sc-coche" aria-hidden="true">✓</span><span class="sc-ico" aria-hidden="true">${x.icone}</span><span class="sc-txt"><b>${x.nom}</b><small class="sc-desc">${x.desc}</small><small class="sc-court">${x.court}</small></span></button>`).join('');
+  if (focus) l.querySelector('[aria-checked="true"]')?.focus();
   if ($('pitchLogement')) $('pitchLogement').textContent = PITCH[scenario] || PITCH.standard;
 }
 rendreScenarios();
+$('scenariosListe')?.addEventListener('keydown', (e) => {
+  const k = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; const ids = Object.keys(SCENARIOS);
+  let j = null; if (k) j = (ids.indexOf(scenario) + k + ids.length) % ids.length; else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = ids.length - 1;
+  if (j === null) return; e.preventDefault(); scenario = ids[j]; rendreScenarios();
+});
 
 function rafraichir(nbAvant) {
   const nouveaux = s.messages.slice(0, Math.max(0, s.messages.length - nbAvant));

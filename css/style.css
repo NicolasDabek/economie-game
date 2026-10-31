@@ -576,3 +576,18 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
 .intro[data-etape="2"] .duree{margin-top:var(--e3)}
 .intro-reprendre{justify-content:center}.intro-reprendre:has(.cache:only-child){display:none}
 .intro[data-etape="2"] .intro-points{order:0;margin:0 0 var(--e2)}
+
+/* ---------------------------------------------------------------- v1.5.6 : passe UX 7 */
+/* 2. carte de départ choisie : coche ✓ en plus de la couleur */
+.btn.scenario{position:relative}
+.btn.scenario .sc-coche{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;display:none;align-items:center;justify-content:center;background:var(--ok);color:#fff;font-size:14px;font-weight:700;line-height:1}
+.btn.scenario[aria-checked="true"] .sc-coche{display:inline-flex}
+.btn.scenario[aria-checked="true"] .sc-txt{padding-right:22px}
+/* 1. mobile : « Suivant » collé en bas de la fenêtre d'accueil, même quand le contenu défile */
+@media (max-width:600px){
+  .intro-e1-actions{order:1;position:sticky;bottom:calc(-1 * (var(--e3) + env(safe-area-inset-bottom)));margin:var(--e2) calc(-1 * var(--e4)) calc(-1 * (var(--e3) + env(safe-area-inset-bottom)));padding:var(--e2) var(--e4) calc(var(--e3) + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--bord);z-index:1}
+  .intro-e1-actions button{flex:1}
+  .intro-e1-actions{margin-top:auto}
+  .intro .modal-contenu{overflow-y:auto}
+  .intro[data-etape="1"] .intro-version{order:0}
+}

@@ -14,7 +14,7 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   const n = await p.$$eval('[data-scenario]', x => x.length); ch(n === 4, `${n} scénarios proposés à l'accueil`);
   const petits = await p.$$eval('[data-scenario]', x => x.filter(e => e.getBoundingClientRect().height < 44).length); ch(petits === 0, 'boutons de scénario ≥ 44 px');
   await p.click('[data-scenario="appartement-elec"]'); await p.waitForTimeout(150);
-  ch(await p.getAttribute('[data-scenario="appartement-elec"]', 'aria-pressed') === 'true', 'choix « appartement » marqué (aria-pressed)');
+  ch(await p.getAttribute('[data-scenario="appartement-elec"]', 'aria-checked') === 'true', 'choix « appartement » marqué (aria-pressed)');
   ch((await p.textContent('#pitchLogement')).includes('30 m²'), `accroche : « ${await p.textContent('#pitchLogement')} »`);
   await p.evaluate(() => document.querySelector('#scenarios').scrollIntoView({ block: 'start' })); await p.waitForTimeout(150);
   await p.screenshot({ path: `${out}/v130_mobile_scenarios.png` });

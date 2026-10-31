@@ -2,6 +2,13 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.5.6] — 31 octobre 2026
+
+Septième passe UX (mesures : `test/captures-v156.cjs`, mobile 390×844 et 360×480, bureau 1280×800, ajouté à `npm run test:navigateur`).
+
+- **« Suivant : la durée → » collé en bas de l'accueil sur mobile** : pied de fenêtre sticky, pleine largeur, à 12 px du bas de l'écran, en haut comme en bas du défilement (à 360×480, 83 px de contenu défilent dessous).
+- **Cartes de départ** : groupe de boutons radio (`role="radiogroup"` titré « Ton point de départ », `role="radio"` + `aria-checked`, un seul arrêt Tab, flèches et Début / Fin pour changer), et coche ✓ verte sur la carte choisie, en plus de la couleur.
+
 ## [1.5.5] — 30 octobre 2026
 
 Sixième passe UX (mesures : `test/captures-v155.cjs`, bureau 1280×800 et mobile 390×844, ajouté à `npm run test:navigateur`).

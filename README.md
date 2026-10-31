@@ -229,6 +229,7 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 | Malin | 33,3 / 36,8 / 39,8 % | Autonome |
 | Maître | 61,5 / 66,7 / 68,5 % | Maître / Légende / Légende |
 
+- **Passe UX 7 (v1.5.6)** : « Suivant » collé en bas de l'accueil sur mobile ; cartes de départ en boutons radio avec coche ✓ et `aria-checked`.
 - **Passe UX 6 (v1.5.5)** : accueil en 2 étapes (point de départ, puis durée) avec indicateur 1/2, `<h1>` masqué, survols réservés aux appareils qui survolent (`@media (hover:hover)`).
 - **Passe UI/UX 5 (v1.5.4)** : bilan du jour 1 en état vide (« disponible à partir de demain »), petits textes du bilan à 12 px, onglets au clavier (← → Début Fin, un seul arrêt Tab par liste), sous-onglets mobiles qui passent à la ligne au lieu d'être coupés, bas de chaque onglet vérifié sous « Jour suivant ».
 - **Passe GD 5 (v1.5.3)** : le silo et la cave sont crédités des légumes mangés au-delà de leur garde de base (silo 167 à 199 € sur 5 ans pour l'autosuffisant) ; la multiprise et la bouillotte activent leur habitude à l'achat, et bouillotte et housse mesurent la chaleur économisée dans la chambre ; un défi réussi avec un moral moyen < 35 ne compte pas ; le ventilateur est présenté comme un achat de confort (~20 €/an d'électricité), crédité de la clim évitée pendant les canicules.

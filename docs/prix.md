@@ -466,3 +466,7 @@ Aucun prix ni chiffre de jeu modifié : interface seulement.
 ## Passe UX 6 (v1.5.5, 30 octobre 2026)
 
 Aucun prix ni chiffre de jeu modifié : interface seulement.
+
+## Passe UX 7 (v1.5.6, 31 octobre 2026)
+
+Aucun prix ni chiffre de jeu modifié : interface seulement.
