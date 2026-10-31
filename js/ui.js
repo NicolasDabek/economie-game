@@ -41,7 +41,7 @@ export function rendreJauges(s) {
     ['⏳ Temps libre', libre, budget, `${fmtH(libre)} / ${fmtH(budget)}`],
     ['🏗️ Équipements', cap, 400, eur(cap)],
   ];
-  const NOMS_M = { plaisirs: 'plaisirs (usés par la répétition)', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'assiette monotone', vacances: 'vacances', stress: 'stress (argent, pannes, maladie)', controle: 'budget maîtrisé' };
+  const NOMS_M = { plaisirs: 'plaisirs (usés par la répétition)', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'assiette monotone', vacances: 'vacances', stress: 'stress (argent, pannes, maladie)', controle: 'budget maîtrisé', fierte: 'fierté (mois sous le voisin)' };
   const raisonsM = s.mor?.raisons?.length ? ` En ce moment : ${s.mor.raisons.slice(0, 3).map(([k, x]) => `${NOMS_M[k] || k} ${x > 0 ? '+' : ''}${Math.round(x)}`).join(', ')}.` : '';
   const TIPS = [
     'Ton compte courant. Le salaire (loyer déduit) arrive le 1er du mois. Sous zéro : découvert et agios.',
@@ -328,7 +328,7 @@ export function rendreInvestissements(s) {
     const retour = r.atteint !== null ? `✅ jour ${r.atteint + 1}` : r.payback !== null ? `~${dureeTxt(r.payback)} (±${Math.round(r.incertitude * 100)} %)` : (ROI_ITEMS[r.id].indirect ? 'indirect' : ROI_ITEMS[r.id].confort ? 'confort' : '∞');
     return `<tr><td><b>${r.nom}</b>${r.occasion ? ' <span class="tag">occasion</span>' : ''}<br><small>€/jour : ${sais}${r.note ? ' · ' + r.note : ''}${ROI_ITEMS[r.id].indirect ? ' · ' + ROI_ITEMS[r.id].indirect : ''}${r.climEvitee ? ` · clim mobile évitée ${eur(r.climEvitee)}/an (${r.climEviteeFourchette.map(x => Math.round(x)).join('-')} €/an : amortissement + électricité)` : ''}${ACHATS[r.id].fourchette ? ` · prix réel ${ACHATS[r.id].fourchette.join('-')} €` : ''}</small><br>${sparkline(r)}</td>
       <td>${eur(r.prix)}</td><td>${eur(r.mesure)}<br><small>${r.jours} j</small></td><td>${eur(r.annuel)}</td><td>${eur(r.entretienAn)}</td><td>${retour}</td><td>${eur(r.residuelAuj)}<br><small>vie ${num(r.vieAns, 0)} ans, −${Math.round(r.degr * 100)} %/an</small></td>
-      <td style="color:${r.net5 >= 0 ? 'var(--ok)' : ROI_ITEMS[r.id].confort ? 'var(--doux)' : 'var(--mal)'}">${eur(r.net5)}${ROI_ITEMS[r.id].confort && r.net5 < 0 ? `<br><small>achat de confort : ~${eur0(-r.annuel)}/an</small>` : ''}</td><td>${num(r.ratio, 2)}</td></tr>`;
+      <td style="color:${r.net5 >= 0 ? 'var(--ok)' : ROI_ITEMS[r.id].confort ? 'var(--doux)' : 'var(--mal)'}">${eur(r.net5)}${r.net5 < 0 && r.rentableAns && !ROI_ITEMS[r.id].confort ? `<br><small>rentable en ~${r.rentableAns} ans (vie ${Math.round(r.vieAns)} ans)</small>` : ''}${ROI_ITEMS[r.id].confort && r.net5 < 0 ? `<br><small>achat de confort : ~${eur0(-r.annuel)}/an</small>` : ''}</td><td>${num(r.ratio, 2)}</td></tr>`;
   };
   const head = COLS.map(([c, l]) => `<th><button class="lien" data-tri="${c}">${l}${k === c ? (sens > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('');
   // batterie contre ballon
@@ -411,7 +411,7 @@ export function rendreFin(s) {
   const r = scoreFinal(s);
   const dom = r.domaines.map(d => `<tr><td>${d.nom}</td><td style="color:${d.valeur >= 0 ? 'var(--ok)' : 'var(--mal)'}">${eur(d.valeur)}</td></tr>`).join('');
   const inv = r.invest.filter(i => i.prix > 0).map(i => `<li>${i.nom} : ${eur(i.prix)} → ${eur(i.gain)} économisés ${i.rentable ? '✅ rentabilisé' : i.amorti ? '🟡 amorti pour cet hiver' : '❌ pas encore'}</li>`).join('');
-  const classement = tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `<li><b>${x.nom}</b> : payé ${eur(x.prix)}, mesuré ${eur(x.mesure)}, net 5 ans ${eur(x.net5)} ${x.atteint !== null ? '✅ rentabilisé' : x.payback !== null ? `(retour ~${dureeTxt(x.payback)})` : ROI_ITEMS[x.id].indirect ? '(gain indirect)' : ROI_ITEMS[x.id].confort ? `(achat de confort : ~${eur0(-x.annuel)}/an)` : '❌'}</li>`).join('');
+  const classement = tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `<li><b>${x.nom}</b> : payé ${eur(x.prix)}, mesuré ${eur(x.mesure)}, net 5 ans ${eur(x.net5)}${x.net5 < 0 && x.rentableAns ? ` (rentable en ~${x.rentableAns} ans sur ${Math.round(x.vieAns)} ans de vie)` : ''} ${x.atteint !== null ? '✅ rentabilisé' : x.payback !== null ? `(retour ~${dureeTxt(x.payback)})` : ROI_ITEMS[x.id].indirect ? '(gain indirect)' : ROI_ITEMS[x.id].confort ? `(achat de confort : ~${eur0(-x.annuel)}/an)` : '❌'}</li>`).join('');
   const m = r.moy;
   const g = (l, v) => `<div>${l}<b style="color:${v >= 60 ? 'var(--ok)' : v >= 40 ? 'var(--warn)' : 'var(--mal)'}">${Math.round(v)} %</b></div>`;
   $('finContenu').innerHTML = `<h2>Fin de la campagne : ${Math.round((s.joursTotal || 365) / 365)} ans ❄️🌱☀️🍂</h2><div class="grand">${r.titre}</div>

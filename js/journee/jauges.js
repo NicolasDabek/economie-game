@@ -73,7 +73,7 @@ export function jaugesDuJour(s, v) {
   paliersJour(s, outilsM);
   // moral (v0.7) : tend vers une ligne de base (bien-être, santé, lumière, social, nouveauté, vacances, stress), usé par les nouveaux gestes
   const cbv = coutBaseVariable(s);
-  moralJour(s, { ...outilsM, confortJour, coutVolonte, doy: chapitreDuJour(s.jour).doy, pctEco: cbv > 100 ? (cbv - coutVariable(s)) / cbv : 0 });
+  moralJour(s, { ...outilsM, confortJour, coutVolonte, doy: chapitreDuJour(s.jour).doy, pctEco: cbv > 100 ? (cbv - coutVariable(s)) / cbv : 0, cumMoi: coutVariable(s), cumVoisin: cbv });
   // paliers d'économies : la satisfaction de voir le compteur grimper
   const ecoNow = coutBaseVariable(s) - coutVariable(s);
   // v1.1 (analyse GD, P4) : +3 tous les 250 € jusqu'à 2 000 €, puis +1 tous les 1 000 € (la fierté s'émousse)

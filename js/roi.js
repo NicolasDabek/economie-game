@@ -56,6 +56,17 @@ export function analyseROI(s, id) {
     const residuel = prix * (P.revente || 0) * Math.max(0, 1 - y / vieAns);
     proj.push({ an: y, cumul, net: cumul - prix - opportunite + residuel, residuel, opportunite });
   }
+  // v1.6 (passe GD 6) : sur toute la durée de vie (au moins 10 ans), sans baisser aucun prix. Un petit équipement d'eau
+  // (cuve, mousseurs, goutte-à-goutte, stérilisateur) gagne peu par an et vit 6 à 15 ans : négatif à 5 ans, rentable ensuite.
+  const horizon = Math.max(10, Math.ceil(vieAns)); let c2 = mesure - entretienPaye, rentableAns = null, net10 = null, netVie = null;
+  for (let y = 1; y <= horizon; y++) {
+    const f = Math.pow(1 + infl, y - 1) * Math.pow(1 - (P.degr || 0), y - 1), k = y === 1 ? Math.max(0, 1 - t0) : 1;
+    c2 += (y - 1 < vieAns ? (annuel * f - (P.entretien || 0)) * k : 0);   // plus d'entretien une fois l'objet hors d'usage
+    const net = c2 - prix - prix * (Math.pow(1 + FINANCE.livretA, y) - 1) + prix * (P.revente || 0) * Math.max(0, 1 - y / vieAns);
+    if (y === 10) net10 = net;
+    if (y === Math.min(10, Math.max(1, Math.round(vieAns)))) netVie = net;   // bilan en fin de vie (au plus 10 ans)
+    if (rentableAns === null && net >= 0 && y <= vieAns + 0.5) rentableAns = y;
+  }
   // date de retour : atteint (jour de jeu) ou projeté (mois)
   let atteint = null;
   if (r) { const i = r.serie.findIndex(v => v >= prix); if (i >= 0) atteint = r.depuis + i + 1; }
@@ -65,7 +76,7 @@ export function analyseROI(s, id) {
   return {
     id, nom: a.nom, prix, prixNeuf: a.prix, occasion, mesure, entretienPaye, entretienAn: P.entretien || 0, jours, pj, annuel, vieAns,
     degr: P.degr || 0, residuelAuj, proj, atteint, payback, incertitude, note: P.note || '', serie: r ? r.serie : [],
-    net5: proj.at(-1).net, climEvitee, climEviteeFourchette: ce ? [ce.min, ce.max] : null, ratio: proj.at(-1).net / Math.max(1, prix),
+    net5: proj.at(-1).net, net10, netVie, rentableAns, climEvitee, climEviteeFourchette: ce ? [ce.min, ce.max] : null, ratio: proj.at(-1).net / Math.max(1, prix),
   };
 }
 

@@ -53,11 +53,22 @@ export function moralJour(s, ctx) {
   d.stress = -stress;
   // maîtrise : voir son budget tenu (ou filer) pèse sur le moral
   d.controle = M.controle * Math.max(-0.5, Math.min(1, (ctx.pctEco || 0) / 0.4));
+  // v1.6 (passe GD 6) : fierté. Chaque mois passé sous la dépense du voisin donne +1 de moral durable (plafond +6) ; un mois au-dessus en retire 1.
+  // Mois à moins de 40 de moral en moyenne : on ne la ressent pas (elle ne monte pas ; sous 35 elle retombe), et « moral négligé » reste sans défi.
+  // « Tout à fond » (confort maximal, aucune économie) dépassait le moral du maître (69-70 contre 62-64) : se voir tenir son budget compte aussi.
+  if (ctx.cumVoisin !== undefined && new Date(Date.UTC(2026, 11, 1) + s.jour * 864e5).getUTCDate() === 1) {
+    const f = m.fierteMois;
+    if (f) { const moi = ctx.cumMoi - f.moi, vois = ctx.cumVoisin - f.voisin, moy = f.n ? f.somme / f.n : s.volonte, seuil = M.fierteMoralMin ?? 40;
+      m.fierte = Math.max(0, Math.min(M.fierteMax ?? 6, (m.fierte || 0) + (moi < vois && moy >= seuil ? 1 : moi >= vois || moy < seuil - 5 ? -1 : 0))); }
+    m.fierteMois = { moi: ctx.cumMoi, voisin: ctx.cumVoisin, somme: 0, n: 0 };
+  }
+  if (m.fierteMois) { m.fierteMois.somme += s.volonte; m.fierteMois.n++; }
+  d.fierte = m.fierte || 0;
   // palier de bien-être (v0.8.1) : sommeil et énergie tirent le moral
   d.sommeil = EP.baseBE[palierBE(s.bienetre).id] || 0;
   // ligne de base
   const base = M.base + M.kBienetre * (s.bienetre - 55) + M.kSante * (s.sante - 75) + M.kConfort * (ctx.confortJour - 75)
-    + d.controle + d.sommeil + d.plaisirs + d.social + d.lumiere + d.monotonie + d.vacances + d.stress;
+    + d.controle + d.sommeil + d.plaisirs + d.social + d.lumiere + d.monotonie + d.vacances + d.stress + d.fierte;
   m.base = base; m.detail = d;
   s.volonte = Math.max(0, Math.min(100, s.volonte + (base - s.volonte) / M.inertie - ctx.coutVolonte));
   // moral très bas : achats compulsifs

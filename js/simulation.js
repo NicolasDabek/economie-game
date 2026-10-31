@@ -549,7 +549,14 @@ export function scoreFinal(s) {
   // v1.3 (passe GD 2, A) : la bande 22-45 % est scindée en Économe (22-32 %) et Autonome (32-45 %)
   const TITRES = ['Dépensier', 'Malin', 'Optimiseur', 'Économe', 'Autonome', 'Maître de la sobriété', 'Légende de la sobriété'];
   const SEUILS = [8, 15, 22, 32, 45, 62];
-  let rang = SEUILS.filter(x => pct >= x).length;
+  // v1.6 (passe GD 6) : hystérésis de ±2 points sur l'historique des bilans annuels. Le même foyer finissait « Maître » à 61,5 %
+  // ou « Légende » à 66,7 % selon la graine (météo, prix) : un titre se gagne en passant le seuil de 2 points, et ne se perd que 2 points dessous.
+  const HYST = 2, serie = [...(s.eco?.bilans || []).map(b => b.pctCumul).filter(x => typeof x === 'number'), pct];
+  let rang = SEUILS.filter(x => serie[0] >= x).length;
+  for (const p of serie.slice(1)) {
+    while (rang < SEUILS.length && p >= SEUILS[rang] + HYST) rang++;
+    while (rang > 0 && p < SEUILS[rang - 1] - HYST) rang--;
+  }
   const notes = [];
   const equilibre = moy.confort >= 70 && moy.sante >= 70 && moy.hygiene >= 60 && moy.bienetre >= 55 && moy.moral >= 40;
   if (rang >= 3 && !equilibre) { rang = 2; notes.push('Économe, Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40.'); }
@@ -641,7 +648,7 @@ export function faireBilan(s) {
   const chauf = parDomaine.find(d => d.nom.startsWith('Chauffage'));
   if (!chauf || chauf.valeur < 100) objectifs.push('Chauffage : moins de 100 € gagnés cette année. Robinets thermostatiques, 1 °C de moins la nuit, rideaux fermés le soir.');
   if (objectifs.length < 2) objectifs.push('Garder le cap : tes habitudes travaillent pour toi chaque jour sans effort.');
-  e.dernierBilan = { an, cumul: dom, sommes: { ...sm }, nbJours: s.nbJours, parDomaine, moy, economies: r.economies - (prec?.economiesCumul || 0), economiesCumul: r.economies,
+  e.dernierBilan = { an, cumul: dom, sommes: { ...sm }, nbJours: s.nbJours, parDomaine, moy, economies: r.economies - (prec?.economiesCumul || 0), economiesCumul: r.economies, pctCumul: r.pct,
     patrimoine: r.patrimoine, patrimoineVoisin: r.patrimoineVoisin, placements: v.total, livrets: v.livrets, salaire: e.salaire, inflation: e.inflationAn, objectifs, gainFin: r.fin.net - (prec?.finCumul || 0), finCumul: r.fin.net };
   e.bilans.push(e.dernierBilan);
   debloquer(s, 'bilanAnnuel');

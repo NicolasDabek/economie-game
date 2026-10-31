@@ -7,6 +7,7 @@ import { alimentationAutonome, arrosageJour } from './autonomie.js';
 import { CET, TOILETTES, SC } from './data.js';
 
 const KWH_L_K = 1.163 / 1000;          // kWh pour chauffer 1 litre de 1 K
+const MOUSSEUR_LAVABO = 3;             // v1.6 : l/jour évités au lavabo (≈ 7 l/j d'usage, débit 12 → 6-7 l/min : ADEME, docs/prix.md)
 const EAU_FIXE = 35;                   // l/jour : WC, lavabo, ménage (identique pour tous)
 
 export function nouvelEtatSystemes() {
@@ -180,6 +181,8 @@ export function systemesJour(s, ctx) {
       else eauFroide += DOUCHE.recupFroide;
     }
   }
+  // v1.6 (passe GD 6) : le mousseur du lavabo (annoncé « évier et lavabo ») n'était compté qu'à l'évier, et seulement pour la vaisselle à la main
+  if (s.possede.mousseurs) { const l = MOUSSEUR_LAVABO * (SC.eauChaude || 1); eauFroide -= l; ctx.litresEvites += l; attr(s, 'mousseurs', l / 1000 * PRIX.eauM3); }
   const V = VAISSELLE[y.vaisselle];
   const lvJour = y.vaisselle === 'lvQuotidien' || (y.vaisselle === 'lvPleinEco' && s.jour % 2 === 0);
   let lChaudVaisselle = (V.litresChauds || 0) * (y.vaisselle === 'courante' && s.possede.mousseurs ? 0.6 : 1);

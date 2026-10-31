@@ -97,7 +97,7 @@ export function detecterCombos(s, { faits, chap, st, ctx }) {
       continue;
     }
     n++;
-    if (id === 'caveNaturelle') { const g = ctx.couts.nourriture * 0.03; ctx.couts.nourriture -= g; const p = typePuits(s); s.attribution[p] = (s.attribution[p] || 0) + g; }
+    if (id === 'caveNaturelle') { const g = ctx.couts.nourriture * 0.03; ctx.couts.nourriture -= g; const p = typePuits(s); s.attribution[p] = (s.attribution[p] || 0) + g; if (s.autonomie?.stats) s.autonomie.stats.caveEur = (s.autonomie.stats.caveEur || 0) + g; }
     if (id === 'climTerre' && ctx.jm.canicule) ctx.d.bienetre += 1;
     if (c.fois === 1) {
       s.volonte = Math.min(100, s.volonte + 3); s.bienetre = Math.min(100, s.bienetre + 2);

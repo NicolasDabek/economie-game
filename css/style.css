@@ -591,3 +591,7 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
   .intro .modal-contenu{overflow-y:auto}
   .intro[data-etape="1"] .intro-version{order:0}
 }
+
+/* v1.6.0 (passe GD 6) : jauge mensuelle du défi, pastille 🟢🟠🔴 */
+.tb-defi .progres.presque > div { background: var(--avert, #d68910); }
+.tb-defi small { opacity: .8; }

@@ -292,15 +292,24 @@ const SEUL = process.env.SEUL || '';
 // v1.5 (passe GD 4) : rentabilité des équipements du maître (graine 2026, 5 ans), lue par test/reco-test.mjs
 if (SEUL === 'roi-maitre') {
   GRAINE = 2026; HOOK = HOOKS['maître'] || null; const s = maitre(); HOOK = null;
-  console.log('ROI_MAITRE ' + JSON.stringify(tableauROI(s).map(x => ({ id: x.id, nom: x.nom, prix: x.prix, mesure: Math.round(x.mesure), net5: Math.round(x.net5), indirect: !!ROI_ITEMS[x.id].indirect, confort: !!ROI_ITEMS[x.id].confort }))));
+  console.log('ROI_MAITRE ' + JSON.stringify(tableauROI(s).map(x => ({ id: x.id, nom: x.nom, prix: x.prix, mesure: Math.round(x.mesure), net5: Math.round(x.net5), net10: Math.round(x.net10), netVie: Math.round(x.netVie), vie: x.vieAns, rentableAns: x.rentableAns, indirect: !!ROI_ITEMS[x.id].indirect, confort: !!ROI_ITEMS[x.id].confort }))));
 }
+// v1.6 (passe GD 6) : la cave. L'autosuffisant n'a pas de puits canadien (donc pas de cave) : « puits (cave comprise) 0 € » venait de là.
+// Sonde : le même autosuffisant avec un puits fait maison et la sortie dans le cellier branchée dès le 1er printemps.
+const sondeCave = (g) => { GRAINE = g; HOOK = (s) => { HOOKS.autosuffisant(s); if (s.jour === 100 && !s.possede.puitsDIY) { s.possede.puitsDIY = true; s.passif.cave = true; } };
+  const s = maligne(); HOOK = null; return { cave: s.autonomie?.stats?.caveEur || 0, silo: s.attribution.silo || 0 }; };
+if (SEUL === 'titres') { for (const g of graines) { GRAINE = g; HOOK = HOOKS['maître']; const s = maitre(); HOOK = null; const r = scoreFinal(s); console.log(`TITRES ${g} ${(s.eco.bilans || []).map(b => (b.pctCumul ?? 0).toFixed(1)).join(' ')} final ${r.pct.toFixed(1)} ${r.titre}`); } }
+if (SEUL === 'cave') { for (const g of graines) { const c = sondeCave(g); console.log(`CAVE ${g} cave ${c.cave.toFixed(1)} € silo ${c.silo.toFixed(1)} €`); } }
 for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
   console.log(`\n=== graine ${g} ===`);
   for (const [nom, s, r] of lancer(g)) {
     const m = r.moy;
     // v1.5.3 (passe GD 5) : silo et cave crédités des kg mangés au-delà de la garde de base
     if (nom === 'autosuffisant') { const sil = s.attribution.silo || 0, cav = ['puitsPro', 'puitsDIY', 'puitsHydro'].reduce((x, k) => x + (s.possede[k] ? s.attribution[k] || 0 : 0), 0);
-      console.log(`   SILO graine ${g} : silo ${sil.toFixed(1)} € · puits (cave comprise) ${cav.toFixed(1)} €`); if (!(sil > 0)) { ok = false; console.log(`✗ ${g} silo de l'autosuffisant à 0 € sur 5 ans`); } }
+      const sc = sondeCave(g); GRAINE = g;
+      console.log(`   SILO graine ${g} : silo ${sil.toFixed(1)} € · puits ${cav.toFixed(1)} € (pas de puits, donc pas de cave) · sonde avec puits + cave branchée : cave ${sc.cave.toFixed(1)} €, silo ${sc.silo.toFixed(1)} €`);
+      if (!(sil > 0)) { ok = false; console.log(`✗ ${g} silo de l'autosuffisant à 0 € sur 5 ans`); }
+      if (!(sc.cave > 0)) { ok = false; console.log(`✗ ${g} cave à 0 € sur 5 ans malgré puits + sortie dans le cellier`); } }
     console.log(`${pad(nom, 16)} coût ${r.cout.toFixed(0)} € | voisin ${r.base.toFixed(0)} € | éco ${r.economies.toFixed(0)} € (${r.pct.toFixed(1)} %) | confort ${m.confort.toFixed(0)} santé ${m.sante.toFixed(0)} moral ${m.moral.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} | rechutes ${s.rechutes} hab ${r.habitudes} princ ${r.principes} | défis ${(s.eco?.defisReussis || []).map(d => d.fait ? '✓' : '✗').join('') || '-'} | ${r.titre}${r.note ? ' (' + r.note + ')' : ''}`);
     console.log(`   coûts v0.7 : santé ${Math.round(s.depenses.sante || 0)} € · moisissures ${Math.round(s.depenses.logement || 0)} € · revenus perdus ${Math.round(s.depenses.revenus || 0)} € · imprévus ${Math.round(s.depenses.imprevus || 0)} € · ${s.mor.episodes} épisodes, ${s.mor.joursArret} j d'arrêt, salaire ×${s.mor.facteurSalaire.toFixed(3)}`);
     (tous[nom] ||= []).push(r);
@@ -308,7 +317,7 @@ for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
       console.log('   domaines maître :', r.domaines.map(d => `${d.nom} ${d.valeur.toFixed(0)}`).join(' · '));
       console.log('   autonomie maître :', JSON.stringify(tauxAutosuffisance(s), (k, v) => typeof v === 'number' ? Math.round(v) : v), JSON.stringify(etatAutonomie(s).stats, (k, v) => typeof v === 'number' ? Math.round(v) : v));
       console.log('   combos maître :', Object.keys(s.combos).join(', '));
-      console.log('   rentabilité maître :', tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `${x.nom.slice(0, 22)} payé ${x.prix} mesuré ${x.mesure.toFixed(0)} net5 ${x.net5.toFixed(0)}`).join(' | '));
+      console.log('   rentabilité maître :', tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `${x.nom.slice(0, 22)} payé ${x.prix} mesuré ${x.mesure.toFixed(0)} net5 ${x.net5.toFixed(0)} net10 ${x.net10.toFixed(0)}`).join(' | '));
       if (Object.keys(s.combos).length < 3) { ok = false; console.log('✗ combos'); }
     }
   }
@@ -321,6 +330,7 @@ if (process.env.ROI) {
   for (const [n, a] of Object.entries(agg).sort((x, y) => y[1].mes / y[1].prix - x[1].mes / x[1].prix)) console.log(`  ${n.slice(0, 40).padEnd(40)} ${String(a.n).padStart(2)} strat. · prix moy ${(a.prix / a.n).toFixed(0).padStart(4)} € · ${(a.mes / a.n).toFixed(0).padStart(5)} €/an · ROI ${(a.mes / a.prix * 100).toFixed(0).padStart(5)} %/an · ${a.strats.join(',')}`);
 }
 const R = (n) => tous[n];
+const DEB3 = [], TITRES_M = [];
 for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   const ch = (c, t) => { if (!c) { ok = false; console.log('✗', graines[i], t); } };
   ch(R('maître')[i].rang > R('austère extrême')[i].rang, 'maître > austère (rang)');
@@ -338,7 +348,9 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   ch(R('bien-être négligé')[i].rang === 0, `bien-être négligé : Dépensier (obtenu ${R('bien-être négligé')[i].titre})`);
   // v1.4 (passe GD 3, §3.2) : taux de réussite des défis ciblés par profil
   { const n = (p) => R(p)[i].defis.filter(Boolean).length;
-    ch(n('malin') >= 1 && n('malin') <= 2, `malin : 1 à 2 défis réussis sur 3 (obtenu ${n('malin')})`);
+    // v1.6 (passe GD 6) : « La chasse aux watts » à 0,67 du voisin : le malin (0,605-0,613) et le débutant guidé (0,659-0,666) la réussissent
+    ch(n('malin') === 3, `malin : 3 défis réussis sur 3 (obtenu ${n('malin')})`);
+    DEB3.push(n('débutant guidé') === 3);
     // v1.5 (passe GD 4) : le maître les réussit tous, l'austère n'en réussit aucun (il n'agit sur rien : il se prive)
     ch(n('maître') === 3, `maître : 3 défis réussis sur 3 (obtenu ${n('maître')})`);
     // v1.5.3 (passe GD 5) : le moral compte dans « abîmé » : moral négligé n'en réussit aucun ; l'autosuffisant les réussit tous
@@ -362,7 +374,12 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   ch(mo('ne rien toucher') >= 55 && mo('ne rien toucher') <= 65, `moral ne rien toucher ${mo('ne rien toucher').toFixed(0)} dans [55, 65]`);
   ch(mo('tout à fond') >= 65 && mo('tout à fond') <= 75, `moral tout à fond ${mo('tout à fond').toFixed(0)} dans [65, 75]`);
   ch(mo('malin') >= 55 && mo('malin') <= 65, `moral malin ${mo('malin').toFixed(0)} dans [55, 65]`);
-  ch(mo('maître') >= 55 && mo('maître') <= 65, `moral maître ${mo('maître').toFixed(0)} dans [55, 65]`);
+  // v1.6 (passe GD 6) : fierté (+1/mois sous le voisin, plafond +6) : le maître remonte de 62-64 à 67-68, au niveau de « tout à fond » (68-70)
+  ch(mo('maître') >= 60 && mo('maître') <= 70, `moral maître ${mo('maître').toFixed(0)} dans [60, 70]`);
+  ch(mo('maître') >= mo('tout à fond') - 4, `moral maître ${mo('maître').toFixed(0)} ≥ tout à fond ${mo('tout à fond').toFixed(0)} − 4`);
+  ch(mo('malin') > mo('ne rien toucher') - 4, `moral malin ${mo('malin').toFixed(0)} proche de ne rien toucher ${mo('ne rien toucher').toFixed(0)}`);
+  // v1.6 : hystérésis de ±2 points : le même maître a le même titre sur les 3 graines
+  TITRES_M.push(R('maître')[i].titre);
   ch(mo('austère extrême') < 25 && mo('glacial') < 30, 'moral austère < 25 et glacial < 30');
   ch(R('ne rien toucher')[i].rang <= 1, 'défaut perd');
   // v0.8.1 : négliger le moral ou le bien-être pour économiser finit par coûter plus cher que le malin
@@ -372,6 +389,11 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   ch(R('bien-être négligé')[i].economies < R('malin')[i].economies, `bien-être négligé ${R('bien-être négligé')[i].economies.toFixed(0)} € < malin`);
 }
 
+if (TITRES_M.length) {
+  const nd = DEB3.filter(Boolean).length; console.log(`débutant guidé 3/3 défis sur ${nd} graine(s) sur ${DEB3.length} · titres du maître : ${TITRES_M.join(' / ')}`);
+  if (nd < 2) { ok = false; console.log('✗ débutant guidé : 3/3 défis sur au moins 2 graines'); }
+  if (new Set(TITRES_M).size !== 1) { ok = false; console.log('✗ le maître change de titre selon la graine'); }
+}
 // v1.5.3 : objets de confort pur ou de sécurité, sans économie à mesurer (liste explicite)
 const CONFORT_PUR = ['ventilateur', 'clim', 'moustiquaire', 'kitSecu', 'tenuePluie', 'lunettes', 'appoint', 'corde'];
 // v1.3 (passe GD 2, D) : jardin + poules + poêle achetés la 1re année = pari de long terme (moins bien que le malin sur 3 ans, mieux sur 10 ans)

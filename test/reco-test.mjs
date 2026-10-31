@@ -87,6 +87,11 @@ for (const graine of [2026, 7]) {
   else {
     const T = JSON.parse(ligne.slice(11)), petits = T.filter(x => x.prix < 60 && !x.indirect && !x.confort);
     for (const x of petits) if (x.net5 < -20) ko(`rentabilité maître : ${x.nom} (${x.prix} €) perd ${-x.net5} € nets sur 5 ans (mesuré ${x.mesure} €)`);
+    // v1.6 (passe GD 6) : aucun équipement du plan conseillé (les petits équipements d'eau et de conserve signalés en passe 6, et les achats
+    // de base du conseiller) n'est négatif sur sa durée de vie, bornée à 10 ans. Hors champ : confort, gain indirect.
+    const PLAN = ['cuve', 'mousseurs', 'sterilisateur', 'goutte', 'pommeau', 'multiprise', 'led', 'calfeutrage', 'boudin', 'silo', 'oyas', 'composteur', 'potager', 'jaquette', 'purge'];
+    for (const x of T.filter(x => PLAN.includes(x.id) && !x.indirect && !x.confort)) if (x.netVie < 0) ko(`rentabilité maître : ${x.nom} (${x.prix} €) négatif sur sa vie (${Math.round(x.vie)} ans, max 10) : ${x.netVie} €`);
+    console.log('rentabilité maître sur la durée de vie (≤ 10 ans) :', T.filter(x => ['cuve', 'mousseurs', 'sterilisateur', 'goutte'].includes(x.id) || x.net5 < 0).map(x => `${x.nom.slice(0, 24)} net5 ${x.net5} € → fin de vie ${x.netVie} € (10 ans ${x.net10} €)${x.rentableAns ? `, rentable ~${x.rentableAns} an(s)` : ''}`).join(' · '));
     console.log('rentabilité maître, équipements < 60 € :', petits.map(x => `${x.nom.slice(0, 24)} ${x.net5} €`).join(' · '));
   }
 }

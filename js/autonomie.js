@@ -145,7 +145,7 @@ function creditGarde(s, l, kg) {
   const puits = s.passif?.cave ? PUITS.find(k => s.possede[k]) : null, v = kg * l.valeurKg;
   // silo seul : de base à base × 3 ; cave seule : de base à base × 1,4 ; silo + cave : le silo jusqu'à base × 3, la cave au-delà
   if (s.possede.silo && (!puits || age <= base * GARDE.silo)) s.attribution.silo = (s.attribution.silo || 0) + v;
-  else if (puits) s.attribution[puits] = (s.attribution[puits] || 0) + v;
+  else if (puits) { s.attribution[puits] = (s.attribution[puits] || 0) + v; const A = etatAutonomie(s); A.stats.caveEur = (A.stats.caveEur || 0) + v; }   // v1.6 : part de la cave suivie à part
 }
 // consommation : les lots qui périment le plus tôt d'abord, jusqu'à la part fruits-légumes-œufs des courses
 function garderMangerJour(s, ctx, A, R) {
@@ -239,6 +239,11 @@ export function arrosageJour(s, ctx) {
   if (s.possede.goutte && s.possede.cuve) besoin *= POTAGER.goutte;
   const dePluie = s.possede.cuve ? Math.min(y.pluie, besoin) : 0;
   y.pluie -= dePluie;
+  // v1.6 (passe GD 6) : sous arrêté sécheresse, l'eau de la cuve sauve la récolte du jour (sans elle : −60 %) ; crédité à la cuve
+  const sauveParCuve = (r) => { if (!(sec && dePluie > 0 && r <= 0.5)) return; let v = 0; for (const p of A.planches) { const C = CULTURES[p.culture]; if (p.etat === 'recolte' && C) v += p.kgPrevu / C.recolte * C.prixKg; }
+    // sans le goutte-à-goutte (besoin ×2), la cuve aurait-elle suffi ? Sinon les deux étaient nécessaires : gain partagé
+    const g = v * POTAGER.stressEau, aussiGoutte = s.possede.goutte && (dePluie + y.pluie) < besoin / POTAGER.goutte - 0.5;
+    s.attribution.cuve = (s.attribution.cuve || 0) + (aussiGoutte ? g / 2 : g); if (aussiGoutte) s.attribution.goutte = (s.attribution.goutte || 0) + g / 2; };
   let reste = besoin - dePluie;
   if (ctx.faits.recupEau && s.possede.seau) { ctx.litresEvites = (ctx.litresEvites || 0) + Math.min(8, reste); reste = Math.max(0, reste - 8); }
   const ref = m2 * (POTAGER.arrosage[chap.saison] ?? 0) * (jm.canicule ? 1.4 : 1) * (jm.nuage > 0.75 ? 0.3 : 1);
@@ -246,6 +251,7 @@ export function arrosageJour(s, ctx) {
   const evite = Math.max(0, ref - besoin) / 1000 * PRIX.eauM3, part = (s.possede.oyas ? 1 : 0) + (s.possede.goutte && s.possede.cuve ? 1 : 0);
   if (part) { if (s.possede.oyas) s.attribution.oyas = (s.attribution.oyas || 0) + evite / part; if (s.possede.goutte && s.possede.cuve) s.attribution.goutte = (s.attribution.goutte || 0) + evite / part; }
   s.attribution.cuve = (s.attribution.cuve || 0) + dePluie / 1000 * PRIX.eauM3;
+  sauveParCuve(reste);
   if (sec && reste > 0.5) { ctx.stressEau = true; reste = 0; if (!A.alertes['stress' + sec.debut]) { A.alertes['stress' + sec.debut] = 1; ctx.msg('🚱 Arrêté sécheresse : arrosage interdit au robinet. Sans eau de pluie, le potager souffre (−60 % de récolte par jour sans eau).', 'alerte'); ctx.debloquer('solCouvert'); } }
   A.stats.pluie += dePluie;
   ctx.pluieJour = dePluie;
@@ -362,7 +368,7 @@ export function actionAutonomie(s, action, v, o) {
       const risque = makeRng(s.seed * 7 + s.jour * 101)() < (s.possede.sterilisateur ? C.risqueSterilisateur : C.risqueMarmite);
       ajouterLot(A, { cat: 'bocaux', nom: 'Bocaux', kg, valeurKg: C.valeurKg, coutKg: 0, maison: true, risque }, s.jour);
       s.volonte -= C.moral; A.stats.bocaux += n;
-      if (s.possede.sterilisateur) s.attribution.sterilisateur = (s.attribution.sterilisateur || 0) + kg * 0.5;
+      if (s.possede.sterilisateur) s.attribution.sterilisateur = (s.attribution.sterilisateur || 0) + kg * 0.5 + (C.risqueMarmite - C.risqueSterilisateur) * CUEILLETTE.intox.cout;   // v1.6 : intoxications évitées (espérance)
       o.msg(`🫙 ${n} bocaux stérilisés (${num1(kg)} kg) : ils se gardent un an. ${fmt(C.temps)} et un peu de fatigue (−${C.moral} moral).`, 'info');
       o.debloquer('conserver'); return true;
     }

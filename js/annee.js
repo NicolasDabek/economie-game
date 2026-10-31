@@ -151,7 +151,7 @@ export const DEFIS = [
   // v1.5 (passe GD 4) : mesuré lui aussi face au voisin. Face à soi-même (effort 1,00 demandé), le ratio de TOUS les profils tombait
   // entre 0,97 et 1,02 selon la graine (« ne rien toucher » 0,989 à 1,017) : un tirage au sort, perdu par le maître sur la graine 1789.
   // Face au voisin : maître 0,37, autosuffisant 0,55, malin 0,67, ne rien toucher 0,90 → seuil à 60 % (au moins 40 % de moins).
-  { poste: 'elec', mode: 'voisin', effort: 0.60, nom: 'La chasse aux watts', texte: 'dépenser au moins 40 % de moins que le voisin en électricité cette année, avec au moins une habitude ou un équipement électrique' },
+  { poste: 'elec', mode: 'voisin', effort: 0.67, nom: 'La chasse aux watts', texte: 'dépenser au moins un tiers de moins que le voisin en électricité cette année, avec au moins une habitude ou un équipement électrique' },
   { poste: 'transport', mode: 'voisin', effort: 0.97, nom: 'Bouger autrement', texte: 'dépenser au moins 3 % de moins que le voisin en transport cette année, avec une habitude, un équipement ou un mode de transport sans voiture' },
 ];
 export const DEFI_EFFORT = 0.98;
