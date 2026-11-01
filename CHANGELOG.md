@@ -2,6 +2,17 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.6.0] — 1er novembre 2026
+
+Sixième passe de game design (mesures : `DETAIL_DEFIS=1 node test/sim-test.mjs`, graines 2026, 7 et 1789, 5 ans). Aucun prix baissé.
+
+- **« La chasse aux watts »** : seuil passé de 0,60 à 0,67 de la dépense d'électricité du voisin (au moins un tiers de moins). Le malin (0,605-0,613) et le débutant guidé (0,659-0,666) la ratent de peu ; ils la réussissent désormais (3/3 défis sur les 3 graines). « Ne rien toucher » (0,90) la rate toujours ; moral négligé et bien-être négligé restent à 0 défi.
+- **Jauge du défi** : « X € / Y € au prorata » avec pastille 🟢 (dans la cible), 🟠 (jusqu'à 8 % au-dessus), 🔴 (au-dessus), et la part de la dépense du voisin (« 58 % du voisin, objectif ≤ 67 % ») au lieu d'un ratio à la cible annuelle.
+- **Cave** : la clé était juste ; l'autosuffisant n'achète pas de puits canadien, donc pas de cave (0 € attendu). Une sonde (même profil + puits fait maison + sortie dans le cellier) mesure 263 à 266 € de cave sur 5 ans ; la part de la cave est maintenant suivie à part.
+- **Rentabilité sur la durée de vie** : « rentable en ~N ans (vie X ans) » quand le net à 5 ans est négatif. Les gains manquants sont crédités : mousseur du lavabo (3 l/jour, il n'était compté qu'à l'évier), récolte sauvée par la cuve sous arrêté sécheresse, intoxications évitées par le stérilisateur. Plus d'entretien compté après la fin de vie.
+- **Titre final avec hystérésis de ±2 points** sur les bilans annuels : le maître est « Légende de la sobriété » sur les 3 graines (avant : Maître à 61,5 % sur la graine 2026).
+- **Fierté** : +1 de moral par mois passé sous la dépense du voisin (plafond +6), à condition que le mois ne soit pas déprimé (moral moyen ≥ 40 ; sous 35 elle retombe). Le maître passe de 62-63 à 67-68 de moral moyen (« tout à fond » : 68-70).
+
 ## [1.5.6] — 31 octobre 2026
 
 Septième passe UX (mesures : `test/captures-v156.cjs`, mobile 390×844 et 360×480, bureau 1280×800, ajouté à `npm run test:navigateur`).

@@ -470,3 +470,13 @@ Aucun prix ni chiffre de jeu modifié : interface seulement.
 ## Passe UX 7 (v1.5.6, 31 octobre 2026)
 
 Aucun prix ni chiffre de jeu modifié : interface seulement.
+
+## Passe GD 6 (v1.6.0, 1er novembre 2026)
+
+Aucun prix baissé, aucun prix d'achat modifié. Nouvelles valeurs :
+
+- **Mousseur au lavabo : 3 l/jour évités** (`MOUSSEUR_LAVABO`, js/systemes.js). Un robinet de lavabo débite 12 l/min environ, 6 à 7 l/min avec mousseur (ADEME, « Réduire sa facture d'eau », https://agirpourlatransition.ademe.fr/particuliers/maison/economies-denergie-deau/reduire-facture-deau). Pour ~7 l/jour d'usage au lavabo (mains, dents, part de la ligne fixe de 35 l/jour déjà en jeu), −40 % ≈ 3 l/jour. Crédité au prix de l'eau seul (4,89 €/m³ déjà en jeu), sans l'énergie : estimation basse.
+- **Récolte sauvée par la cuve** : aucune valeur nouvelle. Le jeu applique déjà −60 % de récolte par jour d'arrêté sécheresse sans eau de pluie (`POTAGER.stressEau`) ; la cuve est créditée de cette perte évitée, aux prix au kilo des cultures déjà en jeu.
+- **Stérilisateur** : aucune valeur nouvelle. Espérance d'intoxication évitée = (6 % − 1 %) × 30 € par fournée (`CONSERVES.bocaux`, `CUEILLETTE.intox`, déjà en jeu).
+- **Fierté** : +1 de moral par mois sous le voisin, plafond +6 (`MORAL.fierteMax`, `fierteMoralMin` 40). Paramètre de jeu, pas un prix.
+- **Défi « La chasse aux watts »** : seuil 0,67 de la dépense du voisin (au moins un tiers de moins). Paramètre de jeu.

@@ -229,6 +229,7 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 | Malin | 33,3 / 36,8 / 39,8 % | Autonome |
 | Maître | 61,5 / 66,7 / 68,5 % | Maître / Légende / Légende |
 
+- **Passe GD 6 (v1.6.0)** : défi « chasse aux watts » à 0,67 du voisin, jauge du défi au prorata 🟢🟠🔴, rentabilité sur la durée de vie, hystérésis ±2 points des titres, bonus de fierté (+1/mois sous le voisin, max +6).
 - **Passe UX 7 (v1.5.6)** : « Suivant » collé en bas de l'accueil sur mobile ; cartes de départ en boutons radio avec coche ✓ et `aria-checked`.
 - **Passe UX 6 (v1.5.5)** : accueil en 2 étapes (point de départ, puis durée) avec indicateur 1/2, `<h1>` masqué, survols réservés aux appareils qui survolent (`@media (hover:hover)`).
 - **Passe UI/UX 5 (v1.5.4)** : bilan du jour 1 en état vide (« disponible à partir de demain »), petits textes du bilan à 12 px, onglets au clavier (← → Début Fin, un seul arrêt Tab par liste), sous-onglets mobiles qui passent à la ligne au lieu d'être coupés, bas de chaque onglet vérifié sous « Jour suivant ».
