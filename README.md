@@ -229,6 +229,7 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 | Malin | 33,3 / 36,8 / 39,8 % | Autonome |
 | Maître | 61,5 / 66,7 / 68,5 % | Maître / Légende / Légende |
 
+- **Passe GD 7 (v1.7.0)** : moral entamé par la surconsommation (−1/mois au-delà de +20 % du voisin, plancher −4), rampe du débutant (suggestion ciblée sur le plus gros poste), récap mensuel des 3 gestes les plus rentables, jalons du potager 10 % / 25 %, seuil 🟠 annoncé et écart au défi en € dans le bilan annuel.
 - **Passe GD 6 (v1.6.0)** : défi « chasse aux watts » à 0,67 du voisin, jauge du défi au prorata 🟢🟠🔴, rentabilité sur la durée de vie, hystérésis ±2 points des titres, bonus de fierté (+1/mois sous le voisin, max +6).
 - **Passe UX 7 (v1.5.6)** : « Suivant » collé en bas de l'accueil sur mobile ; cartes de départ en boutons radio avec coche ✓ et `aria-checked`.
 - **Passe UX 6 (v1.5.5)** : accueil en 2 étapes (point de départ, puis durée) avec indicateur 1/2, `<h1>` masqué, survols réservés aux appareils qui survolent (`@media (hover:hover)`).

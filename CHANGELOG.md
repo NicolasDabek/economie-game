@@ -2,6 +2,17 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.7.0] — 1er novembre 2026
+
+Septième passe de game design (mesures : `DETAIL_DEFIS=1 node test/sim-test.mjs`, graines 2026, 7 et 1789, 5 ans). Aucun prix modifié.
+
+- **Surconsommation** : un mois de consommation à plus de +20 % du voisin retire 1 de moral durable par tranche de 20 % (plancher −4) ; un mois sous le voisin en rend 1. Équipements, pannes, santé, salaire perdu et dégâts n'en font pas partie : investir n'est pas gaspiller. « Tout à fond » passe de 68-70 à 64-66 de moral, le maître reste à 67-68 (au moins +2 sur les 3 graines). Moral négligé : toujours 0 défi.
+- **Rampe du débutant** : dès la 1re habitude acquise, le conseiller propose « 🎯 Ton plus gros poste » (une suggestion ciblée par habitude acquise, 3 au plus), même si ce poste reste sous celui du voisin. Le conseil « cuisiner maison » vient avec le couvercle. Débutant guidé : 31,9 / 34,1 / 38,2 % (avant 23,3 / 23,3 / 28,9 %), devant moral négligé sur les 3 graines, et 3/3 défis.
+- **« La chasse aux watts »** : seuil à 0,70 du voisin (au moins 30 % de moins). Le débutant qui cuisine maison est à 0,675-0,682 ; « ne rien toucher » (0,90) et « premiers pas » (0,90) la ratent toujours.
+- **Récap mensuel** : sur le tableau de bord, « 🏅 Le mois dernier, ce qui t'a le plus rapporté » liste les 3 gestes ou équipements qui ont le plus rapporté le mois écoulé (attribution existante).
+- **Jalons du potager** : badges « Jardinier en herbe » (10 % de l'alimentation produite à la maison) et « Potager nourricier » (25 %) dans la carte Autosuffisance, avec un message quand ils tombent. L'autosuffisant les obtient vers le jour 205 et le jour 1 100-1 190.
+- **Défi** : la jauge annonce le seuil 🟠 (« 🟠 jusqu'à +8 % ») et l'annonce du défi explique les trois couleurs. Le bilan annuel affiche l'écart au défi en € (« 21 € sous la cible »).
+
 ## [1.6.0] — 1er novembre 2026
 
 Sixième passe de game design (mesures : `DETAIL_DEFIS=1 node test/sim-test.mjs`, graines 2026, 7 et 1789, 5 ans). Aucun prix baissé.

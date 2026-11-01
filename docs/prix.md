@@ -480,3 +480,12 @@ Aucun prix baissé, aucun prix d'achat modifié. Nouvelles valeurs :
 - **Stérilisateur** : aucune valeur nouvelle. Espérance d'intoxication évitée = (6 % − 1 %) × 30 € par fournée (`CONSERVES.bocaux`, `CUEILLETTE.intox`, déjà en jeu).
 - **Fierté** : +1 de moral par mois sous le voisin, plafond +6 (`MORAL.fierteMax`, `fierteMoralMin` 40). Paramètre de jeu, pas un prix.
 - **Défi « La chasse aux watts »** : seuil 0,67 de la dépense du voisin (au moins un tiers de moins). Paramètre de jeu.
+
+## Passe GD 7 (v1.7.0, 1er novembre 2026)
+
+Aucun prix modifié, aucune nouvelle valeur de prix. Paramètres de jeu seulement :
+
+- **Surconsommation** : −1 de moral par tranche de 20 % au-dessus du voisin sur un mois de consommation, plancher −4 (`MORAL.surconsoSeuil` 1,2, `surconsoMax` 4). Exclus : équipements, pannes, santé, logement, salaire perdu, imprévus.
+- **Couvercle** : −20 % d'énergie de cuisson, valeur déjà en jeu (principe « Cuire plus vite, cuire moins »).
+- **Jalons du potager** : 10 % et 25 % de l'alimentation produite à la maison.
+- **Défi « La chasse aux watts »** : seuil 0,70 de la dépense du voisin.
