@@ -10,7 +10,8 @@ export const MORAL = {
   plaisir: 11, privation: 6, adaptMax: 0.7, adaptJours: 60, nouveaute: 0.4,
   social: 10, blues: 6,
   monotonie: { austere: 1, batch: 0.8, livraison: 0.2, classique: 0.3, maison: 0.15 }, monotonieMax: 8,
-  fierteMax: 6, fierteMoralMin: 40,   // v1.6 : +1 de moral par mois sous le voisin, au plus +6
+  fierteMax: 6, fierteMoralMin: 40,
+  surconsoSeuil: 1.2, surconsoMax: 4,   // v1.7 : −1 de moral par mois à plus de +20 % du voisin, au plus −4   // v1.6 : +1 de moral par mois sous le voisin, au plus +6
   controle: 11, stressDecouvert: 10, stressPrecaution: 5, stressMarche: 4, stressPanne: 5, stressMaladie: 6,
   seuilCompulsif: 25, probaCompulsif: 0.1,
 };

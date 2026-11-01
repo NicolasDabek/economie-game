@@ -14,7 +14,7 @@ const ko = (t) => { ok = false; console.log('✗', t); };
 for (const graine of [2026, 7]) {
   const s = nouvellePartie(graine, 2);
   const hist = {};              // levier -> [{jour, de, a}] (changements faits par un conseil)
-  let clics = 0, faits = 0, conflits = 0;
+  let clics = 0, faits = 0, conflits = 0, top3s = 0, cibles = 0;
   const m = { volonte: 0, sante: 0, hygiene: 0, bienetre: 0 }; let n = 0;
   while (!s.fini && s.jour < 730) {
     if (s.dilemme) { const o = choixDilemme(s).filter(o => o.possible !== false); resoudreDilemme(s, o[0].id); continue; }
@@ -33,6 +33,11 @@ for (const graine of [2026, 7]) {
       }
     }
     jourSuivant(s); n++;
+    // v1.7 : récap mensuel top 3 sans NaN ; conseils (dont la suggestion ciblée) avec un montant fini
+    for (const x of s.tab?.top3 || []) if (!Number.isFinite(x.eur) || !x.nom || /NaN|undefined/.test(x.nom)) ko(`${graine} j${s.jour} top 3 invalide : ${JSON.stringify(x)}`);
+    if (s.tab?.top3?.length) top3s++;
+    for (const r of R) if (!Number.isFinite(r.an) || /NaN|undefined/.test(r.titre + (r.jauge || ''))) ko(`${graine} j${s.jour} conseil NaN : ${r.titre} ${r.jauge}`);
+    if (R.some(r => r.cible)) cibles++;
     for (const g in m) m[g] += s[g];
   }
   for (const g in m) m[g] /= n;
@@ -43,6 +48,9 @@ for (const graine of [2026, 7]) {
   if (m.hygiene < 70) ko(`${graine} hygiène moyenne ${m.hygiene.toFixed(0)} < 70`);
   if (m.bienetre < 55) ko(`${graine} bien-être moyen ${m.bienetre.toFixed(0)} < 55`);
   if (r.economies <= 0) ko(`${graine} suivre les conseils fait perdre de l'argent`);
+  console.log(`graine ${graine} : récap top 3 présent ${top3s} jours, suggestion ciblée proposée ${cibles} jours, dernier top 3 : ${(s.tab?.top3 || []).map(x => `${x.nom} +${x.eur.toFixed(1)} €`).join(' · ')}`);
+  if (!top3s) ko(`${graine} aucun récap mensuel top 3`);
+  if (!cibles) ko(`${graine} aucune suggestion ciblée sur le plus gros poste`);
 }
 // scénario du bug : déprime + gros budget plaisirs → jamais « baisser » et « remonter » les plaisirs ensemble,
 // et aucune économie sur les plaisirs ou abonnements

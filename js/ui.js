@@ -41,7 +41,7 @@ export function rendreJauges(s) {
     ['⏳ Temps libre', libre, budget, `${fmtH(libre)} / ${fmtH(budget)}`],
     ['🏗️ Équipements', cap, 400, eur(cap)],
   ];
-  const NOMS_M = { plaisirs: 'plaisirs (usés par la répétition)', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'assiette monotone', vacances: 'vacances', stress: 'stress (argent, pannes, maladie)', controle: 'budget maîtrisé', fierte: 'fierté (mois sous le voisin)' };
+  const NOMS_M = { plaisirs: 'plaisirs (usés par la répétition)', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'assiette monotone', vacances: 'vacances', stress: 'stress (argent, pannes, maladie)', controle: 'budget maîtrisé', fierte: 'fierté (mois sous le voisin)', surconso: 'gaspillage (mois à +20 % du voisin)' };
   const raisonsM = s.mor?.raisons?.length ? ` En ce moment : ${s.mor.raisons.slice(0, 3).map(([k, x]) => `${NOMS_M[k] || k} ${x > 0 ? '+' : ''}${Math.round(x)}`).join(', ')}.` : '';
   const TIPS = [
     'Ton compte courant. Le salaire (loyer déduit) arrive le 1er du mois. Sous zéro : découvert et agios.',
@@ -389,6 +389,7 @@ function rendreBilan(b) {
   return `<div class="stats"><div>Économies de l'année<b style="${c(b.economies)}">${eur(b.economies)}</b></div><div>Cumul depuis le début<b style="${c(b.economiesCumul)}">${eur(b.economiesCumul)}</b></div>
     <div>Patrimoine<b>${eur(b.patrimoine)}</b><small>voisin : ${eur(b.patrimoineVoisin)}</small></div><div>Livrets · placements<b>${eur(b.livrets)} · ${eur(b.placements - b.livrets)}</b></div>
     <div>Placements vs Livret A (année)<b style="${c(b.gainFin)}">${eur(b.gainFin)}</b></div><div>Salaire · inflation<b>${eur(b.salaire)}/mois · ${(b.inflation * 100).toFixed(1).replace('.', ',')} %</b></div></div>
+    ${b.defi ? `<h3>🎯 Défi ${b.defi.an} : ${b.defi.nom ?? ''}</h3><p class="bilan-defi">${b.defi.fait ? '🏅 Réussi' : '✗ Manqué'} : ${eur(b.defi.depense)} dépensés pour une cible de ${eur(b.defi.cible)}, <b style="${c(-b.defi.ecart)}">${b.defi.ecart <= 0 ? `${eur(-b.defi.ecart)} sous la cible` : `${eur(b.defi.ecart)} au-dessus`}</b>.</p>` : ''}
     <h3>Jauges moyennes de l'année</h3><div class="stats">${g('😊 Confort', b.moy.confort)}${g('❤️ Santé', b.moy.sante)}${g('💪 Moral', b.moy.volonte)}${g('🧼 Hygiène', b.moy.hygiene)}${g('🌻 Bien-être', b.moy.bienetre)}</div>
     <h3>Économies par domaine</h3><table class="domaines">${dom || '<tr><td>Aucune</td></tr>'}</table>
     <h3>🎯 Objectifs pour l'année prochaine</h3><ul>${b.objectifs.map(o => `<li>${o}</li>`).join('')}</ul>`;

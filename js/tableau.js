@@ -39,8 +39,10 @@ const vecteur = (s) => Object.fromEntries(postes(s).map(p => [p.id, [p.moi, p.vo
 /** Appelé chaque jour par la simulation : instantané au changement de mois. Sans effet sur le jeu. */
 export function instantaneMois(s) {
   const m = dateDuJour(s.jour).getUTCMonth(), v = vecteur(s);
-  if (!s.tab) { s.tab = { mois: m, debut: v, prec: null }; return; }
+  if (!s.tab) { s.tab = { mois: m, debut: v, prec: null, attr: { ...(s.attribution || {}) } }; return; }
   if (s.tab.mois === m) return;
+  // v1.7 (passe GD 7) : récap mensuel, les 3 gestes et équipements qui ont le plus rapporté le mois écoulé (attribution existante)
+  s.tab.top3 = top3Gestes(s.attribution, s.tab.attr || {}); s.tab.attr = { ...(s.attribution || {}) };
   s.tab.prec = Object.fromEntries(Object.entries(v).map(([k, [a, b]]) => [k, [a - (s.tab.debut[k]?.[0] || 0), b - (s.tab.debut[k]?.[1] || 0)]]));
   // historique mensuel (v0.9) : dépenses du mois écoulé et patrimoine, pour les courbes
   const tot = (o) => Object.values(o).reduce((t, x) => t + x, 0);
@@ -50,6 +52,12 @@ export function instantaneMois(s) {
   s.tab.mois = m; s.tab.debut = v;
 }
 
+const NOMS_ATTR = { cuisson: 'Chaleur de la cuisson récupérée' };
+/** Les 3 meilleures sources d'économie entre deux relevés d'attribution (€ positifs, sans NaN). */
+export function top3Gestes(attr = {}, avant = {}) {
+  return Object.entries(attr).map(([id, x]) => ({ id, nom: ACHATS[id]?.nom || NOMS_ATTR[id] || id, eur: (Number(x) || 0) - (Number(avant[id]) || 0) }))
+    .filter(x => Number.isFinite(x.eur) && x.eur >= 0.5).sort((a, b) => b.eur - a.eur).slice(0, 3);
+}
 // courbes SVG simples (deux séries, axes, légende) ; état vide explicite
 export function courbe(points, series, { unite = ' €', hauteur = 180, vide = 'Pas encore assez de données.' } = {}) {
   if (!points || points.length < 2) return `<p class="vide">📈 ${vide}</p>`;
@@ -163,7 +171,8 @@ export function appliquerConseil(s, a) {
     },
     eauChaude: () => { if (y.douche.minutes <= 7 && y.ballon.consigne <= 55) return null; y.douche.minutes = Math.min(7, y.douche.minutes); y.ballon.consigne = Math.min(55, y.ballon.consigne); return 'Douche de 7 min, ballon à 55 °C.'; },
     eau: () => { if (y.douche.minutes <= 7 && y.vaisselle === 'bassine') return null; y.douche.minutes = Math.min(7, y.douche.minutes); y.vaisselle = 'bassine'; return 'Douche de 7 min, vaisselle à la bassine.'; },
-    alim: () => { if (y.regime === 'maison' || y.regime === 'batch') return null; y.regime = 'maison'; return 'Cuisine maison.'; },
+    // v1.7 : cuisiner maison fait monter l'électricité de cuisson : le conseil vient avec le couvercle (−20 % d'énergie de cuisson)
+    alim: () => { if (y.regime === 'maison' || y.regime === 'batch') return null; y.regime = 'maison'; if (!y.couvercle) { y.couvercle = true; return 'Cuisine maison, casseroles avec couvercle.'; } return 'Cuisine maison.'; },
     elec: () => { if (!s.possede.multiprise) return acheter(s, 'multiprise') ? 'Multiprise à interrupteur achetée.' : null; if (y.multipriseGeste) return null; y.multipriseGeste = true; return 'Multiprise éteinte le soir.'; },
     clim: () => { if (s.voletsJour && s.ventNuit) return null; s.voletsJour = true; s.ventNuit = true; return 'Volets fermés le jour, fenêtres ouvertes la nuit.'; },
     services: () => { const r = y.relevesFaits || faireReleves(s, c); if (!r) return null; let n = 0; for (const k of ['cloud', 'appli', 'assurance', 'sport']) if (resilier(s, k, c)) n++; return n ? `${n} abonnement(s) inutile(s) résilié(s).` : null; },
@@ -179,6 +188,7 @@ export function appliquerConseil(s, a) {
 // ni solaire, ni Tempo, ni placements, et n'est disponible que 3 fois par semaine.
 // les rappels d'entretien (lessive, lavage à la main, ranger les pulls) ne comptent pas dans le quota
 export const CORVEES = new Set(['lessive', 'laverMain', 'alleger']);
+export const RAMPE_MAX = 3;
 export const CONSEILLER = { parSemaine: 3, horizon: 10, retourMax: 15 };
 const DOM_CAT = { Instruments: 'chauffage', Isolation: 'chauffage', Chauffage: 'chauffage', Confort: 'chauffage', 'Eau chaude': 'eau', Cuisine: 'cuisine', 'Électricité': 'elec', Transport: 'transport', Jardin: 'jardin', 'Été': 'ete' };
 const DOM_ALLER = { maison: 'chauffage', eau: 'eau', cuisine: 'cuisine', elec: 'elec', transport: 'transport', linge: 'linge', budget: 'budget', jardin: 'jardin' };
@@ -194,6 +204,7 @@ export function conseillerDispo(s) {
 export function suivreConseil(s, r) {
   if (!r?.action || (!CORVEES.has(r.action.type) && conseillerDispo(s).reste <= 0)) return null;
   const t = appliquerConseil(s, r.action);
+  if (t && r.action.cible) { s.reco ??= { snap: null, chg: {}, ignores: {} }; s.reco.cibles = (s.reco.cibles || 0) + 1; }
   if (t && !CORVEES.has(r.action.type)) { s.reco ??= { snap: null, chg: {}, ignores: {} }; (s.reco.faits ??= []).push(s.jour); s.reco.faits = s.reco.faits.filter(j => j > s.jour - 14); }
   return t;
 }
@@ -211,6 +222,15 @@ export function recommandations(s, r = scoreFinal(s)) {
   for (const p of postes(s)) {
     const fuite = (p.moi - p.voisin) / jours * 365;
     if (p.id !== 'imprevus' && domaineConnu(s, DOM_ALLER[p.aller] || p.aller) && fuite > 30 && s.jour >= 7 && !(p.aller === 'transport' && s.jour < 3)) L.push({ titre: GESTE_POSTE[p.id]?.titre || `Réduire le poste « ${p.nom.toLowerCase()} »`, an: fuite, roi: null, jauge: `${p.nom} : ${eur(fuite)}/an de plus que le voisin`, aller: p.aller, fuite: true, poste: p.id, action: { type: 'poste', id: p.id } });
+  }
+  // v1.7 (passe GD 7) : rampe du débutant. Dès la 1re habitude acquise, le conseiller vise ton plus gros poste de dépense
+  // (même s'il reste sous celui du voisin) : c'est là qu'un seul réglage rapporte le plus. Une suggestion ciblée par habitude acquise, trois au plus.
+  if ((s.reco?.cibles || 0) < Math.min(RAMPE_MAX, Object.values(s.gestes || {}).filter(g => g?.habitude).length) && s.jour >= 7) {
+    const deja = new Set(L.filter(x => x.poste).map(x => x.poste));
+    const gros = postes(s).filter(p => p.id !== 'imprevus' && GESTE_POSTE[p.id] && !deja.has(p.id) && domaineConnu(s, DOM_ALLER[p.aller] || p.aller) && !(p.aller === 'transport' && s.jour < 3))
+      .sort((a, b) => b.moi - a.moi).find(p => faisable(s, { type: 'poste', id: p.id }) && !sourceDeJaugeBasse(s, p.id));
+    if (gros) { const an = gros.moi / jours * 365 * 0.15;
+      L.push({ titre: `🎯 Ton plus gros poste : ${GESTE_POSTE[gros.id].titre.charAt(0).toLowerCase() + GESTE_POSTE[gros.id].titre.slice(1)}`, an, roi: null, jauge: `${gros.nom} : ${eur(gros.moi / jours * 365)}/an, ton premier poste de dépense`, aller: gros.aller, cible: true, poste: gros.id, action: { type: 'poste', id: gros.id, cible: true } }); }
   }
   // gestes : un seul à la fois (la volonté s'use quand on en apprend plusieurs)
   if (!enApprentissage(s)) for (const g of GESTES_RECO) if ((s.principes.includes(PRINCIPE_GESTE[g.id]) || domaineConnu(s, g.id === 'gamelle' ? 'cuisine' : DOM_ALLER[g.aller])) && !g.fait(s) && (g.dispo?.(s) ?? true) && (!g.hiver || saisonFroide(s))) { L.push({ titre: g.titre, an: g.an, roi: null, jauge: `nouveau geste : un peu de moral chaque jour pendant ${JOURS_HABITUDE} jours`, aller: g.aller, action: { type: 'geste', id: g.id } }); break; }
@@ -294,7 +314,7 @@ export function rendreTableau(s, etat = {}) {
 
   const hero = `<div class="tb-carte tb-hero"><h3>Économisé vs voisin</h3>${s.nbJours === 0 ? '<p class="vide-j1">🌱 Ton premier écart apparaîtra demain.</p><p class="aide">Règle un ou deux gestes (thermostat, douche, courses), puis passe au jour suivant : on compare ta journée à celle du voisin.</p>' : `<b class="grand ${r.economies >= 0 ? 'plus' : 'moins'}">${eur(r.economies)}</b>`}<div class="lignes">
     ${s.eco ? `<div><span>Solde estimé du mois</span><b class="${salaire - loyer - projMois >= 0 ? 'plus' : 'moins'}">${salaire - loyer - projMois >= 0 ? '+' : ''}${eur(salaire - loyer - projMois)}</b></div>` : ''}
-    <div><span>Épargne de précaution</span><b>${eur(prec)} / ${eur(cible)}</b></div></div></div>`;
+    <div><span>Épargne de précaution</span><b>${eur(prec)} / ${eur(cible)}</b></div></div>${s.tab?.top3?.length ? `<div class="tb-top3"><span>🏅 Le mois dernier, ce qui t'a le plus rapporté :</span><ol>${s.tab.top3.map(x => `<li>${x.nom} <b class="plus">+${eur(Math.round(x.eur)).replace(',00', '')}</b></li>`).join('')}</ol></div>` : ''}</div>`;
   // 2. jauges
   const ej = etat.prec || {};
   const J = [['😊', 'Confort', 'confort', s.confort, null, CAUSES.confort(s)], ['❤️', 'Santé', 'sante', s.sante, null, CAUSES.sante(s)],
@@ -327,7 +347,7 @@ export function rendreTableau(s, etat = {}) {
   const dfPro = df ? (dfV ? dfC : df.cible * Math.min(1, (s.jour - df.jour + 1) / 365)) : 1;   // cible au prorata, à date
   const dfVs = dfFait / dfVois, dfR = dfFait / Math.max(1, dfPro);
   const dfEtat = dfR <= 1 ? ['🟢', 'dans la cible', 'ok'] : dfR <= 1.08 ? ['🟠', 'presque', 'presque'] : ['🔴', 'au-dessus', 'alerte'];
-  const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — <span class="tb-defi-etat" aria-label="${dfEtat[1]}">${dfEtat[0]}</span> ${eur(Math.round(dfFait)).replace(",00", "")} / ${eur(Math.round(dfPro)).replace(",00", "")} au prorata <small>(${Math.round(dfVs * 100)} % du voisin${dfV ? `, objectif ≤ ${Math.round(df.effort * 100)} %` : ''})</small></span><div class="progres ${dfEtat[2] === 'ok' ? '' : dfEtat[2]}" role="progressbar" aria-valuenow="${Math.round(dfVs * 100)}" aria-valuemin="0" aria-valuemax="100" aria-label="Dépense du défi en % de celle du voisin"><div style="width:${Math.min(100, dfVs * 100)}%"></div></div></div>` : '';
+  const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — <span class="tb-defi-etat" aria-label="${dfEtat[1]}">${dfEtat[0]}</span> ${eur(Math.round(dfFait)).replace(",00", "")} / ${eur(Math.round(dfPro)).replace(",00", "")} au prorata <small>(${Math.round(dfVs * 100)} % du voisin${dfV ? `, objectif ≤ ${Math.round(df.effort * 100)} %, 🟠 jusqu'à +8 %` : ''})</small></span><div class="progres ${dfEtat[2] === 'ok' ? '' : dfEtat[2]}" role="progressbar" aria-valuenow="${Math.round(dfVs * 100)}" aria-valuemin="0" aria-valuemax="100" aria-label="Dépense du défi en % de celle du voisin"><div style="width:${Math.min(100, dfVs * 100)}%"></div></div></div>` : '';
   const dispo = conseillerDispo(s), arrondi = (v) => Math.max(5, Math.round(v / 5) * 5);
   const fourchette = (v) => `${eur(arrondi(v * 0.7)).replace(',00', '')} à ${eur(arrondi(v * 1.3)).replace(',00', '')}/an`;
   const conseillerH = `<p class="tb-conseiller">🧑‍🏫 <b>Le conseiller</b> est une aide pour débuter : il ne connaît que les principes que tu as découverts, raisonne poste par poste sur une dizaine de jours et ne planifie ni combos, ni solaire, ni Tempo, ni placements — ça, c'est ton talent. ${dispo.reste ? `Disponible encore <b>${dispo.reste} fois</b> cette semaine.` : `<b>Il revient dans ${dispo.retour} j</b> (3 conseils par semaine) ; les rappels d'entretien restent possibles.`}</p>`;

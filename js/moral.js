@@ -59,16 +59,20 @@ export function moralJour(s, ctx) {
   if (ctx.cumVoisin !== undefined && new Date(Date.UTC(2026, 11, 1) + s.jour * 864e5).getUTCDate() === 1) {
     const f = m.fierteMois;
     if (f) { const moi = ctx.cumMoi - f.moi, vois = ctx.cumVoisin - f.voisin, moy = f.n ? f.somme / f.n : s.volonte, seuil = M.fierteMoralMin ?? 40;
-      m.fierte = Math.max(0, Math.min(M.fierteMax ?? 6, (m.fierte || 0) + (moi < vois && moy >= seuil ? 1 : moi >= vois || moy < seuil - 5 ? -1 : 0))); }
-    m.fierteMois = { moi: ctx.cumMoi, voisin: ctx.cumVoisin, somme: 0, n: 0 };
+      m.fierte = Math.max(0, Math.min(M.fierteMax ?? 6, (m.fierte || 0) + (moi < vois && moy >= seuil ? 1 : moi >= vois || moy < seuil - 5 ? -1 : 0)));
+      // v1.7 (passe GD 7) : surconsommation. Un mois à plus de +20 % du voisin retire 1 de moral durable par tranche de 20 % (+40 % : −2), plancher −4 ; un mois sous le voisin en rend 1 (entre +0 et +20 % : rien ne bouge).
+      const conso = ctx.cumConso !== undefined && f.conso !== undefined ? ctx.cumConso - f.conso : moi, vc = ctx.cumVoisinConso !== undefined && f.vc !== undefined ? ctx.cumVoisinConso - f.vc : vois;
+      m.surconso = Math.min(0, Math.max(-(M.surconsoMax ?? 4), (m.surconso || 0) + (conso > (M.surconsoSeuil ?? 1.2) * vc ? -Math.max(1, Math.floor((conso / Math.max(1, vc) - 1) / ((M.surconsoSeuil ?? 1.2) - 1))) : conso <= vc ? 1 : 0))); }
+    m.fierteMois = { moi: ctx.cumMoi, conso: ctx.cumConso, vc: ctx.cumVoisinConso, voisin: ctx.cumVoisin, somme: 0, n: 0 };
   }
   if (m.fierteMois) { m.fierteMois.somme += s.volonte; m.fierteMois.n++; }
   d.fierte = m.fierte || 0;
+  d.surconso = m.surconso || 0;
   // palier de bien-être (v0.8.1) : sommeil et énergie tirent le moral
   d.sommeil = EP.baseBE[palierBE(s.bienetre).id] || 0;
   // ligne de base
   const base = M.base + M.kBienetre * (s.bienetre - 55) + M.kSante * (s.sante - 75) + M.kConfort * (ctx.confortJour - 75)
-    + d.controle + d.sommeil + d.plaisirs + d.social + d.lumiere + d.monotonie + d.vacances + d.stress + d.fierte;
+    + d.controle + d.sommeil + d.plaisirs + d.social + d.lumiere + d.monotonie + d.vacances + d.stress + d.fierte + d.surconso;
   m.base = base; m.detail = d;
   s.volonte = Math.max(0, Math.min(100, s.volonte + (base - s.volonte) / M.inertie - ctx.coutVolonte));
   // moral très bas : achats compulsifs

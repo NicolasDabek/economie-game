@@ -299,6 +299,7 @@ if (SEUL === 'roi-maitre') {
 const sondeCave = (g) => { GRAINE = g; HOOK = (s) => { HOOKS.autosuffisant(s); if (s.jour === 100 && !s.possede.puitsDIY) { s.possede.puitsDIY = true; s.passif.cave = true; } };
   const s = maligne(); HOOK = null; return { cave: s.autonomie?.stats?.caveEur || 0, silo: s.attribution.silo || 0 }; };
 if (SEUL === 'titres') { for (const g of graines) { GRAINE = g; HOOK = HOOKS['maître']; const s = maitre(); HOOK = null; const r = scoreFinal(s); console.log(`TITRES ${g} ${(s.eco.bilans || []).map(b => (b.pctCumul ?? 0).toFixed(1)).join(' ')} final ${r.pct.toFixed(1)} ${r.titre}`); } }
+if (SEUL === 'postes') { const { postes } = await import('../js/tableau.js'); for (const g of graines) { GRAINE = g; for (const nom of ['débutant guidé', 'moral négligé', 'malin']) { HOOK = HOOKS[nom] || null; const s = STRATS.find(x => x[0] === nom)[1](); HOOK = null; console.log(`POSTES ${g} ${nom} ${scoreFinal(s).pct.toFixed(1)} % ` + postes(s).map(p => `${p.id} ${Math.round(p.moi)}/${Math.round(p.voisin)}`).join(' · ')); } } }
 if (SEUL === 'cave') { for (const g of graines) { const c = sondeCave(g); console.log(`CAVE ${g} cave ${c.cave.toFixed(1)} € silo ${c.silo.toFixed(1)} €`); } }
 for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
   console.log(`\n=== graine ${g} ===`);
@@ -312,6 +313,12 @@ for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
       if (!(sc.cave > 0)) { ok = false; console.log(`✗ ${g} cave à 0 € sur 5 ans malgré puits + sortie dans le cellier`); } }
     console.log(`${pad(nom, 16)} coût ${r.cout.toFixed(0)} € | voisin ${r.base.toFixed(0)} € | éco ${r.economies.toFixed(0)} € (${r.pct.toFixed(1)} %) | confort ${m.confort.toFixed(0)} santé ${m.sante.toFixed(0)} moral ${m.moral.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} | rechutes ${s.rechutes} hab ${r.habitudes} princ ${r.principes} | défis ${(s.eco?.defisReussis || []).map(d => d.fait ? '✓' : '✗').join('') || '-'} | ${r.titre}${r.note ? ' (' + r.note + ')' : ''}`);
     console.log(`   coûts v0.7 : santé ${Math.round(s.depenses.sante || 0)} € · moisissures ${Math.round(s.depenses.logement || 0)} € · revenus perdus ${Math.round(s.depenses.revenus || 0)} € · imprévus ${Math.round(s.depenses.imprevus || 0)} € · ${s.mor.episodes} épisodes, ${s.mor.joursArret} j d'arrêt, salaire ×${s.mor.facteurSalaire.toFixed(3)}`);
+    if (nom === 'maître' || nom === 'débutant guidé') { const bd = (s.eco?.bilans || []).filter(b => b.defi);
+      console.log(`   BILAN-DÉFI ${nom} graine ${g} : ${bd.map(b => `an ${b.an + 1} ${b.defi.fait ? '✓' : '✗'} ${b.defi.ecart > 0 ? '+' : ''}${b.defi.ecart} €`).join(' · ') || '—'}`);
+      if (!bd.length || bd.some(b => !Number.isFinite(b.defi.ecart))) { ok = false; console.log(`✗ ${g} ${nom} : bilan annuel sans écart au défi en €`); } }
+    if (nom === 'autosuffisant' || nom === 'maître' || nom === 'malin') { const J = etatAutonomie(s).jalons || {}, ta = tauxAutosuffisance(s);
+      console.log(`   JALONS ${nom} graine ${g} : alimentation maison ${ta.alim.toFixed(1)} % · 10 % ${J.p10 !== undefined ? 'j' + J.p10 : '—'} · 25 % ${J.p25 !== undefined ? 'j' + J.p25 : '—'}`);
+      if (nom === 'autosuffisant' && J.p10 === undefined) { ok = false; console.log(`✗ ${g} autosuffisant sans le jalon potager 10 %`); } }
     (tous[nom] ||= []).push(r);
     if (g === 2026 && nom === 'maître') {
       console.log('   domaines maître :', r.domaines.map(d => `${d.nom} ${d.valeur.toFixed(0)}`).join(' · '));
@@ -330,7 +337,7 @@ if (process.env.ROI) {
   for (const [n, a] of Object.entries(agg).sort((x, y) => y[1].mes / y[1].prix - x[1].mes / x[1].prix)) console.log(`  ${n.slice(0, 40).padEnd(40)} ${String(a.n).padStart(2)} strat. · prix moy ${(a.prix / a.n).toFixed(0).padStart(4)} € · ${(a.mes / a.n).toFixed(0).padStart(5)} €/an · ROI ${(a.mes / a.prix * 100).toFixed(0).padStart(5)} %/an · ${a.strats.join(',')}`);
 }
 const R = (n) => tous[n];
-const DEB3 = [], TITRES_M = [];
+const DEB3 = [], TITRES_M = [], DEBMN = [];
 for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   const ch = (c, t) => { if (!c) { ok = false; console.log('✗', graines[i], t); } };
   ch(R('maître')[i].rang > R('austère extrême')[i].rang, 'maître > austère (rang)');
@@ -342,13 +349,14 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   ch(R('maître')[i].moy.moral >= 45, 'moral moyen du maître ≥ 45');
   // v0.9 : suivre le tableau de bord ne doit jamais punir
   const d = R('débutant guidé')[i];
-  ch(d.rang === 2 || d.rang === 3, `débutant guidé : Optimiseur ou Économe (obtenu ${d.titre})`);
+  // v1.7 (passe GD 7) : avec la rampe, le débutant guidé peut atteindre Autonome (jamais Maître)
+  ch(d.rang >= 2 && d.rang <= 4, `débutant guidé : Optimiseur, Économe ou Autonome (obtenu ${d.titre})`);
   ch(R('malin')[i].rang === 3 || R('malin')[i].rang === 4, `malin : Économe ou Autonome (obtenu ${R('malin')[i].titre})`);
   // v1.3 (passe GD 2, B et C)
   ch(R('bien-être négligé')[i].rang === 0, `bien-être négligé : Dépensier (obtenu ${R('bien-être négligé')[i].titre})`);
   // v1.4 (passe GD 3, §3.2) : taux de réussite des défis ciblés par profil
   { const n = (p) => R(p)[i].defis.filter(Boolean).length;
-    // v1.6 (passe GD 6) : « La chasse aux watts » à 0,67 du voisin : le malin (0,605-0,613) et le débutant guidé (0,659-0,666) la réussissent
+    // v1.6 (passe GD 6) : « La chasse aux watts » à 0,67 du voisin ; v1.7 : 0,70, le débutant guidé qui cuisine maison (rampe) est à 0,675-0,682
     ch(n('malin') === 3, `malin : 3 défis réussis sur 3 (obtenu ${n('malin')})`);
     DEB3.push(n('débutant guidé') === 3);
     // v1.5 (passe GD 4) : le maître les réussit tous, l'austère n'en réussit aucun (il n'agit sur rien : il se prive)
@@ -361,8 +369,11 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   ch(R('premiers pas')[i].rang >= 1, `premiers pas : au moins Malin (obtenu ${R('premiers pas')[i].titre})`);
   { const dn = R('ne rien toucher')[i].defis; ch(dn.length >= 2 && dn.every(x => !x), `ne rien toucher : aucun défi réussi (${dn.map(x => x ? '✓' : '✗').join('')})`); }
   // v0.9.2 : le conseiller aide à débuter, il ne remplace pas le joueur
-  ch(d.economies < R('malin')[i].economies, 'débutant guidé < malin');
-  ch(d.pct >= 18 && d.pct <= 32, `débutant guidé ${d.pct.toFixed(1)} % dans [18, 32]`);
+  // v1.7 (passe GD 7) : rampe du débutant (suggestions ciblées sur le plus gros poste) : ≥ 26 %, devant moral négligé sur au moins 2 graines,
+  // et pas plus de 2 points au-dessus du malin (le conseiller aide à débuter, il ne remplace pas le joueur)
+  ch(d.pct <= R('malin')[i].pct + 2, `débutant guidé ${d.pct.toFixed(1)} % ≤ malin ${R('malin')[i].pct.toFixed(1)} % + 2`);
+  ch(d.pct >= 26 && d.pct <= 40, `débutant guidé ${d.pct.toFixed(1)} % dans [26, 40]`);
+  DEBMN.push(d.pct > R('moral négligé')[i].pct);
   ch(d.economies > R('ne rien toucher')[i].economies + 10000, 'débutant guidé > défaut + 10 k€');
   ch(d.moy.sante >= 70 && d.moy.hygiene >= 70 && d.moy.moral >= 45, 'débutant guidé en bonne santé');
   // v0.7 : l'austérité coûte aussi de l'argent (santé, arrêts, dents, moisissures, augmentations perdues)
@@ -372,11 +383,12 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   // moral sur 5 ans : cibles de conception
   const mo = (n) => R(n)[i].moy.moral;
   ch(mo('ne rien toucher') >= 55 && mo('ne rien toucher') <= 65, `moral ne rien toucher ${mo('ne rien toucher').toFixed(0)} dans [55, 65]`);
-  ch(mo('tout à fond') >= 65 && mo('tout à fond') <= 75, `moral tout à fond ${mo('tout à fond').toFixed(0)} dans [65, 75]`);
+  ch(mo('tout à fond') >= 60 && mo('tout à fond') <= 72, `moral tout à fond ${mo('tout à fond').toFixed(0)} dans [60, 72]`);
   ch(mo('malin') >= 55 && mo('malin') <= 65, `moral malin ${mo('malin').toFixed(0)} dans [55, 65]`);
   // v1.6 (passe GD 6) : fierté (+1/mois sous le voisin, plafond +6) : le maître remonte de 62-64 à 67-68, au niveau de « tout à fond » (68-70)
   ch(mo('maître') >= 60 && mo('maître') <= 70, `moral maître ${mo('maître').toFixed(0)} dans [60, 70]`);
-  ch(mo('maître') >= mo('tout à fond') - 4, `moral maître ${mo('maître').toFixed(0)} ≥ tout à fond ${mo('tout à fond').toFixed(0)} − 4`);
+  // v1.7 (passe GD 7) : la surconsommation pèse sur le moral : le maître dépasse « tout à fond » d'au moins 2 points
+  ch(mo('maître') >= mo('tout à fond') + 2, `moral maître ${mo("maître").toFixed(3)} ≥ tout à fond ${mo("tout à fond").toFixed(3)} + 2`);
   ch(mo('malin') > mo('ne rien toucher') - 4, `moral malin ${mo('malin').toFixed(0)} proche de ne rien toucher ${mo('ne rien toucher').toFixed(0)}`);
   // v1.6 : hystérésis de ±2 points : le même maître a le même titre sur les 3 graines
   TITRES_M.push(R('maître')[i].titre);
@@ -391,6 +403,7 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
 
 if (TITRES_M.length) {
   const nd = DEB3.filter(Boolean).length; console.log(`débutant guidé 3/3 défis sur ${nd} graine(s) sur ${DEB3.length} · titres du maître : ${TITRES_M.join(' / ')}`);
+  { const k = DEBMN.filter(Boolean).length; console.log(`débutant guidé devant moral négligé sur ${k} graine(s) sur ${DEBMN.length}`); if (DEBMN.length >= 2 && k < 2) { ok = false; console.log('✗ débutant guidé devant moral négligé sur moins de 2 graines'); } }
   if (nd < 2) { ok = false; console.log('✗ débutant guidé : 3/3 défis sur au moins 2 graines'); }
   if (new Set(TITRES_M).size !== 1) { ok = false; console.log('✗ le maître change de titre selon la graine'); }
 }

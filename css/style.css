@@ -595,3 +595,11 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
 /* v1.6.0 (passe GD 6) : jauge mensuelle du défi, pastille 🟢🟠🔴 */
 .tb-defi .progres.presque > div { background: var(--avert, #d68910); }
 .tb-defi small { opacity: .8; }
+
+/* v1.7 : récap mensuel des 3 gestes les plus rentables */
+.tb-top3{margin-top:.6rem;font-size:.9rem}
+.tb-top3 ol{margin:.3rem 0 0;padding-left:1.4rem}
+.tb-top3 li{display:flex;justify-content:space-between;gap:.5rem}
+.auto-jalons{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0}
+.badge-jalon{font-size:.85rem;padding:.15rem .5rem;border-radius:1rem;border:1px solid var(--bord,#ccc);opacity:.7}
+.badge-jalon.acquis{opacity:1;font-weight:600;border-color:var(--ok,#1e8449)}

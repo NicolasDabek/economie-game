@@ -648,7 +648,9 @@ export function faireBilan(s) {
   const chauf = parDomaine.find(d => d.nom.startsWith('Chauffage'));
   if (!chauf || chauf.valeur < 100) objectifs.push('Chauffage : moins de 100 € gagnés cette année. Robinets thermostatiques, 1 °C de moins la nuit, rideaux fermés le soir.');
   if (objectifs.length < 2) objectifs.push('Garder le cap : tes habitudes travaillent pour toi chaque jour sans effort.');
-  e.dernierBilan = { an, cumul: dom, sommes: { ...sm }, nbJours: s.nbJours, parDomaine, moy, economies: r.economies - (prec?.economiesCumul || 0), economiesCumul: r.economies, pctCumul: r.pct,
+  // v1.7 (passe GD 7) : le bilan annuel affiche l'écart au défi en € (dernier défi tranché, pas encore montré)
+  const dD = (e.defisReussis || []).at(-1), defi = dD && dD.ecart !== undefined && dD.an !== prec?.defi?.an ? { an: dD.an, nom: dD.nom, fait: dD.fait, depense: dD.depense, cible: dD.cible, ecart: dD.ecart } : null;
+  e.dernierBilan = { an, defi, cumul: dom, sommes: { ...sm }, nbJours: s.nbJours, parDomaine, moy, economies: r.economies - (prec?.economiesCumul || 0), economiesCumul: r.economies, pctCumul: r.pct,
     patrimoine: r.patrimoine, patrimoineVoisin: r.patrimoineVoisin, placements: v.total, livrets: v.livrets, salaire: e.salaire, inflation: e.inflationAn, objectifs, gainFin: r.fin.net - (prec?.finCumul || 0), finCumul: r.fin.net };
   e.bilans.push(e.dernierBilan);
   debloquer(s, 'bilanAnnuel');

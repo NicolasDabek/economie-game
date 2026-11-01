@@ -323,8 +323,15 @@ export function autonomieSoir(s, j) {
   // annonce de l'arrêté sécheresse
   const an = anneeDuJour(s.jour); secheresseActive(s); const x = A.secheresse[an];
   if (x && s.jour === x.debut - SECHERESSE.annonce) j.msg(`📅 Annonce : arrêté sécheresse dans ${SECHERESSE.annonce} jours, arrosage interdit au robinet pendant ${x.fin - x.debut} jours. Cuve pleine, paillage et oyas sauvent le potager.`, 'annonce');
-  if (tauxAutosuffisance(s).global >= 25) j.debloquer('autonomie');
+  const ta = tauxAutosuffisance(s);
+  if (ta.global >= 25) j.debloquer('autonomie');
+  // v1.7 (passe GD 7) : jalons du potager. 10 % puis 25 % de l'alimentation produite à la maison (cumul depuis le début, après 60 jours)
+  if (s.possede.potager || s.possede.poules) { A.jalons ??= {};
+    for (const [k, seuil, ico] of JALONS_POTAGER) if (!A.jalons[k] && s.jour >= 60 && ta.alim >= seuil) { A.jalons[k] = s.jour;
+      j.msg(`${ico} Jalon atteint : ${seuil} % de ton alimentation vient de la maison (potager, poules, cueillette). Badge « ${JALON_NOM[k]} » !`, 'info'); } }
 }
+export const JALONS_POTAGER = [['p10', 10, '🌱'], ['p25', 25, '🥕']];
+export const JALON_NOM = { p10: 'Jardinier en herbe', p25: 'Potager nourricier' };
 export function tauxAutosuffisance(s) {
   const st = etatAutonomie(s).stats;
   const pc = (a, b) => (a + b > 0 ? 100 * a / (a + b) : 0);

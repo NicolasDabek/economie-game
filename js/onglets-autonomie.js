@@ -3,7 +3,7 @@
 // Maison (poêle et bois), Eau chaude (ballon thermodynamique, toilettes sèches), tableau de bord (taux).
 import { CULTURES, POTAGER, CONSERVES, BOIS, CET, POULES, CUEILLETTE, GARDE } from './data.js';
 import { etatAutonomie, nbPlanches, previsionPlanche, calendrier, kgStock, valeurStock, argentImmobilise, dureeGarde, kgBocaux, kgLacto, achatsSaison,
-  cueillettePossible, especesDuMois, secheresseActive, boisDisponible, lotSec, saisonChauffe, tauxAutosuffisance } from './autonomie.js';
+  cueillettePossible, especesDuMois, secheresseActive, boisDisponible, lotSec, saisonChauffe, tauxAutosuffisance, JALONS_POTAGER, JALON_NOM } from './autonomie.js';
 import { chapitreDuJour, dateDuJour } from './meteo.js';
 
 const eur = (x) => x.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: x < 100 ? 2 : 0 });
@@ -126,10 +126,14 @@ export function rendreEauAutonomie(s) {
 }
 
 // ---------------------------------------------------------------- tableau de bord
+function jalonsH(s) {
+  const J = etatAutonomie(s).jalons || {};
+  return `<p class="auto-jalons" aria-label="Jalons du potager">${JALONS_POTAGER.map(([k, seuil, ico]) => `<span class="badge-jalon${J[k] ? ' acquis' : ''}" title="${seuil} % de l'alimentation produite à la maison">${J[k] ? ico : '🔒'} ${JALON_NOM[k]} (${seuil} %)${J[k] ? ' ✓' : ''}</span>`).join(' ')}</p>`;
+}
 export function carteAutosuffisance(s) {
   const t = tauxAutosuffisance(s);
   const barre = (lab, v, ico) => `<div class="auto-l"><span>${ico} ${lab}</span><span class="auto-b" role="img" aria-label="${lab} ${Math.round(v)} %"><i style="width:${Math.min(100, v)}%"></i></span><b>${Math.round(v)} %</b></div>`;
-  return `<div class="carte autosuf"><h3>🏡 Autosuffisance · ${t.titre}</h3>${barre('Alimentation', t.alim, '🥕')}${barre('Eau', t.eau, '💧')}${barre('Chaleur', t.chaleur, '🔥')}${barre('Électricité', t.elec, '☀️')}<p class="aide">Part produite à la maison depuis le début (moyenne ${Math.round(t.global)} %). Ce titre ne compte pas dans le score d'économies : produire soi-même n'est pas toujours rentable.</p></div>`;
+  return `<div class="carte autosuf"><h3>🏡 Autosuffisance · ${t.titre}</h3>${barre('Alimentation', t.alim, '🥕')}${barre('Eau', t.eau, '💧')}${barre('Chaleur', t.chaleur, '🔥')}${barre('Électricité', t.elec, '☀️')}${jalonsH(s)}<p class="aide">Part produite à la maison depuis le début (moyenne ${Math.round(t.global)} %). Ce titre ne compte pas dans le score d'économies : produire soi-même n'est pas toujours rentable.</p></div>`;
 }
 export function alertesAutonomie(s) {
   const A = etatAutonomie(s), out = [];

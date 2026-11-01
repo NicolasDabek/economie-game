@@ -6,6 +6,8 @@ import { nouvelEtatMoral, moralJour, santeJour, paliersJour } from '../moral.js'
 import { palierBE, EFFETS_PALIERS as EP } from '../paliers.js';
 import { coutBaseVariable, coutVariable, debloquer, msg, payer, tempsLibre, vetementsPortes, eur } from '../simulation.js';
 
+// v1.7 : la surconsommation ne compte que la consommation : ni équipements (investissement), ni pannes, ni santé, ni salaire perdu, ni dégâts
+const HORS_CONSO = ['equipement', 'remplacements', 'sante', 'logement', 'revenus', 'imprevus'];
 export function jaugesDuJour(s, v) {
   const { ctx, hiver, ete, faits, invites, deprime, coutVolonte, sommeC, nC, froid, chaud, humMax, sommeil, nS } = v;
   // --- vêtements ---
@@ -73,7 +75,7 @@ export function jaugesDuJour(s, v) {
   paliersJour(s, outilsM);
   // moral (v0.7) : tend vers une ligne de base (bien-être, santé, lumière, social, nouveauté, vacances, stress), usé par les nouveaux gestes
   const cbv = coutBaseVariable(s);
-  moralJour(s, { ...outilsM, confortJour, coutVolonte, doy: chapitreDuJour(s.jour).doy, pctEco: cbv > 100 ? (cbv - coutVariable(s)) / cbv : 0, cumMoi: coutVariable(s), cumVoisin: cbv });
+  moralJour(s, { ...outilsM, confortJour, coutVolonte, doy: chapitreDuJour(s.jour).doy, pctEco: cbv > 100 ? (cbv - coutVariable(s)) / cbv : 0, cumMoi: coutVariable(s), cumConso: coutVariable(s) - HORS_CONSO.reduce((x, k) => x + (s.depenses[k] || 0), 0), cumVoisinConso: cbv - (s.base.remplacements || 0), cumVoisin: cbv });
   // paliers d'économies : la satisfaction de voir le compteur grimper
   const ecoNow = coutBaseVariable(s) - coutVariable(s);
   // v1.1 (analyse GD, P4) : +3 tous les 250 € jusqu'à 2 000 €, puis +1 tous les 1 000 € (la fierté s'émousse)
