@@ -38,9 +38,14 @@ export const GARDE = {
   frais: 7, racines: 45, courges: 90, bocaux: 365, lacto: 180, oeufs: 21, cueillette: 5,
   silo: 3, cave: 1.4,      // multiplicateurs pour racines et courges
   partLegumes: 0.35,       // au plus 35 % des courses du jour remplacés par le garde-manger (fruits, légumes, œufs)
+  // v1.8 (passe GD 8) : un légume du potager (sans pesticide de synthèse) remplace un légume bio, pas un légume conventionnel.
+  // Familles Rurales, 19e Observatoire des prix des fruits et légumes (juin 2025) : panier de 19 fruits et légumes 254 €/mois en bio
+  // contre 133 € en conventionnel (famille de 4) → ×1,91 (docs/prix.md).
+  equivalentBio: 1.91,
+  partConserves: 0.12,     // v1.8 : estimation de jeu, budget conserves, sauces, plats cuisinés et choucroute hors 35 % de frais (docs/prix.md)
 };
 export const CONSERVES = {
-  bocaux: { kgMax: 8, temps: 3, kwh: 0.5, capsule: 0.2, kgParBocal: 0.5, valeurKg: 5.0, moral: 3, risqueMarmite: 0.06, risqueSterilisateur: 0.01 },
+  bocaux: { kgMax: 8, temps: 3, kwh: 0.5, capsule: 0.2, kgParBocal: 0.5, valeurKg: 6.3, moral: 3, risqueMarmite: 0.06, risqueSterilisateur: 0.01 },
   lacto:  { kgMax: 5, temps: 1, sel: 0.1, valeurKg: 6.0, santeJour: 0.06 },
 };
 export const ACHATS_SAISON = {
@@ -48,7 +53,7 @@ export const ACHATS_SAISON = {
   tomates: { nom: '15 kg de tomates de plein champ (à transformer)', kg: 15, prixKg: 1.6, valeurKg: 3.0, garde: 'frais', mois: [7, 8], bocal: true },
   choux:   { nom: '10 kg de choux de saison', kg: 10, prixKg: 1.2, valeurKg: 1.8, garde: 'frais', mois: [9, 10, 11], lacto: true },
 };
-export const POULES = { n: 3, oeufsAn: 220, saison: { hiver: 0.35, printemps: 1.35, ete: 1.15, automne: 0.75 }, prixOeuf: 0.40,
+export const POULES = { n: 3, oeufsAn: 220, saison: { hiver: 0.35, printemps: 1.35, ete: 1.15, automne: 0.75 }, prixOeuf: 0.49,
   alimentKgJour: 0.13, alimentPrixKg: 0.92, epluchures: 0.3, renardRisque: 0.004, declaration: 0.25, bienetre: 0.4 };
 export const BOIS = {
   kwhStere: 1700, rendement: 0.75, humideRendement: 0.55, puissance: 5000,

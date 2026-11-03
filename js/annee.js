@@ -151,7 +151,7 @@ export const DEFIS = [
   // v1.5 (passe GD 4) : mesuré lui aussi face au voisin. Face à soi-même (effort 1,00 demandé), le ratio de TOUS les profils tombait
   // entre 0,97 et 1,02 selon la graine (« ne rien toucher » 0,989 à 1,017) : un tirage au sort, perdu par le maître sur la graine 1789.
   // Face au voisin : maître 0,37, autosuffisant 0,55, malin 0,67, ne rien toucher 0,90 → seuil à 60 % (au moins 40 % de moins).
-  { poste: 'elec', mode: 'voisin', effort: 0.70, nom: 'La chasse aux watts', texte: 'dépenser au moins 30 % de moins que le voisin en électricité cette année, avec au moins une habitude ou un équipement électrique' },
+  { poste: 'elec', mode: 'voisin', effort: 0.70, nom: 'La chasse aux watts', texte: 'dépenser au moins 30 % de moins que le voisin en électricité cette année, avec au moins 2 habitudes ou équipements électriques (multiprise, LED, frigo, bouilloire, solaire…)' },
   { poste: 'transport', mode: 'voisin', effort: 0.97, nom: 'Bouger autrement', texte: 'dépenser au moins 3 % de moins que le voisin en transport cette année, avec une habitude, un équipement ou un mode de transport sans voiture' },
 ];
 export const DEFI_EFFORT = 0.98;
@@ -162,9 +162,19 @@ export const LEVIERS_DEFI = {
   elec: { gestes: ['multiprise', 'frigo', 'couvercle', 'bouilloire', 'couperEau', 'voletsJour', 'ventNuit'], cats: ['Électricité', 'Production', 'Eau chaude'] },
   transport: { gestes: ['ecoconduite', 'gamelle'], cats: ['Transport'] },
 };
+// v1.8 (passe GD 8) : « La chasse aux watts » demande au moins 2 leviers qui passent par le compteur électrique quel que soit le logement
+// (habitudes multiprise, frigo, bouilloire, volets le jour, ventilation la nuit ; équipements Électricité ou Production).
+// Couvercle, couper l'eau et le matériel d'eau chaude comptent pour la cuisine et l'eau chaude, pas pour ce défi.
+export const LEVIERS_WATTS = { gestes: ['multiprise', 'frigo', 'bouilloire', 'voletsJour', 'ventNuit'], cats: ['Électricité', 'Production'], min: 2 };
+export function leviersWatts(s) {
+  const g = LEVIERS_WATTS.gestes.filter(id => s.gestes?.[id]?.habitude).length;
+  const a = Object.keys(ACHATS).filter(id => s.possede?.[id] && LEVIERS_WATTS.cats.includes(ACHATS[id].cat)).length;
+  return g + a;
+}
 /** Le joueur a-t-il agi sur ce poste ? Renvoie la première action trouvée (texte) ou null. */
 export function actionDefi(s, poste) {
   const L = LEVIERS_DEFI[poste]; if (!L) return 'poste libre';
+  if (poste === 'elec' && leviersWatts(s) < LEVIERS_WATTS.min) return null;
   const g = L.gestes.find(id => s.gestes?.[id]?.habitude);
   if (g) return 'habitude';
   const a = Object.keys(ACHATS).find(id => s.possede?.[id] && L.cats.includes(ACHATS[id].cat) && id !== 'thermometre' && id !== 'hygrometre');
@@ -187,6 +197,7 @@ function defiAnnuel(s, ctx, an) {
     (e.defisReussis ??= []).push({ an: f.an, poste: f.poste, fait, chiffre, action: !!action, abime, moral: f.sommes ? Math.round(m('volonte')) : null, nom: f.nom, depense: Math.round(D[f.poste] - f.debut), cible: f.cible, ecart: Math.round(D[f.poste] - f.debut - f.cible), ratio: Math.round((D[f.poste] - f.debut) / f.cible * 1000) / 1000, vsVoisin: Math.round((D[f.poste] - f.debut) / Math.max(1, (s.base[f.poste] || 0) - f.debutVoisin) * 1000) / 1000 });
     if (fait) { s.volonte = Math.min(100, s.volonte + 8); ctx.msg(`🏅 Défi ${f.an} réussi : « ${f.nom} », ${eur0(f.cible - (D[f.poste] - f.debut))} sous la cible. Moral +8.`, 'alerte'); }
     else if (chiffre && action) ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». Le chiffre y est, mais pas à n'importe quel prix : santé, confort, hygiène, bien-être ou moral se sont effondrés cette année.`, 'info');
+    else if (chiffre && f.poste === 'elec') ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». Le chiffre y est, mais il faut au moins 2 habitudes ou équipements électriques (multiprise, LED, frigo, bouilloire, solaire…).`, 'info');
     else if (chiffre) ctx.msg(`🎯 Défi ${f.an} manqué : « ${f.nom} ». La dépense a baissé toute seule (météo, prix), mais aucune habitude ni aucun équipement lié : un défi se gagne en agissant.`, 'info');
     else ctx.msg(`🎯 Défi ${f.an} manqué de ${eur0(D[f.poste] - f.debut - f.cible)} : « ${f.nom} ».`, 'info');
     e.defi = null;

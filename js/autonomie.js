@@ -109,7 +109,7 @@ function potagerJour(s, ctx, A, rng) {
       p.etat = 'recolte';
       const part = Math.min(p.kgPrevu - p.recolte, p.kgPrevu / C.recolte) * (ctx.stressEau ? 1 - POTAGER.stressEau : 1);
       if (ctx.stressEau) p.kgPrevu -= p.kgPrevu / C.recolte * POTAGER.stressEau;
-      if (part > 0) { p.recolte += part; kgJour += part; valeur += part * C.prixKg; ajouterLot(A, { cat: C.garde, nom: C.nom, kg: part, valeurKg: C.prixKg, coutKg: 0, maison: true, bocal: !!C.bocal, lacto: !!C.lacto }, s.jour); }
+      if (part > 0) { p.recolte += part; kgJour += part; valeur += part * C.prixKg * GARDE.equivalentBio; ajouterLot(A, { cat: C.garde, nom: C.nom, kg: part, valeurKg: C.prixKg * GARDE.equivalentBio, coutKg: 0, maison: true, bocal: !!C.bocal, lacto: !!C.lacto }, s.jour); }
       const finSaison = C.gel && d >= 305;
       if (p.recolte >= p.kgPrevu - 1e-6 || s.jour - p.seme >= C.pousse + C.recolte || finSaison) {
         p.famillePrec = C.famille; p.anFin = anneeDuJour(s.jour) + p.culture; p.etat = 'libre';
@@ -152,9 +152,13 @@ function garderMangerJour(s, ctx, A, R) {
   for (const l of A.stock) if (l.entre === s.jour && (l.cat === 'racines' || l.cat === 'courges')) l.fin = l.entre + dureeGarde(s, l.cat);
   let besoin = R.cout * (s.sys.regime === 'livraison' ? 0.1 : GARDE.partLegumes), maison = 0, achat = 0, lacto = false, chou = false;
   A.stock.sort((a, b) => a.fin - b.fin);
+  // v1.8 (passe GD 8) : bocaux et lactofermentés remplacent aussi le rayon épicerie (conserves, sauces, choucroute) : budget à part
+  let besoinConserves = R.cout * (s.sys.regime === 'livraison' ? 0 : GARDE.partConserves);
   for (const l of A.stock) {
-    if (besoin <= 0) break;
-    const kg = Math.min(l.kg, besoin / l.valeurKg);
+    const conserve = l.cat === 'bocaux' || l.cat === 'lacto';
+    if (besoin <= 0 && !(conserve && besoinConserves > 0)) continue;
+    const dispo = conserve ? besoin + besoinConserves : besoin;
+    const kg = Math.min(l.kg, dispo / l.valeurKg);
     if (l.risque && kg > 0) {
       l.risque = false;
       if (s.principes.includes('douteJeter')) { const perte = Math.min(l.kg, CONSERVES.bocaux.kgParBocal); l.kg -= perte; A.stats.gaspilleKg += perte; ctx.msg('🫙 Un bocal bombé, couvercle qui ne tient plus : tu le jettes sans le goûter. Bonne réflexe.', 'info'); continue; }
@@ -162,7 +166,7 @@ function garderMangerJour(s, ctx, A, R) {
       ctx.msg('🤢 Intoxication : un bocal mal stérilisé (botulisme). Urgences, plusieurs jours de convalescence. Un bocal bombé ou qui sent mauvais se jette.', 'alerte');
       ctx.debloquer('douteJeter');
     }
-    l.kg -= kg; besoin -= kg * l.valeurKg;
+    l.kg -= kg; { let v = kg * l.valeurKg; if (conserve) { const c = Math.min(v, besoinConserves); besoinConserves -= c; v -= c; } besoin -= v; }
     // v1.5.3 : silo et cave sont crédités des kg mangés au-delà de la garde de base (sans eux, ces kg auraient pourri et été rachetés)
     if (kg > 0 && (l.cat === 'racines' || l.cat === 'courges')) creditGarde(s, l, kg);
     if (l.maison) maison += kg * l.valeurKg; else achat += kg * l.valeurKg;

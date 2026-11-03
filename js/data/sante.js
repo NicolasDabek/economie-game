@@ -11,6 +11,7 @@ export const MORAL = {
   social: 10, blues: 6,
   monotonie: { austere: 1, batch: 0.8, livraison: 0.2, classique: 0.3, maison: 0.15 }, monotonieMax: 8,
   fierteMax: 6, fierteMoralMin: 40,
+  comprendre: [33, 45], comprendreSeuil: 62,   // v1.8 (passe GD 8) : principes découverts : maîtrise et fierté nulles sous 33, pleines à 45
   surconsoSeuil: 1.2, surconsoMax: 4,   // v1.7 : −1 de moral par mois à plus de +20 % du voisin, au plus −4   // v1.6 : +1 de moral par mois sous le voisin, au plus +6
   controle: 11, stressDecouvert: 10, stressPrecaution: 5, stressMarche: 4, stressPanne: 5, stressMaladie: 6,
   seuilCompulsif: 25, probaCompulsif: 0.1,

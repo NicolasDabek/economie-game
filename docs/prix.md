@@ -489,3 +489,15 @@ Aucun prix modifié, aucune nouvelle valeur de prix. Paramètres de jeu seulemen
 - **Couvercle** : −20 % d'énergie de cuisson, valeur déjà en jeu (principe « Cuire plus vite, cuire moins »).
 - **Jalons du potager** : 10 % et 25 % de l'alimentation produite à la maison.
 - **Défi « La chasse aux watts »** : seuil 0,70 de la dépense du voisin.
+
+## Passe GD 8 (v1.8.0, 3 novembre 2026)
+
+Aucun prix baissé. Valeurs relevées le 3 novembre 2026 :
+
+- **Légumes du potager = légumes bio** (`GARDE.equivalentBio` 1,91) : Familles Rurales, 19e Observatoire des prix des fruits et légumes (juin 2025, publié le 28 juillet 2025), panier de 19 fruits et légumes pour 4 personnes : 254 €/mois en bio contre 133 € en conventionnel, soit ×1,91. Le potager sans pesticide de synthèse remplace du bio. https://www.famillesrurales.org/12351/19-edition-de-lobservatoire-des-prix-des-fruits-et-legumes
+- **Œuf des poules** (`POULES.prixOeuf` 0,40 → 0,49 €) : RNM/FranceAgriMer, cours détail du 22/10/2026, boîte de 6 œufs bio : 2,92 € en magasins spécialisés bio (2,69-3,20 €), 2,55 € en GMS (relayé par Web-agri, « Oeuf – Prix du marché de Rungis »). 2,92 / 6 = 0,49 €. Agence BIO, conjoncture mars 2026 : 2,42 € la boîte en GMS en moyenne 2025.
+- **Bocaux maison** (`CONSERVES.bocaux.valeurKg` 5,0 → 6,3 €/kg) : ratatouille bio cuisinée à l'huile d'olive d'Aucy 530 g, 6,32 €/kg (Chronodrive, rayon ratatouilles, relevé le 3 novembre 2026) ; autres bio 4,60-5,08 €/kg, piperade 7,15 €/kg.
+- **Lactofermentés** (`CONSERVES.lacto.valeurKg` 6,0 €/kg) : inchangé. Choucroute crue bio lactofermentée 1 kg : 3,50-5,99 €/kg (La Fourche 4,37 €, Botanic 5,19 €, relevés du 3 novembre 2026), la valeur en jeu reste au-dessus.
+- **Budget conserves** (`GARDE.partConserves` 0,12) : estimation de jeu, pas un prix. Part des courses du jour que bocaux et lactofermentés peuvent remplacer en plus des 35 % de frais. Ordre de grandeur : plats préparés ~4 % du budget alimentaire (FranceAgriMer, « Les achats de plats préparés », 2008-2011), plus conserves de légumes, sauces et choucroute.
+- **Bois en réserve** : compté en fin de partie au prix du bois vert (`BOIS.prixVert` 70 €/stère, déjà en jeu).
+- **Autonome** : au moins 25 % d'alimentation maison ou 2 équipements d'autonomie. **Chasse aux watts** : au moins 2 gestes ou équipements électriques pour le 🟢. **Comprendre** : maîtrise et fierté pondérées par les principes (rien sous 33, plein effet à 45), au-dessus de 62 de moral seulement. Paramètres de jeu.

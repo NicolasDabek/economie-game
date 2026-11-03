@@ -6,12 +6,13 @@ import { systemesJour, voisinJour, tempsRoutines, prixElec } from './systemes.js
 import { transportJour, voisinTransport, tempsTransport } from './transport.js';
 import { suivreROI } from './roi.js';
 import { financeJour, gainFinancier, valeurLiquidation, valeurs } from './finance.js';
-import { appliquerIndices, debutJourCampagne, mensualiser, choixCampagne, titreCampagne, resoudreCampagne, resteAVivre } from './annee.js';
+import { appliquerIndices, debutJourCampagne, mensualiser, choixCampagne, titreCampagne, resoudreCampagne, resteAVivre, leviersWatts } from './annee.js';
 import { anneeDuJour, dateDuJour } from './meteo.js';
 import { nouvelEtatMoral, moralJour, santeJour, coutRechute, paliersJour } from './moral.js';
 import { palierMoral, palierBE, EFFETS_PALIERS as EP } from './paliers.js';
 import { makeRng } from './rng.js';
-import { surAchat, poeleJour, poeleConsommer, autonomieSoir, actionAutonomie, etatAutonomie } from './autonomie.js';
+import { surAchat, poeleJour, poeleConsommer, autonomieSoir, actionAutonomie, etatAutonomie, valeurStock, tauxAutosuffisance } from './autonomie.js';
+import { BOIS } from './data/autosuffisance.js';
 import { instantaneMois } from './tableau.js';
 import { gestesDuJour } from './journee/gestes.js';
 import { lessiveDuJour } from './journee/lessive.js';
@@ -503,6 +504,11 @@ export function moyennes(s) {
 
 // 8 rechutes sur une campagne de 5 ans ; proportionnel à la durée (au moins 5)
 export const seuilRechutes = (ans) => Math.max(5, Math.round(8 * ans / 5));
+export const EQUIP_AUTONOMIE = ['solaire', 'batterie', 'cuve', 'poules', 'silo', 'poele', 'cet', 'toilettesSeches'];
+export function autonomieTitre(s) {
+  const alim = s.autonomie ? tauxAutosuffisance(s).alim : 0, n = EQUIP_AUTONOMIE.filter(k => s.possede?.[k]).length;
+  return { alim, n, ok: alim >= 25 || n >= 2 };
+}
 export function scoreFinal(s) {
   const d = s.depenses, b = s.base;
   const am = amortissement(s);
@@ -510,7 +516,12 @@ export function scoreFinal(s) {
   const cout = tresorerie - d.equipement - d.vetements + am.equip + am.vet;
   const base = coutBaseVariable(s);
   const fin = s.fin ? gainFinancier(s) : { gain: 0, voisin: 0, net: 0 };
-  const economies = base - cout + fin.net;
+  // v1.8 (passe GD 8) : le garde-manger est un actif. Bocaux, lactofermentés, racines et courges en réserve valent ce qu'ils évitent d'acheter
+  // (même valeur au kg que lorsqu'ils sont mangés) ; sans ça, la récolte d'automne de la dernière année ne comptait pas.
+  // Le bois en réserve (acheté d'avance, il sèche sous l'abri) compte aussi, au prix payé (prixVert, le moins cher).
+  const boisStock = s.autonomie ? (etatAutonomie(s).bois || []).reduce((x, l) => x + (l.st || 0), 0) * BOIS.prixVert : 0;
+  const gardeManger = s.autonomie ? valeurStock(etatAutonomie(s)) + boisStock : 0;
+  const economies = base - cout + fin.net + gardeManger;
   const pct = base > 0 ? economies / base * 100 : 0;
   const moy = moyennes(s);
   const habitudes = Object.values(s.gestes).filter(g => g.habitude).length;
@@ -522,6 +533,7 @@ export function scoreFinal(s) {
     { nom: 'Eau chaude (ballon)', valeur: (b.eauChaude || 0) - (d.eauChaudeEur || 0) },
     { nom: 'Eau', valeur: b.eau - d.eau },
     { nom: 'Alimentation', valeur: (b.nourriture || 0) - d.nourriture },
+    { nom: 'Réserves en stock (garde-manger, bois)', valeur: gardeManger },
     { nom: 'Autre électricité (veilles, éclairage, cuisson, linge, solaire)', valeur: elecBase - elecPlayer },
     { nom: 'Abonnements et services', valeur: (b.services || 0) - d.services },
     { nom: 'Plaisirs', valeur: (b.plaisirs || 0) - d.plaisirs },
@@ -560,6 +572,10 @@ export function scoreFinal(s) {
   const notes = [];
   const equilibre = moy.confort >= 70 && moy.sante >= 70 && moy.hygiene >= 60 && moy.bienetre >= 55 && moy.moral >= 40;
   if (rang >= 3 && !equilibre) { rang = 2; notes.push('Économe, Autonome et Maître exigent en moyenne : confort ≥ 70, santé ≥ 70, hygiène ≥ 60, bien-être ≥ 55, moral ≥ 40.'); }
+  // v1.8 (passe GD 8) : « Autonome » se mérite par l'autonomie, pas seulement par le pourcentage : potager ≥ 25 % de l'alimentation
+  // ou au moins 2 équipements d'autonomie (production, eau de pluie, poules, silo, bois, ballon thermodynamique, toilettes sèches)
+  const autonomie = autonomieTitre(s);
+  if (rang === 4 && !autonomie.ok) { rang = 3; notes.push(`Autonome demande un potager qui couvre au moins 25 % de l'alimentation (${Math.round(autonomie.alim)} %) ou au moins 2 équipements d'autonomie (${autonomie.n}).`); }
   const ans = Math.max(1, s.nbJours / 365);
   if (rang === 6 && (s.principes.length < 40 || habitudes < 10)) { rang = 5; notes.push('La Légende demande 40 principes et 10 habitudes.'); }
   if (rang === 5 && (s.principes.length < 28 || habitudes < 8)) { rang = 4; notes.push('Maître demande 28 principes et 8 habitudes.'); }
@@ -650,7 +666,11 @@ export function faireBilan(s) {
   if (objectifs.length < 2) objectifs.push('Garder le cap : tes habitudes travaillent pour toi chaque jour sans effort.');
   // v1.7 (passe GD 7) : le bilan annuel affiche l'écart au défi en € (dernier défi tranché, pas encore montré)
   const dD = (e.defisReussis || []).at(-1), defi = dD && dD.ecart !== undefined && dD.an !== prec?.defi?.an ? { an: dD.an, nom: dD.nom, fait: dD.fait, depense: dD.depense, cible: dD.cible, ecart: dD.ecart } : null;
-  e.dernierBilan = { an, defi, cumul: dom, sommes: { ...sm }, nbJours: s.nbJours, parDomaine, moy, economies: r.economies - (prec?.economiesCumul || 0), economiesCumul: r.economies, pctCumul: r.pct,
+  // v1.8 (passe GD 8) : défi de l'année en cours au 1er décembre : marge en € qu'il reste avant de dépasser la cible (négative : dépassement)
+  const dc = e.defi, dcFait = dc ? (s.depenses[dc.poste] || 0) - dc.debut : 0;
+  const dcCible = dc ? (dc.mode === 'voisin' ? ((s.base[dc.poste] || 0) - dc.debutVoisin) * dc.effort : dc.cible) : 0;
+  const defiEnCours = dc && Number.isFinite(dcCible - dcFait) ? { an: dc.an, nom: dc.nom, poste: dc.poste, depense: Math.round(dcFait), cible: Math.round(dcCible), marge: Math.round(dcCible - dcFait), leviers: dc.poste === 'elec' ? leviersWatts(s) : null } : null;
+  e.dernierBilan = { an, defi, defiEnCours, cumul: dom, sommes: { ...sm }, nbJours: s.nbJours, parDomaine, moy, economies: r.economies - (prec?.economiesCumul || 0), economiesCumul: r.economies, pctCumul: r.pct,
     patrimoine: r.patrimoine, patrimoineVoisin: r.patrimoineVoisin, placements: v.total, livrets: v.livrets, salaire: e.salaire, inflation: e.inflationAn, objectifs, gainFin: r.fin.net - (prec?.finCumul || 0), finCumul: r.fin.net };
   e.bilans.push(e.dernierBilan);
   debloquer(s, 'bilanAnnuel');

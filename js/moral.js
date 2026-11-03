@@ -52,7 +52,11 @@ export function moralJour(s, ctx) {
   if (s.malade) stress += M.stressMaladie;
   d.stress = -stress;
   // maîtrise : voir son budget tenu (ou filer) pèse sur le moral
-  d.controle = M.controle * Math.max(-0.5, Math.min(1, (ctx.pctEco || 0) / 0.4));
+  // v1.8 (passe GD 8) : on n'est fier que de ce qu'on comprend. La maîtrise du budget et la fierté face au voisin sont pondérées par
+  // les principes découverts (rien sous 33 principes, plein effet à 45), seulement au-dessus de 62 de moral (on ne fait pas sombrer
+  // le débutant, on plafonne son euphorie) : suivre le conseiller sans comprendre rapporte de l'argent, moins de moral.
+  const [c0, c1] = M.comprendre ?? [33, 45], comprendre = s.volonte < (M.comprendreSeuil ?? 62) ? 1 : Math.max(0, Math.min(1, ((s.principes?.length || 0) - c0) / (c1 - c0)));
+  d.controle = M.controle * Math.max(-0.5, Math.min(1, (ctx.pctEco || 0) / 0.4)) * ((ctx.pctEco || 0) > 0 ? comprendre : 1);
   // v1.6 (passe GD 6) : fierté. Chaque mois passé sous la dépense du voisin donne +1 de moral durable (plafond +6) ; un mois au-dessus en retire 1.
   // Mois à moins de 40 de moral en moyenne : on ne la ressent pas (elle ne monte pas ; sous 35 elle retombe), et « moral négligé » reste sans défi.
   // « Tout à fond » (confort maximal, aucune économie) dépassait le moral du maître (69-70 contre 62-64) : se voir tenir son budget compte aussi.
@@ -66,7 +70,7 @@ export function moralJour(s, ctx) {
     m.fierteMois = { moi: ctx.cumMoi, conso: ctx.cumConso, vc: ctx.cumVoisinConso, voisin: ctx.cumVoisin, somme: 0, n: 0 };
   }
   if (m.fierteMois) { m.fierteMois.somme += s.volonte; m.fierteMois.n++; }
-  d.fierte = m.fierte || 0;
+  d.fierte = (m.fierte || 0) * comprendre;
   d.surconso = m.surconso || 0;
   // palier de bien-être (v0.8.1) : sommeil et énergie tirent le moral
   d.sommeil = EP.baseBE[palierBE(s.bienetre).id] || 0;

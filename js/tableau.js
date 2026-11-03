@@ -11,6 +11,7 @@ import { tableauROI, estimationAchat } from './roi.js';
 import { palierMoral, palierBE } from './paliers.js';
 import { arbitrer, PROTEGE } from './arbitre.js';
 import { carteAutosuffisance, alertesAutonomie } from './onglets-autonomie.js';
+import { leviersWatts, LEVIERS_WATTS } from './annee.js';
 // postes qui nourrissent une jauge : on ne les coupe pas quand cette jauge est basse
 export const SOURCES = { plaisirs: ['volonte', 'bienetre'], services: ['volonte', 'bienetre'], abonnements: ['volonte', 'bienetre'], alim: ['bienetre'], chauffage: ['sante', 'confort'], eauChaude: ['hygiene'], linge: ['hygiene'] };
 const valJ = (s, g) => g === 'volonte' ? s.volonte : g === 'confort' ? s.confort : s[g];
@@ -346,7 +347,9 @@ export function rendreTableau(s, etat = {}) {
   const dfVois = df ? Math.max(1, (s.base[df.poste] || 0) - df.debutVoisin) : 1;
   const dfPro = df ? (dfV ? dfC : df.cible * Math.min(1, (s.jour - df.jour + 1) / 365)) : 1;   // cible au prorata, à date
   const dfVs = dfFait / dfVois, dfR = dfFait / Math.max(1, dfPro);
-  const dfEtat = dfR <= 1 ? ['🟢', 'dans la cible', 'ok'] : dfR <= 1.08 ? ['🟠', 'presque', 'presque'] : ['🔴', 'au-dessus', 'alerte'];
+  // v1.8 (passe GD 8) : 🟢 sur « La chasse aux watts » seulement avec au moins 2 leviers électriques ; sinon 🟠 même dans la cible
+  const dfManque = df?.poste === 'elec' ? Math.max(0, LEVIERS_WATTS.min - leviersWatts(s)) : 0;
+  const dfEtat = dfR <= 1 && !dfManque ? ['🟢', 'dans la cible', 'ok'] : dfR <= 1 ? ['🟠', `dans la cible, mais il manque ${dfManque} habitude${dfManque > 1 ? 's' : ''} ou équipement${dfManque > 1 ? 's' : ''} électrique${dfManque > 1 ? 's' : ''}`, 'presque'] : dfR <= 1.08 ? ['🟠', 'presque', 'presque'] : ['🔴', 'au-dessus', 'alerte'];
   const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — <span class="tb-defi-etat" aria-label="${dfEtat[1]}">${dfEtat[0]}</span> ${eur(Math.round(dfFait)).replace(",00", "")} / ${eur(Math.round(dfPro)).replace(",00", "")} au prorata <small>(${Math.round(dfVs * 100)} % du voisin${dfV ? `, objectif ≤ ${Math.round(df.effort * 100)} %, 🟠 jusqu'à +8 %` : ''})</small></span><div class="progres ${dfEtat[2] === 'ok' ? '' : dfEtat[2]}" role="progressbar" aria-valuenow="${Math.round(dfVs * 100)}" aria-valuemin="0" aria-valuemax="100" aria-label="Dépense du défi en % de celle du voisin"><div style="width:${Math.min(100, dfVs * 100)}%"></div></div></div>` : '';
   const dispo = conseillerDispo(s), arrondi = (v) => Math.max(5, Math.round(v / 5) * 5);
   const fourchette = (v) => `${eur(arrondi(v * 0.7)).replace(',00', '')} à ${eur(arrondi(v * 1.3)).replace(',00', '')}/an`;

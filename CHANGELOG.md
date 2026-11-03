@@ -2,6 +2,24 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.8.0] — 3 novembre 2026
+
+Passe GD 8 : titres et défis mérités, l'autonomie qui paie.
+
+### Équilibrage
+- **Autonome réservé** : il faut au moins 25 % d'alimentation maison ou 2 équipements d'autonomie (solaire, batterie, cuve, poules, silo, poêle, chauffe-eau thermodynamique, toilettes sèches). Sinon le titre s'arrête à l'étage du dessous, avec une note dans le bilan.
+- **La chasse aux watts** : le 🟢 demande au moins 2 gestes ou équipements électriques ; sinon 🟠 « il manque N… ».
+- **Le potager vaut du bio** : légumes valorisés ×1,91 (Familles Rurales 2025), œuf maison 0,49 € (bio, RNM octobre 2026), bocaux 6,3 €/kg. Les bocaux et lactofermentés ont leur propre budget (12 % des courses) en plus des 35 % de frais.
+- **Réserves en stock** : garde-manger et bois d'avance comptent dans les économies de fin de partie.
+- **Comprendre pour être fier** : la maîtrise du budget et la fierté sont pondérées par les principes découverts (au-dessus de 62 de moral) ; le débutant guidé plafonne à 75 de moral.
+
+### Interface
+- **Bilan** : le défi en cours affiche la marge restante en euros jusqu'au 31 décembre.
+
+### Tests
+- sim-test : autosuffisant Autonome et ≥ malin + 3,5 points (cible 4, mesuré +3,9 à +4,4) ; débutant jamais Autonome, moral ≤ 75, strictement derrière le malin ; à 3 ans l'autosuffisant peut passer devant de moins de 1 500 € ; maître ≥ tout à fond + 1,5 de moral ; débutant au plus 0,5 point derrière moral négligé. `G=` pour une seule graine.
+- reco-test : marges du défi en cours finies (pas de NaN).
+
 ## [1.7.1] — 3 novembre 2026
 
 Passe UX 9 : accessibilité clavier du tutoriel.

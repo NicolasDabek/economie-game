@@ -41,6 +41,11 @@ for (const graine of [2026, 7]) {
     for (const g in m) m[g] += s[g];
   }
   for (const g in m) m[g] /= n;
+  // v1.8 (passe GD 8) : bilan du 1er décembre, marge en € du défi en cours, finie et sans NaN
+  const enCours = (s.eco?.bilans || []).filter(b => b.defiEnCours);
+  for (const b of enCours) if (!Number.isFinite(b.defiEnCours.marge) || !Number.isFinite(b.defiEnCours.cible) || /NaN|undefined/.test(JSON.stringify(b.defiEnCours))) ko(`${graine} bilan ${b.an} : marge du défi invalide ${JSON.stringify(b.defiEnCours)}`);
+  if (s.nbJours > 730 && !enCours.length) ko(`${graine} aucun bilan avec la marge du défi en cours`);
+  console.log(`graine ${graine} : marges au 1er décembre ${enCours.map(b => `${b.defiEnCours.nom} ${b.defiEnCours.marge} €`).join(' · ') || '—'}`);
   const r = scoreFinal(s);
   console.log(`graine ${graine} : ${clics} clics, ${faits} appliqués · moral ${m.volonte.toFixed(0)} santé ${m.sante.toFixed(0)} hygiène ${m.hygiene.toFixed(0)} bien-être ${m.bienetre.toFixed(0)} · éco ${r.economies.toFixed(0)} € · ${r.titre}`);
   if (m.volonte < 45) ko(`${graine} moral moyen ${m.volonte.toFixed(0)} < 45`);
