@@ -229,6 +229,7 @@ Une campagne de 5 ans se simule en environ 0,5 s, une de 10 ans en environ 0,8 s
 | Malin | 33,3 / 36,8 / 39,8 % | Autonome |
 | Maître | 61,5 / 66,7 / 68,5 % | Maître / Légende / Légende |
 
+- **Audit v1.9.0** : défis Panier malin (−15 %) et Bouger autrement (−45 %) plus exigeants, fierté jusqu'à +8, cuiseur solaire pliable utile face à la lentille.
 - **Passe GD 8 (v1.8.0)** : Autonome réservé (25 % d'alimentation maison ou 2 équipements), chasse aux watts avec 2 leviers, potager valorisé en bio et réserves comptées, moral pondéré par les principes compris, marge du défi en cours dans le bilan.
 - **Passe UX 9 (v1.7.1)** : tutoriel modal au clavier (focus initial, Tab piégé, Échap, retour du focus) ; ⏩ mobile relié à Semaine / Mois / Prochain événement par `aria-controls`.
 - **Passe GD 7 (v1.7.0)** : moral entamé par la surconsommation (−1/mois au-delà de +20 % du voisin, plancher −4), rampe du débutant (suggestion ciblée sur le plus gros poste), récap mensuel des 3 gestes les plus rentables, jalons du potager 10 % / 25 %, seuil 🟠 annoncé et écart au défi en € dans le bilan annuel.

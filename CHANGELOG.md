@@ -2,6 +2,16 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.9.0] — 3 novembre 2026
+
+Audit de game design : défis trop faciles, sobriété moins fière que l'inaction, choix dominé.
+
+### Équilibrage
+- **Le panier malin** : il faut 15 % de moins que le voisin en nourriture (au lieu de 3 %). « Premiers pas » le gagnait avec 2 habitudes (0,95 du voisin).
+- **Bouger autrement** : il faut 45 % de moins que le voisin en transport (au lieu de 3 %). Tout profil qui touchait au transport le gagnait (0,59) ; malin 0,41, maître 0,21.
+- **Fierté** : plafond porté de +6 à +8. Le malin finissait avec moins de moral (61-62) que « ne rien toucher » (63) ; il est maintenant à 63-64.
+- **Cuiseur solaire pliable** : il était dominé en tout par la lentille de Fresnel (39 € contre 100 €) et jamais rentable (−34 € à 10 ans). Il mijote maintenant sans surveillance (60 → 75 % de la cuisson l'été) et fonctionne sous un voile léger ; la lentille garde l'hiver (45 % contre 25 %). Mesuré : +68 € à 5 ans.
+
 ## [1.8.0] — 3 novembre 2026
 
 Passe GD 8 : titres et défis mérités, l'autonomie qui paie.

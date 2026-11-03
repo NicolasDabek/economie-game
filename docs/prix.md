@@ -501,3 +501,7 @@ Aucun prix baissé. Valeurs relevées le 3 novembre 2026 :
 - **Budget conserves** (`GARDE.partConserves` 0,12) : estimation de jeu, pas un prix. Part des courses du jour que bocaux et lactofermentés peuvent remplacer en plus des 35 % de frais. Ordre de grandeur : plats préparés ~4 % du budget alimentaire (FranceAgriMer, « Les achats de plats préparés », 2008-2011), plus conserves de légumes, sauces et choucroute.
 - **Bois en réserve** : compté en fin de partie au prix du bois vert (`BOIS.prixVert` 70 €/stère, déjà en jeu).
 - **Autonome** : au moins 25 % d'alimentation maison ou 2 équipements d'autonomie. **Chasse aux watts** : au moins 2 gestes ou équipements électriques pour le 🟢. **Comprendre** : maîtrise et fierté pondérées par les principes (rien sous 33, plein effet à 45), au-dessus de 62 de moral seulement. Paramètres de jeu.
+
+## Audit v1.9.0 (3 novembre 2026)
+
+Aucun prix modifié. Paramètres de jeu : défis nourriture 0,85 et transport 0,55 du voisin ; `MORAL.fierteMax` 8 ; cuiseur pliable 75 % de la cuisson l'été, actif sous un voile (nébulosité < 0,5).
