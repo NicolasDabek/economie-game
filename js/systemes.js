@@ -112,11 +112,13 @@ export function systemesJour(s, ctx) {
   if (faits.bouilloire) kwhCuisson = Math.max(0.1, kwhCuisson - 0.1);
   if (y.pain === 'maison' || y.pain === 'levain') kwhCuisson += y.regime === 'batch' ? 0.1 : CUISINE.painMaisonKwh;
   let solaireCuisine = 0;
-  const clair = jm.nuage < 0.35;
-  if (y.cuisineSolaire && clair && y.regime !== 'livraison') {
+  // v1.9 : le cuiseur pliable (100 €) était dominé en tout par la lentille (39 €). Une lentille ne chauffe qu'en plein soleil direct ;
+  // le cuiseur à réflecteurs mijote sans surveillance tout l'après-midi et travaille encore sous un voile léger (nuage < 0,5).
+  const clair = jm.nuage < 0.35, voile = jm.nuage < 0.5;
+  if (y.cuisineSolaire && (clair || (voile && s.possede.fourSolaire)) && y.regime !== 'livraison') {
     let f = 0;
-    if (s.possede.fourSolaire) f = Math.max(f, hiver ? 0.25 : 0.6);
-    if (s.possede.fresnel) f = Math.max(f, hiver ? 0.45 : 0.6);
+    if (s.possede.fourSolaire) f = Math.max(f, hiver ? 0.25 : 0.75);
+    if (s.possede.fresnel && clair) f = Math.max(f, hiver ? 0.45 : 0.6);
     solaireCuisine = kwhCuisson * f;
     attr(s, s.possede.fourSolaire ? 'fourSolaire' : 'fresnel', solaireCuisine * peC);
     kwhCuisson -= solaireCuisine;
