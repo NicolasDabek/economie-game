@@ -146,13 +146,15 @@ export const DEFIS = [
   { poste: 'gaz', nom: 'Un hiver plus sobre', texte: 'dépenser 2 % de moins en chauffage que l\'an dernier (hausse des prix comprise), avec au moins une habitude ou un équipement de chauffage ou d\'isolation' },
   // v1.5 (passe GD 4) : nourriture et transport se mesurent face au voisin de l'année (−3 %), plus face à soi-même :
   // un foyer déjà sobre ne pouvait plus gagner 2 % sur lui-même (ratios 1,016 à 1,021 pour tous sauf le maître)
-  { poste: 'nourriture', mode: 'voisin', effort: 0.97, nom: 'Le panier malin', texte: 'dépenser au moins 3 % de moins que le voisin en nourriture cette année, avec au moins une habitude ou un équipement de cuisine ou de jardin' },
+  // v1.9 : −3 % face au voisin se gagnait avec 2 habitudes (premiers pas 0,947) ; il faut maintenant −15 % (débutant guidé 0,66, malin 0,70)
+  { poste: 'nourriture', mode: 'voisin', effort: 0.85, nom: 'Le panier malin', texte: 'dépenser au moins 15 % de moins que le voisin en nourriture cette année, avec au moins une habitude ou un équipement de cuisine ou de jardin' },
   // v1.4 (passe GD 3) : jamais réussi, même par le maître ; seuil assoupli à +5 % sur l'an dernier.
   // v1.5 (passe GD 4) : mesuré lui aussi face au voisin. Face à soi-même (effort 1,00 demandé), le ratio de TOUS les profils tombait
   // entre 0,97 et 1,02 selon la graine (« ne rien toucher » 0,989 à 1,017) : un tirage au sort, perdu par le maître sur la graine 1789.
   // Face au voisin : maître 0,37, autosuffisant 0,55, malin 0,67, ne rien toucher 0,90 → seuil à 60 % (au moins 40 % de moins).
   { poste: 'elec', mode: 'voisin', effort: 0.70, nom: 'La chasse aux watts', texte: 'dépenser au moins 30 % de moins que le voisin en électricité cette année, avec au moins 2 habitudes ou équipements électriques (multiprise, LED, frigo, bouilloire, solaire…)' },
-  { poste: 'transport', mode: 'voisin', effort: 0.97, nom: 'Bouger autrement', texte: 'dépenser au moins 3 % de moins que le voisin en transport cette année, avec une habitude, un équipement ou un mode de transport sans voiture' },
+  // v1.9 : −3 % était gagné par tout profil qui touchait au transport (premiers pas 0,59) ; il faut −45 % (malin 0,41, maître 0,21)
+  { poste: 'transport', mode: 'voisin', effort: 0.55, nom: 'Bouger autrement', texte: 'dépenser au moins 45 % de moins que le voisin en transport cette année, avec une habitude, un équipement ou un mode de transport sans voiture' },
 ];
 export const DEFI_EFFORT = 0.98;
 // leviers liés à chaque poste : gestes (habitude) et catégories d'équipements
