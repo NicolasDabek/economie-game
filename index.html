@@ -135,7 +135,7 @@
 <footer class="temps" aria-label="Faire avancer le temps">
   <div class="temps-int">
     <button id="btnJour" class="primaire" aria-keyshortcuts="J"><span class="t-ico"></span><span>Jour suivant</span></button>
-    <button id="btnPlusTemps" aria-expanded="false" aria-label="Avancer plus vite (semaine, mois, prochain événement)" title="Avancer plus vite : semaine, mois, prochain événement">⏩</button>
+    <button id="btnPlusTemps" aria-expanded="false" aria-controls="btnSemaine btnMois btnEvenement" aria-label="Avancer plus vite (semaine, mois, prochain événement)" title="Avancer plus vite : semaine, mois, prochain événement">⏩</button>
     <button id="btnSemaine"><span class="t-ico"></span><span>Semaine</span></button>
     <button id="btnMois"><span class="t-ico"></span><span>Mois</span></button>
     <button id="btnEvenement" data-tip="Avance vite jusqu'au prochain choix, alerte ou changement de saison"><span class="t-ico"></span><span>Prochain événement</span></button>
@@ -160,7 +160,7 @@
   <div class="acts"><button class="btn primaire" id="reglagesFermer">Fermer</button></div>
 </div></div>
 <div id="confirmation" class="modal cache" role="dialog" aria-modal="true" aria-labelledby="confTitre"><div class="modal-contenu petit" id="confContenu"></div></div>
-<div id="coach" class="coach cache" role="dialog" aria-live="polite" aria-labelledby="coachTitre">
+<div id="coach" class="coach cache" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="coachTitre" aria-describedby="coachTexte">
   <div class="coach-voile"></div><div class="coach-halo"></div>
   <div class="coach-bulle"><div class="coach-etape" id="coachEtape"></div><h3 id="coachTitre"></h3><p id="coachTexte"></p>
     <div class="coach-actions"><button class="btn" id="coachPasser">Passer le tutoriel</button><span></span><button class="btn" id="coachPrec">Précédent</button><button class="btn primaire" id="coachSuiv">Suivant</button></div></div>

@@ -259,8 +259,30 @@ const ETAPES = [
 ];
 const coach = { actif: false, i: 0 };
 export const coachActif = () => coach.actif;
-export function demarrerTutoriel(s) { ETAPES.forEach(e => delete e.vu); coach.actif = true; coach.i = 0; afficherEtape(s); }
-export function arreterTutoriel() { coach.actif = false; $('coach').classList.add('cache'); prefs.tutoFait = true; sauverPrefs(); }
+// v1.7.1 (passe UX 9) : vraie boîte de dialogue. Focus sur « Suivant » à l'ouverture, Tab / Maj+Tab bouclent dans la bulle
+// (plus l'élément mis en lumière par l'étape, qu'il faut pouvoir atteindre au clavier), Échap ferme, le focus revient d'où il venait.
+export function demarrerTutoriel(s) { ETAPES.forEach(e => delete e.vu); coach.retour = document.activeElement !== document.body ? document.activeElement : dernierFocus; coach.actif = true; coach.i = 0; afficherEtape(s); }
+export function arreterTutoriel() {
+  coach.actif = false; $('coach').classList.add('cache'); prefs.tutoFait = true; sauverPrefs();
+  const r = coach.retour; coach.retour = null;
+  // élément d'origine masqué (ex. « Rejouer le tutoriel » dans le menu refermé) : on rend le focus au menu qui le contenait
+  const vis = (e) => e && e.isConnected && e !== document.body && e.checkVisibility?.() !== false && e.offsetParent !== null && typeof e.focus === 'function';
+  const cible = vis(r) ? r : vis(r?.closest?.('details')?.querySelector('summary')) ? r.closest('details').querySelector('summary') : $('btnJour');
+  cible?.focus();
+}
+// dernier élément focalisé hors tutoriel : le menu se referme avant le lancement, document.activeElement vaut alors <body>
+let dernierFocus = null;
+document.addEventListener('focusin', (ev) => { if (!coach.actif) dernierFocus = ev.target; });
+function focusables(el) { return el ? [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent !== null) : []; }
+document.addEventListener('keydown', (ev) => {
+  if (!coach.actif || ev.key !== 'Tab') return;
+  const bulle = document.querySelector('.coach-bulle'), cible = document.querySelector(ETAPES[coach.i]?.sel);
+  const L = [...(cible && !cible.disabled && cible.offsetParent !== null ? [cible] : []), ...focusables(bulle)];
+  if (!L.length) return;
+  const i = L.indexOf(document.activeElement);
+  ev.preventDefault();
+  L[i < 0 ? 0 : (i + (ev.shiftKey ? -1 : 1) + L.length) % L.length].focus();
+}, true);
 export function etapeSuivante(s, sens = 1) {
   coach.i += sens;
   if (coach.i >= ETAPES.length) return arreterTutoriel();

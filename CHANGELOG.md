@@ -2,6 +2,17 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.7.1] — 3 novembre 2026
+
+Passe UX 9 : accessibilité clavier du tutoriel.
+
+### Accessibilité
+- **Tutoriel (#coach)** : vraie boîte de dialogue modale (`aria-modal="true"`, `aria-describedby` sur le texte). À l'ouverture, le focus va sur « Suivant » ; Tab et Maj+Tab bouclent dans la bulle (plus l'élément mis en lumière par l'étape, pour pouvoir le manipuler au clavier) ; Échap ferme, comme les autres fenêtres ; le focus revient sur l'élément qui a lancé le tutoriel, ou sur le bouton « Menu » si cet élément est dans le menu refermé.
+- **⏩ sur mobile** : « Semaine », « Mois » et « Prochain événement » restent repliés derrière ⏩ sous 1000 px (choix volontaire depuis la barre flottante, faute de place à côté de « Jour suivant ») ; ⏩ avait déjà `aria-label`, `title` et `aria-expanded`, il reçoit `aria-controls` vers les trois boutons.
+
+### Tests
+- `test/captures-v171.cjs` (bureau et mobile) : aria-modal, focus initial, piège Tab / Maj+Tab sur 24 pressions, Échap et retour du focus, état replié puis déplié de « Mois » sur mobile. Ajouté à `npm run test:navigateur`.
+
 ## [1.7.0] — 1er novembre 2026
 
 Septième passe de game design (mesures : `DETAIL_DEFIS=1 node test/sim-test.mjs`, graines 2026, 7 et 1789, 5 ans). Aucun prix modifié.
