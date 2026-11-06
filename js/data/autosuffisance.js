@@ -45,7 +45,7 @@ export const GARDE = {
   partConserves: 0.12,     // v1.8 : estimation de jeu, budget conserves, sauces, plats cuisinés et choucroute hors 35 % de frais (docs/prix.md)
 };
 export const CONSERVES = {
-  bocaux: { kgMax: 8, temps: 3, kwh: 0.5, capsule: 0.2, kgParBocal: 0.5, valeurKg: 6.3, moral: 3, risqueMarmite: 0.06, risqueSterilisateur: 0.01 },
+  bocaux: { kgMax: 12, temps: 2, kwh: 0.5, capsule: 0.2, kgParBocal: 0.5, valeurKg: 6.3, moral: 2, risqueMarmite: 0.06, risqueSterilisateur: 0.01 },  // v1.10 : 8→12 kg, 3→2 h (rappel « récolte à conserver »)
   lacto:  { kgMax: 5, temps: 1, sel: 0.1, valeurKg: 6.0, santeJour: 0.06 },
 };
 export const ACHATS_SAISON = {

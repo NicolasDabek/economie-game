@@ -208,10 +208,15 @@ const HOOKS = {
     if (j === 140) acheter(s, 'guideCueillette');
     if (j >= 200 && !s.possede.potagerGrand && s.argent > 300) acheter(s, 'potagerGrand');
     if (j > 60 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); }
+    // v1.10 (passe GD 10) : stérilisateur dès juin ; bocaux/lacto chaque jour dès qu'il y a 1 kg (rappel « récolte à conserver »)
+    if (j >= 120 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
+    if (j > 120) {
+      if (s.possede.sterilisateur && kgBocaux(s) >= 1) actionAutonomie(s, 'bocaux', null, oA);
+      if (kgLacto(s) >= 1) actionAutonomie(s, 'lacto', null, oA);
+    }
     // v1.5 : choucroute maison. Le pot n'a rien à fermenter si le potager n'a pas de choux (les haricots partent en bocaux) : on achète les choux d'automne.
     if (s.possede.potLacto && estLe(j, 9, 15) && actionAutonomie(s, 'acheterSaison', 'choux', oA)) actionAutonomie(s, 'lacto', null, oA);   // 10 kg une fois par an (2 pots de 5 kg)
     if (j > 140 && j % 7 === 5 && tempsLibre(s) > 3) actionAutonomie(s, 'cueillette', null, oA);
-    if (j >= 230 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
     saisons(s, true, 'durable'); rafraichirVet(s);
     // v0.7 : la santé d'abord. Mars reste froid (on garde les couches), avril-mai demi-saison, juin des nuits fraîches.
     const mo = new Date(Date.UTC(2026, 11, 1) + j * 864e5).getUTCMonth();
@@ -243,7 +248,7 @@ HOOKS.autosuffisant = (s) => {
   if (j >= 230 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
   if (j > 70 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 2 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); }
   // v1.8 (passe GD 8) : l'été, le surplus part en bocaux chaque jour (il pourrissait entre deux séances, 64 à 190 kg sur 5 ans)
-  else if (j > 70) { if (s.possede.sterilisateur && kgBocaux(s) >= 2) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); }
+  else if (j > 70) { if (s.possede.sterilisateur && kgBocaux(s) >= 1) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 1) actionAutonomie(s, 'lacto', null, oA); }
   // v1.5 (passe GD 4) : ce que fait un vrai foyer autosuffisant, comme le maître : cueillette (guide), choucroute d'automne, arrosage économe
   if (an1 && j >= 90) for (const id of ['oyas', 'goutte', 'lombri', 'silo']) if (!s.possede[id]) acheter(s, id, id === 'oyas' || id === 'lombri');
   if (an1 && j >= 140) for (const id of ['guideCueillette', 'potLacto', 'sechoir']) if (!s.possede[id]) acheter(s, id);
@@ -321,12 +326,18 @@ for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
     if (nom === 'autosuffisant' || nom === 'maître' || nom === 'malin') { const J = etatAutonomie(s).jalons || {}, ta = tauxAutosuffisance(s);
       console.log(`   JALONS ${nom} graine ${g} : alimentation maison ${ta.alim.toFixed(1)} % · 10 % ${J.p10 !== undefined ? 'j' + J.p10 : '—'} · 25 % ${J.p25 !== undefined ? 'j' + J.p25 : '—'}`);
       if (nom === 'autosuffisant' && J.p10 === undefined) { ok = false; console.log(`✗ ${g} autosuffisant sans le jalon potager 10 %`); } }
+    // v1.10 : stats potager pour le contrôle du gaspillage
+    { const st = etatAutonomie(s).stats || {}; r.gaspilleKg = st.gaspilleKg || 0; r.produitKg = st.produitKg || 0; }
     (tous[nom] ||= []).push(r);
     if (g === 2026 && nom === 'maître') {
       console.log('   domaines maître :', r.domaines.map(d => `${d.nom} ${d.valeur.toFixed(0)}`).join(' · '));
       console.log('   autonomie maître :', JSON.stringify(tauxAutosuffisance(s), (k, v) => typeof v === 'number' ? Math.round(v) : v), JSON.stringify(etatAutonomie(s).stats, (k, v) => typeof v === 'number' ? Math.round(v) : v));
       console.log('   combos maître :', Object.keys(s.combos).join(', '));
       console.log('   rentabilité maître :', tableauROI(s).sort((a, b) => b.ratio - a.ratio).map(x => `${x.nom.slice(0, 22)} payé ${x.prix} mesuré ${x.mesure.toFixed(0)} net5 ${x.net5.toFixed(0)} net10 ${x.net10.toFixed(0)}`).join(' | '));
+      // v1.10 (passe GD 10) : chaque équipement a un gain mesuré > 0 ou un bénéfice non monétaire (indirect / confort) affiché
+      { const sans = tableauROI(s).filter(x => x.mesure <= 0 && !ROI_ITEMS[x.id]?.indirect && !ROI_ITEMS[x.id]?.confort).map(x => x.id);
+        if (sans.length) { ok = false; console.log(`✗ équipements sans gain ni bénéfice non monétaire : ${sans.join(', ')}`); }
+        else console.log('✓ chaque équipement du maître a un gain mesuré ou un bénéfice confort/santé'); }
       if (Object.keys(s.combos).length < 3) { ok = false; console.log('✗ combos'); }
     }
   }
@@ -356,6 +367,12 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   ch(R('autosuffisant')[i].rang === 4, `autosuffisant : Autonome (obtenu ${R('autosuffisant')[i].titre})`);
   // v1.8 (passe GD 8) : cible +4 points ; avec des prix sourcés seulement (légumes ×1,91 bio, œuf bio 0,49 €, bocaux 6,3 €/kg, lacto 6 €/kg inchangé), on mesure +3,9 à +4,4 : plancher +3,5
   ch(R('autosuffisant')[i].pct >= R('malin')[i].pct + 3.5, `autosuffisant ${R('autosuffisant')[i].pct.toFixed(1)} % ≥ malin ${R('malin')[i].pct.toFixed(1)} % + 3,5 (cible 4)`);
+  // v1.10 (passe GD 10) : gaspillage potager ≤ 25 % de la production
+  for (const qui of ['maître', 'autosuffisant']) {
+    const rr = R(qui)[i], prod = rr.produitKg || 0, gas = rr.gaspilleKg || 0, ratio = prod > 1 ? gas / prod : 0;
+    console.log(`   GASPILLAGE ${qui} graine ${graines[i]} : ${gas.toFixed(0)} kg / ${prod.toFixed(0)} kg produits (${(ratio * 100).toFixed(0)} %)`);
+    ch(prod < 1 || ratio <= 0.25, `gaspillage ${qui} ${(ratio * 100).toFixed(0)} % ≤ 25 %`);
+  }
   ch(d.moy.moral <= 75, `moral moyen du débutant guidé ${d.moy.moral.toFixed(0)} ≤ 75`);
   ch(R('malin')[i].rang === 3 || R('malin')[i].rang === 4, `malin : Économe ou Autonome (obtenu ${R('malin')[i].titre})`);
   // v1.3 (passe GD 2, B et C)
@@ -365,8 +382,9 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
     // v1.6 (passe GD 6) : « La chasse aux watts » à 0,67 du voisin ; v1.7 : 0,70, le débutant guidé qui cuisine maison (rampe) est à 0,675-0,682
     ch(n('malin') === 3, `malin : 3 défis réussis sur 3 (obtenu ${n('malin')})`);
     // v1.8 (passe GD 8) : 🟢 watts exige 2 leviers électriques ; le débutant guidé n'en a pas → au plus 2/3
-    DEB3.push(n('débutant guidé') === 3);
-    ch(n('débutant guidé') <= 2, `débutant guidé : au plus 2 défis sur 3 (obtenu ${n('débutant guidé')})`);
+    // v1.10 (passe GD 10) : watts rattrapé via 2e geste électrique ; 2/3 défis, jamais 3/3 (transport reste hors portée)
+    DEB3.push(n('débutant guidé') >= 2);
+    ch(n('débutant guidé') === 2, `débutant guidé : 2 défis sur 3 (obtenu ${n('débutant guidé')})`);
     // v1.5 (passe GD 4) : le maître les réussit tous, l'austère n'en réussit aucun (il n'agit sur rien : il se prive)
     ch(n('maître') === 3, `maître : 3 défis réussis sur 3 (obtenu ${n('maître')})`);
     // v1.5.3 (passe GD 5) : le moral compte dans « abîmé » : moral négligé n'en réussit aucun ; l'autosuffisant les réussit tous
@@ -396,13 +414,16 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   const mo = (n) => R(n)[i].moy.moral;
   ch(mo('ne rien toucher') >= 55 && mo('ne rien toucher') <= 65, `moral ne rien toucher ${mo('ne rien toucher').toFixed(0)} dans [55, 65]`);
   ch(mo('tout à fond') >= 60 && mo('tout à fond') <= 72, `moral tout à fond ${mo('tout à fond').toFixed(0)} dans [60, 72]`);
-  ch(mo('malin') >= 55 && mo('malin') <= 65, `moral malin ${mo('malin').toFixed(0)} dans [55, 65]`);
+  ch(mo('malin') >= 55 && mo('malin') <= 75, `moral malin ${mo('malin').toFixed(0)} dans [55, 75]`);
   // v1.6 (passe GD 6) : fierté (+1/mois sous le voisin, plafond +6) : le maître remonte de 62-64 à 67-68, au niveau de « tout à fond » (68-70)
-  ch(mo('maître') >= 60 && mo('maître') <= 70, `moral maître ${mo('maître').toFixed(0)} dans [60, 70]`);
+  ch(mo('maître') >= 60 && mo('maître') <= 80, `moral maître ${mo('maître').toFixed(0)} dans [60, 80]`);
   // v1.7 (passe GD 7) : la surconsommation pèse sur le moral : le maître dépasse « tout à fond » d'au moins 2 points
   // v1.8 (passe GD 8) : marge ramenée de 2 à 1,5 point (la maîtrise dépend des principes compris ; écart mesuré 1,8 sur la graine 2026)
   ch(mo('maître') >= mo('tout à fond') + 1.5, `moral maître ${mo("maître").toFixed(3)} ≥ tout à fond ${mo("tout à fond").toFixed(3)} + 1,5`);
-  ch(mo('malin') > mo('ne rien toucher') - 4, `moral malin ${mo('malin').toFixed(0)} proche de ne rien toucher ${mo('ne rien toucher').toFixed(0)}`);
+  // v1.10 (passe GD 10) : moral inversé corrigé — malin devant l'inaction et le confort maximal
+  ch(mo('malin') >= mo('ne rien toucher') + 3, `moral malin ${mo('malin').toFixed(0)} ≥ ne rien toucher ${mo('ne rien toucher').toFixed(0)} + 3`);
+  ch(mo('malin') >= mo('tout à fond') + 1, `moral malin ${mo('malin').toFixed(0)} ≥ tout à fond ${mo('tout à fond').toFixed(0)} + 1`);
+  ch(mo('débutant guidé') <= mo('malin') + 5, `moral débutant ${mo('débutant guidé').toFixed(0)} ≤ malin ${mo('malin').toFixed(0)} + 5`);
   // v1.6 : hystérésis de ±2 points : le même maître a le même titre sur les 3 graines
   TITRES_M.push(R('maître')[i].titre);
   ch(mo('austère extrême') < 25 && mo('glacial') < 30, 'moral austère < 25 et glacial < 30');
@@ -415,7 +436,8 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
 }
 
 if (TITRES_M.length) {
-  const nd = DEB3.filter(Boolean).length; console.log(`débutant guidé 3/3 défis sur ${nd} graine(s) sur ${DEB3.length} · titres du maître : ${TITRES_M.join(' / ')}`);
+  const nd = DEB3.filter(Boolean).length; console.log(`débutant guidé 2/3 défis sur ${nd} graine(s) sur ${DEB3.length} · titres du maître : ${TITRES_M.join(' / ')}`);
+  if (DEB3.length >= 2 && nd < 2) { ok = false; console.log(`✗ débutant guidé 2/3 défis sur ≥ 2 graines (obtenu ${nd})`); }
   { const k = DEBMN.filter(Boolean).length; console.log(`débutant guidé devant moral négligé sur ${k} graine(s) sur ${DEBMN.length}`); if (false) { ok = false; console.log('✗ débutant guidé devant moral négligé sur moins de 2 graines'); } }
 
   if (new Set(TITRES_M).size !== 1) { ok = false; console.log('✗ le maître change de titre selon la graine'); }

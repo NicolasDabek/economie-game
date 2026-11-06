@@ -21,6 +21,8 @@ export function lessiveDuJour(s, v) {
       if (dehors) debloquer(s, 'airLibre');
       if (L.temp === 30 && ++s.l30 >= 5) debloquer(s, 'trenteDegres');
       const kL = SC.linge || 1;   // v1.3 : une famille lave deux fois plus de linge (une « lessive » = kL machines)
+      // v1.10 : sécher dehors évite un cycle de sèche-linge (~2,5 kWh, ADEME) ; crédité à la corde
+      if (dehors) s.attribution.corde = (s.attribution.corde || 0) + kL * LESSIVE.secheLingeKwh * PRIX.elecKwh;
       const kwh = (LESSIVE.kwh[L.temp] + (L.sechage === 'machine' ? LESSIVE.secheLingeKwh : 0)) * kL;
       const heures = L.hc ? [22, 23, 0] : L.midi ? [12, 13, 14] : [19, 20, 21];
       let reste = kwh * 1000; for (const h of heures) { const x = Math.min(2200 * kL, reste); ctx.elecH[h] += x; reste -= x; }

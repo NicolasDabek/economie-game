@@ -2,7 +2,7 @@
 // (dépenses par poste au 1er du mois) pris par la simulation pour comparer « ce mois-ci » et « le mois dernier ».
 import { ACHATS, BANQUE, PRINCIPES, MEDIATHEQUE, JOURS_HABITUDE, horsScenario } from './data.js';
 import { dateDuJour, prevision } from './meteo.js';
-import { scoreFinal, evenementsAVenir, tempsLibre, eur, acheter, actions, acheterVetement, gestesActifs, planifierLessive, laverMain, linge, remplissage, ROUTINES, routineDispo } from './simulation.js';
+import { scoreFinal, evenementsAVenir, tempsLibre, eur, acheter, actions, acheterVetement, gestesActifs, planifierLessive, laverMain, linge, remplissage, ROUTINES, routineDispo, prendreTemps, payer } from './simulation.js';
 import { chapitreDuJour } from './meteo.js';
 import { faireReleves, resilier, reabonner, prendreMediatheque } from './systemes.js';
 import { deposer } from './finance.js';
@@ -11,7 +11,8 @@ import { tableauROI, estimationAchat } from './roi.js';
 import { palierMoral, palierBE } from './paliers.js';
 import { arbitrer, PROTEGE } from './arbitre.js';
 import { carteAutosuffisance, alertesAutonomie } from './onglets-autonomie.js';
-import { leviersWatts, LEVIERS_WATTS } from './annee.js';
+import { leviersWatts, LEVIERS_WATTS, suggestionWatts } from './annee.js';
+import { actionAutonomie, kgBocaux, kgLacto } from './autonomie.js';
 // postes qui nourrissent une jauge : on ne les coupe pas quand cette jauge est basse
 export const SOURCES = { plaisirs: ['volonte', 'bienetre'], services: ['volonte', 'bienetre'], abonnements: ['volonte', 'bienetre'], alim: ['bienetre'], chauffage: ['sante', 'confort'], eauChaude: ['hygiene'], linge: ['hygiene'] };
 const valJ = (s, g) => g === 'volonte' ? s.volonte : g === 'confort' ? s.confort : s[g];
@@ -107,6 +108,9 @@ export const GESTES_RECO = [
   { id: 'gamelle', titre: 'Emporter sa gamelle le midi', an: 1700, aller: 'transport', fait: (s) => s.transport.repas === 'emporte', faire: (s) => { s.transport.repas = 'emporte'; }, dispo: (s) => s.jour >= 3 },
   { id: 'prixKilo', titre: 'Comparer les prix au kilo', an: 275, aller: 'cuisine', fait: (s) => !!s.sys.prixKiloGeste, faire: (s) => { s.sys.prixKiloGeste = true; } },
   { id: 'liste', titre: 'Faire une liste de courses et un menu des restes', an: 200, aller: 'cuisine', fait: (s) => !!s.sys.liste, faire: (s) => { s.sys.liste = true; } },
+  // v1.10 (passe GD 10) : gestes électriques du défi watts (cuisine = domaine de base, toujours proposables)
+  { id: 'frigo', titre: 'Ne rien mettre de chaud au frigo', an: 40, aller: 'cuisine', fait: (s) => !!s.sys.frigoGeste, faire: (s) => { s.sys.frigoGeste = true; } },
+  { id: 'bouilloire', titre: 'Chauffer la quantité exacte d\'eau à la bouilloire', an: 35, aller: 'cuisine', fait: (s) => !!s.sys.bouilloire, faire: (s) => { s.sys.bouilloire = true; } },
   { id: 'aerer', titre: 'Aérer 5 min matin et soir (fini la fenêtre entrouverte)', an: 145, aller: 'maison', fait: (s) => s.aeration !== 'entrouverte', faire: (s) => { s.aeration = 'breve'; }, hiver: true },
   { id: 'couperEau', titre: 'Couper l\'eau pendant le savonnage', an: 140, aller: 'eau', fait: (s) => !!s.sys.douche.couperEau, faire: (s) => { s.sys.douche.couperEau = true; } },
   { id: 'rideaux', titre: 'Fermer rideaux et volets la nuit', an: 70, aller: 'maison', fait: (s) => s.rideaux !== 'ouverts', faire: (s) => { s.rideaux = 'nuit'; }, hiver: true },
@@ -149,6 +153,19 @@ export function appliquerConseil(s, a) {
   }
   if (a.type === 'placer') return deposer(s, 'livretA', Math.floor(a.montant), c).ok ? `${eur(Math.floor(a.montant))} placés sur le Livret A.` : null;
   if (a.type === 'geste') { const g = GESTES_RECO.find(x => x.id === a.id); if (!g || g.fait(s)) return null; g.faire(s); return `Nouveau geste : ${g.titre.toLowerCase()}.`; }
+  if (a.type === 'autonomie') {
+    if (a.id === 'bocaux') {
+      if (!s.possede.sterilisateur || kgBocaux(s) < 1) return null;
+      const o = { prendreTemps, payer, msg: () => {}, debloquer: () => {} };
+      return actionAutonomie(s, 'bocaux', null, o) ? 'Bocaux stérilisés : récolte sauvée.' : null;
+    }
+    if (a.id === 'lacto') {
+      if (kgLacto(s) < 1) return null;
+      const o = { prendreTemps, payer, msg: () => {}, debloquer: () => {} };
+      return actionAutonomie(s, 'lacto', null, o) ? 'Lactofermentation lancée.' : null;
+    }
+    return null;
+  }
   if (a.type === 'couvrir') return seCouvrir(s);
   if (a.type === 'lessive') { if (s.lessivePrevue || !linge(s).length) return null; return planifierLessive(s, s.sys.lessiveConseil || { temp: 30, sechage: 'air' }) ? 'Lessive lancée (30 °C, séchage à l\'air) : elle tourne cette nuit.' : null; }
   if (a.type === 'laverMain') { const ids = Object.entries(s.vetements).filter(([id, v]) => v.porte && v.salete >= 40 && laverMain(s, id)).map(([id]) => id); return ids.length ? `Lavé à la main (${ids.length} pièce${ids.length > 1 ? 's' : ''}) : propre pour demain.` : null; }
@@ -211,6 +228,26 @@ export function suivreConseil(s, r) {
 }
 export function recommandations(s, r = scoreFinal(s)) {
   const L = [], jours = Math.max(7, s.nbJours || s.jour || 7);
+  // v1.10 (passe GD 10) : dès l'annonce du défi watts, le conseiller pousse un 2e geste/équipement électrique (même sans principe « élec » découvert)
+  { const df = s.eco?.defi; if (df?.poste === 'elec' && leviersWatts(s) < LEVIERS_WATTS.min) {
+    const sug = suggestionWatts(s);
+    if (sug?.kind === 'achat' && !s.possede[sug.id] && ACHATS[sug.id] && s.argent >= ACHATS[sug.id].prix + 100)
+      L.push({ titre: `⚡ Défi watts : ${sug.titre}`, an: 80, roi: null, jauge: `il manque ${LEVIERS_WATTS.min - leviersWatts(s)} levier${LEVIERS_WATTS.min - leviersWatts(s) > 1 ? 's' : ''} électrique${LEVIERS_WATTS.min - leviersWatts(s) > 1 ? 's' : ''}`, aller: 'elec', urgent: true, action: { type: 'achat', id: sug.id } });
+    else if (sug?.kind === 'geste') {
+      const g = GESTES_RECO.find(x => x.id === sug.id);
+      if (g && !g.fait(s)) L.push({ titre: `⚡ Défi watts : ${g.titre}`, an: g.an, roi: null, jauge: `il manque ${LEVIERS_WATTS.min - leviersWatts(s)} geste${LEVIERS_WATTS.min - leviersWatts(s) > 1 ? 's' : ''} électrique${LEVIERS_WATTS.min - leviersWatts(s) > 1 ? 's' : ''}`, aller: g.aller, urgent: true, action: { type: 'geste', id: g.id } });
+    }
+  } }  // v1.10 : récolte à conserver — proposer bocaux / lacto / stérilisateur avant péremption
+  { const Aun = s.autonomie; if (Aun?.stock) {
+    const bientot = Aun.stock.some(l => l.maison && l.fin - s.jour <= 5 && l.fin - s.jour >= 0 && l.kg > 0.5 && l.cat !== 'bocaux' && l.cat !== 'lacto');
+    if (bientot) {
+      if (!s.possede.sterilisateur && ACHATS.sterilisateur && s.argent >= ACHATS.sterilisateur.prix + 100)
+        L.push({ titre: '🫙 Récolte à conserver : acheter un stérilisateur', an: 100, roi: null, jauge: 'les légumes du potager pourrissent sans bocaux', aller: 'cuisine', urgent: true, action: { type: 'achat', id: 'sterilisateur' } });
+      else if (s.possede.sterilisateur)
+        L.push({ titre: '🫙 Récolte à conserver : stériliser des bocaux', an: 80, roi: null, jauge: 'transforme la récolte avant péremption', aller: 'cuisine', urgent: true, action: { type: 'autonomie', id: 'bocaux' } });
+    }
+  } }
+
   for (const [id, a] of Object.entries(ACHATS)) {
     if (s.possede[id] || horsScenario(id) || a.prix > s.argent - 100 || (a.temps || 0) > Math.max(0, tempsLibre(s))) continue;
     if (!DOM_CAT[a.cat] || !domaineConnu(s, DOM_CAT[a.cat])) continue;   // ni solaire, ni ventilation passive, ni domaine inconnu
@@ -349,7 +386,9 @@ export function rendreTableau(s, etat = {}) {
   const dfVs = dfFait / dfVois, dfR = dfFait / Math.max(1, dfPro);
   // v1.8 (passe GD 8) : 🟢 sur « La chasse aux watts » seulement avec au moins 2 leviers électriques ; sinon 🟠 même dans la cible
   const dfManque = df?.poste === 'elec' ? Math.max(0, LEVIERS_WATTS.min - leviersWatts(s)) : 0;
-  const dfEtat = dfR <= 1 && !dfManque ? ['🟢', 'dans la cible', 'ok'] : dfR <= 1 ? ['🟠', `dans la cible, mais il manque ${dfManque} habitude${dfManque > 1 ? 's' : ''} ou équipement${dfManque > 1 ? 's' : ''} électrique${dfManque > 1 ? 's' : ''}`, 'presque'] : dfR <= 1.08 ? ['🟠', 'presque', 'presque'] : ['🔴', 'au-dessus', 'alerte'];
+  const dfSug = dfManque ? suggestionWatts(s) : null;
+  // v1.10 (passe GD 10) : 🟠 précise le geste ou l'équipement manquant
+  const dfEtat = dfR <= 1 && !dfManque ? ['🟢', 'dans la cible', 'ok'] : dfR <= 1 ? ['🟠', `il manque ${dfManque} geste${dfManque > 1 ? 's' : ''} électrique${dfManque > 1 ? 's' : ''}${dfSug ? ' : ' + dfSug.titre : ''}`, 'presque'] : dfR <= 1.08 ? ['🟠', 'presque', 'presque'] : ['🔴', 'au-dessus', 'alerte'];
   const defiH = df ? `<div class="tb-defi"><span>🎯 Défi ${df.an} : <b>${df.nom}</b> — <span class="tb-defi-etat" aria-label="${dfEtat[1]}">${dfEtat[0]}</span> ${eur(Math.round(dfFait)).replace(",00", "")} / ${eur(Math.round(dfPro)).replace(",00", "")} au prorata <small>(${Math.round(dfVs * 100)} % du voisin${dfV ? `, objectif ≤ ${Math.round(df.effort * 100)} %, 🟠 jusqu'à +8 %` : ''})</small></span><div class="progres ${dfEtat[2] === 'ok' ? '' : dfEtat[2]}" role="progressbar" aria-valuenow="${Math.round(dfVs * 100)}" aria-valuemin="0" aria-valuemax="100" aria-label="Dépense du défi en % de celle du voisin"><div style="width:${Math.min(100, dfVs * 100)}%"></div></div></div>` : '';
   const dispo = conseillerDispo(s), arrondi = (v) => Math.max(5, Math.round(v / 5) * 5);
   const fourchette = (v) => `${eur(arrondi(v * 0.7)).replace(',00', '')} à ${eur(arrondi(v * 1.3)).replace(',00', '')}/an`;

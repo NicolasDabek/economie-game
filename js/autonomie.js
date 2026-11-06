@@ -151,6 +151,9 @@ function creditGarde(s, l, kg) {
 function garderMangerJour(s, ctx, A, R) {
   for (const l of A.stock) if (l.entre === s.jour && (l.cat === 'racines' || l.cat === 'courges')) l.fin = l.entre + dureeGarde(s, l.cat);
   let besoin = R.cout * (s.sys.regime === 'livraison' ? 0.1 : GARDE.partLegumes), maison = 0, achat = 0, lacto = false, chou = false;
+  // v1.10 (passe GD 10) : récolte à conserver — les lots qui périment sous 5 j élargissent le budget frais (on mange plus avant de jeter)
+  const urgent = A.stock.filter(l => l.kg > 0.2 && l.fin - s.jour <= 5 && l.fin - s.jour >= 0 && l.cat !== 'bocaux' && l.cat !== 'lacto');
+  if (urgent.length) besoin = Math.max(besoin, R.cout * Math.min(0.55, GARDE.partLegumes + 0.2));
   A.stock.sort((a, b) => a.fin - b.fin);
   // v1.8 (passe GD 8) : bocaux et lactofermentés remplacent aussi le rayon épicerie (conserves, sauces, choucroute) : budget à part
   let besoinConserves = R.cout * (s.sys.regime === 'livraison' ? 0 : GARDE.partConserves);
@@ -414,7 +417,7 @@ export function actionAutonomie(s, action, v, o) {
         if (r() < p) intox = e;
         ajouterLot(A, { cat: id === 'chataignes' ? 'courges' : 'cueillette', nom: e.nom, kg: k, valeurKg: e.prixKg, coutKg: 0, maison: true }, s.jour);
       }
-      A.stats.cueilliKg += kg;
+      A.stats.cueilliKg += kg; A.stats.produitKg += kg;
       s.bienetre = Math.min(100, s.bienetre + CUEILLETTE.bienetre); s.volonte = Math.min(100, s.volonte + CUEILLETTE.moral);
       if (intox) { const I = CUEILLETTE.intox; s.sante = Math.max(0, s.sante - I.sante); s.volonte -= I.moral; o.payer(s, I.cout, 'imprevus'); A.stats.intox++;
         o.msg(`☠️ Confusion : ce n'était pas ce que tu croyais (${intox.confusion}). Intoxication, urgences. Un guide, et la pharmacie pour les champignons, divisent le risque.`, 'alerte'); o.debloquer('cueillette'); }

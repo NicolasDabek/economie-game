@@ -6,15 +6,16 @@
 // - blues de l'hiver : 5 à 10 % des adultes en France connaissent une dépression saisonnière, bien plus un simple coup de mou (Inserm, HAS) ;
 // - le stress financier (découvert, pas d'épargne de précaution) pèse sur le moral (Banque de France, baromètre de l'éducation financière 2024).
 export const MORAL = {
-  base: 31.2, kBienetre: 0.5, kSante: 0.25, kConfort: 1.0, inertie: 15,   // calibré pour 5 ans : ne rien toucher ~62, naïf ~67, malin ~61, maître ~63
+  base: 31.2, kBienetre: 0.5, kSante: 0.25, kConfort: 1.0, inertie: 15,   // v1.10 : contrôle et fierté renforcés (malin ≥ inaction +3 et ≥ tout à fond +1)
   plaisir: 11, privation: 6, adaptMax: 0.7, adaptJours: 60, nouveaute: 0.4,
   social: 10, blues: 6,
   monotonie: { austere: 1, batch: 0.8, livraison: 0.2, classique: 0.3, maison: 0.15 }, monotonieMax: 8,
-  fierteMax: 8,   // v1.9 : 6 → 8, le malin (61) finissait sous « ne rien toucher » (63)
+  fierteMax: 11,  // v1.10 (passe GD 10) : 8 → 11 ; malin doit passer devant inaction (+3) et tout à fond (+1)
   fierteMoralMin: 40,
-  comprendre: [33, 45], comprendreSeuil: 62,   // v1.8 (passe GD 8) : principes découverts : maîtrise et fierté nulles sous 33, pleines à 45
+  comprendre: [36, 48], comprendreSeuil: 62,   // v1.10 : nulles sous 36, pleines à 48 (débutant ~37 principes : peu de fierté haute ; plafond test 75)
   surconsoSeuil: 1.2, surconsoMax: 4,   // v1.7 : −1 de moral par mois à plus de +20 % du voisin, au plus −4   // v1.6 : +1 de moral par mois sous le voisin, au plus +6
-  controle: 11, stressDecouvert: 10, stressPrecaution: 5, stressMarche: 4, stressPanne: 5, stressMaladie: 6,
+  controle: 14,  // v1.10 : 11 → 14, tenir son budget rapporte plus ; dépenser sans compter (tout à fond) pèse davantage
+  stressDecouvert: 10, stressPrecaution: 5, stressMarche: 4, stressPanne: 5, stressMaladie: 6,
   seuilCompulsif: 25, probaCompulsif: 0.1,
 };
 // Coûts de la santé et de la négligence (2026) :

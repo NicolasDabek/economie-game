@@ -173,6 +173,18 @@ export function leviersWatts(s) {
   const a = Object.keys(ACHATS).filter(id => s.possede?.[id] && LEVIERS_WATTS.cats.includes(ACHATS[id].cat)).length;
   return g + a;
 }
+// v1.10 (passe GD 10) : suggestion concrète pour combler les leviers manquants du défi watts
+export const SUGGESTIONS_WATTS = [
+  { id: 'multiprise', kind: 'achat', titre: 'acheter une multiprise à interrupteur', test: (s) => !s.possede?.multiprise },
+  { id: 'frigo', kind: 'geste', titre: 'ne rien mettre de chaud au frigo', test: (s) => !s.sys?.frigoGeste },
+  { id: 'bouilloire', kind: 'geste', titre: 'chauffer la quantité exacte d\'eau', test: (s) => !s.sys?.bouilloire },
+  { id: 'led', kind: 'achat', titre: 'passer aux ampoules LED', test: (s) => !s.possede?.led },
+  { id: 'voletsJour', kind: 'geste', titre: 'fermer les volets le jour (été)', test: (s) => !s.voletsJour },
+  { id: 'ventNuit', kind: 'geste', titre: 'ouvrir grand la nuit (été)', test: (s) => !s.ventNuit },
+];
+export function suggestionWatts(s) {
+  return SUGGESTIONS_WATTS.find(x => x.test(s)) || null;
+}
 /** Le joueur a-t-il agi sur ce poste ? Renvoie la première action trouvée (texte) ou null. */
 export function actionDefi(s, poste) {
   const L = LEVIERS_DEFI[poste]; if (!L) return 'poste libre';

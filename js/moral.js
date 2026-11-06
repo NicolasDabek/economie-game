@@ -53,11 +53,13 @@ export function moralJour(s, ctx) {
   d.stress = -stress;
   // maîtrise : voir son budget tenu (ou filer) pèse sur le moral
   // v1.8 (passe GD 8) : on n'est fier que de ce qu'on comprend. La maîtrise du budget et la fierté face au voisin sont pondérées par
-  // les principes découverts (rien sous 33 principes, plein effet à 45), seulement au-dessus de 62 de moral (on ne fait pas sombrer
+  // les principes découverts (rien sous 36 principes, plein effet à 48), seulement au-dessus de 62 de moral (on ne fait pas sombrer
   // le débutant, on plafonne son euphorie) : suivre le conseiller sans comprendre rapporte de l'argent, moins de moral.
-  const [c0, c1] = M.comprendre ?? [33, 45], comprendre = s.volonte < (M.comprendreSeuil ?? 62) ? 1 : Math.max(0, Math.min(1, ((s.principes?.length || 0) - c0) / (c1 - c0)));
+  // v1.10 : sous le seuil, plancher à 0,45 (le débutant peut remonter) ; plus de « comprendre = 1 » automatique, qui faisait remonter moral négligé (47 principes) et gagner des défis.
+  const [c0, c1] = M.comprendre ?? [36, 48], raw = Math.max(0, Math.min(1, ((s.principes?.length || 0) - c0) / (c1 - c0)));
+  const comprendre = s.volonte < (M.comprendreSeuil ?? 62) ? Math.max(0.45, raw) : raw;
   d.controle = M.controle * Math.max(-0.5, Math.min(1, (ctx.pctEco || 0) / 0.4)) * ((ctx.pctEco || 0) > 0 ? comprendre : 1);
-  // v1.6 (passe GD 6) : fierté. Chaque mois passé sous la dépense du voisin donne +1 de moral durable (plafond +6) ; un mois au-dessus en retire 1.
+  // v1.6 (passe GD 6) : fierté. Chaque mois passé sous la dépense du voisin donne +1 de moral durable (plafond fierteMax) ; un mois au-dessus en retire 1.
   // Mois à moins de 40 de moral en moyenne : on ne la ressent pas (elle ne monte pas ; sous 35 elle retombe), et « moral négligé » reste sans défi.
   // « Tout à fond » (confort maximal, aucune économie) dépassait le moral du maître (69-70 contre 62-64) : se voir tenir son budget compte aussi.
   if (ctx.cumVoisin !== undefined && new Date(Date.UTC(2026, 11, 1) + s.jour * 864e5).getUTCDate() === 1) {

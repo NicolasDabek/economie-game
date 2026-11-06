@@ -114,8 +114,8 @@ export function heuresDuJour(s, v) {
     if (elecChauffage) radBaseKwh += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000;   // le voisin reste en option Base
     else gazBase += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000 / RENDEMENT_CHAUDIERE;
     climBase += rb.climElec / 1000;
-    // v1.5.3 : avec une clim à la maison, chaque heure de canicule passée au ventilateur, clim éteinte, évite ce que la clim aurait consommé (repère : clim du voisin à 25 °C)
-    if (ventilo && jm.canicule && s.possede.clim && !r.climElec && rb.climElec > 0) s.attribution.ventilateur = (s.attribution.ventilateur || 0) + Math.max(0, rb.climElec - ETE.ventilateur) / 1000 * prix;
+    // v1.5.3 / v1.10 : chaque heure de canicule au ventilateur (clim éteinte) évite ce que la clim du voisin consomme ; plus besoin d'avoir une clim pour que le gain soit mesuré
+    if (ventilo && jm.canicule && !r.climElec && rb.climElec > 0) s.attribution.ventilateur = (s.attribution.ventilateur || 0) + Math.max(0, rb.climElec - ETE.ventilateur) / 1000 * prix;
 
     // ressenti et confort
     const P = s.pieces[occ];

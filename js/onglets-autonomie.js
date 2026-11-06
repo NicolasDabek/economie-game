@@ -140,8 +140,9 @@ export function alertesAutonomie(s) {
   if (!s.possede.potager && !s.possede.poele && !s.possede.cet) return out;
   const cal = calendrier(s);
   if (cal.semer.length) out.push({ t: `🌱 À semer : ${cal.semer.slice(0, 3).join(', ')}`, aller: 'jardin' });
-  const bientot = A.stock.filter(l => l.fin - s.jour <= 2 && l.kg > 0.5);
-  if (bientot.length) out.push({ t: `🥫 ${num(bientot.reduce((x, l) => x + l.kg, 0))} kg à consommer ou transformer sous 2 j`, aller: 'cuisine' });
+  // v1.10 (passe GD 10) : rappel « récolte à conserver » (fenêtre 5 j) pour limiter le gaspillage du potager ≤ 25 %
+  const bientot = A.stock.filter(l => l.maison && l.fin - s.jour <= 5 && l.fin - s.jour >= 0 && l.kg > 0.5 && l.cat !== 'bocaux' && l.cat !== 'lacto');
+  if (bientot.length) out.push({ t: `🫙 Récolte à conserver : ${num(bientot.reduce((x, l) => x + l.kg, 0))} kg à bocaux ou lacto sous ${Math.min(...bientot.map(l => l.fin - s.jour))} j`, aller: 'cuisine' });
   if (secheresseActive(s)) out.push({ t: '🚱 Arrêté sécheresse : pas d\'arrosage au robinet', aller: 'jardin' });
   if (s.possede.poele) {
     if (A.poele.mode !== 'eteint' && A.bois.some(l => l.st > 0 && !lotSec(s, l)) && !A.bois.some(l => l.st > 0 && lotSec(s, l))) out.push({ t: '💨 Bois encore humide : il encrasse le conduit', aller: 'maison' });
