@@ -2,6 +2,21 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## [1.10.0] — 6 novembre 2026
+
+Passe GD 10 : moral qui récompense la sobriété, défi watts rattrapable, potager moins gaspillé.
+
+### Équilibrage
+- **Moral inversé corrigé** : fierté plafonnée à +11, contrôle budgétaire 14 (au lieu de 11). Comprendre : nulles sous 36 principes, pleines à 48 ; sous 62 de moral, plancher à 0,45 (plus de « comprendre = 1 » auto). Sur les 3 graines, malin ≥ ne rien toucher +3 et ≥ tout à fond +1 ; débutant ≤ malin +5 (plafond 75).
+- **Défi watts du débutant** : la jauge 🟠 affiche « il manque N geste(s) électrique(s) : [suggestion] ». Le conseiller propose un 2e geste (frigo, bouilloire) ou une multiprise dès l'annonce du défi. Débutant : 2/3 défis sur 3 graines, jamais Autonome.
+- **Équipements à valeur nulle** : chaque fiche montre un gain mesuré ou un bénéfice confort/santé (corde, casque, pluie, ventilateur, goutte-à-goutte). Ventilateur crédité de la clim du voisin évitée en canicule ; corde créditée du sèche-linge évité (~2,5 kWh/lessive).
+- **Gaspillage potager** : rappel « Récolte à conserver » (fenêtre 5 j) ; budget frais élargi quand ça péremption ; bocaux 12 kg / 2 h ; œufs et cueillette comptés dans la production. Maître et autosuffisant ≤ 25 % de gaspillage.
+- **Écart autosuffisant − malin** (5 ans, non resserré) : graine 2026 +5,0 pts ; graine 7 +4,9 pts ; graine 1789 +5,0 pts (plancher validé +3,5 ; cible +4).
+
+### Tests
+- sim-test : moral malin ≥ inaction +3 et ≥ tout à fond +1 ; débutant 2/3 défis sur ≥ 2 graines ; gaspillage ≤ 25 % ; équipements avec gain ou bénéfice non monétaire.
+- reco-test et navigateur inchangés en surface.
+
 ## [1.9.0] — 3 novembre 2026
 
 Audit de game design : défis trop faciles, sobriété moins fière que l'inaction, choix dominé.

@@ -505,3 +505,13 @@ Aucun prix baissé. Valeurs relevées le 3 novembre 2026 :
 ## Audit v1.9.0 (3 novembre 2026)
 
 Aucun prix modifié. Paramètres de jeu : défis nourriture 0,85 et transport 0,55 du voisin ; `MORAL.fierteMax` 8 ; cuiseur pliable 75 % de la cuisson l'été, actif sous un voile (nébulosité < 0,5).
+
+## Passe GD 10 (v1.10.0, 6 novembre 2026)
+
+Aucun prix baissé. Paramètres de jeu et crédits mesurés :
+
+- **Fierté** (`MORAL.fierteMax` 11) et **contrôle** (`MORAL.controle` 14) : paramètres de jeu.
+- **Comprendre** : `[36, 48]`, plancher 0,45 sous 62 de moral.
+- **Bocaux** : capacité 12 kg, temps 2 h, moral −2 (paramètres de jeu, `valeurKg` 6,3 € inchangé).
+- **Corde à linge** : crédit mesuré = sèche-linge évité, 2,5 kWh/lessive × prix élec (ADEME, déjà en jeu dans `LESSIVE.secheLingeKwh`).
+- **Ventilateur** : crédit = clim du voisin évitée les heures de canicule (même sans posséder de clim).
