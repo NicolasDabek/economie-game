@@ -28,6 +28,11 @@ const actif = (p) => p.evaluate(() => { const a = document.activeElement; return
     for (let i = 0; i < 12; i++) { await p.keyboard.press('Tab'); if (!(await dans())) sorties.push(await actif(p)); }
     for (let i = 0; i < 12; i++) { await p.keyboard.press('Shift+Tab'); if (!(await dans())) sorties.push(await actif(p)); }
     ch(!sorties.length, `[${nom}] 1. Tab et Maj+Tab restent dans la bulle (${sorties.length ? 'sorti vers ' + sorties.join(', ') : '24 pressions'})`);
+    // v1.11.1 (passe UX 10) : le focus tourne vraiment (il ne reste pas collé sur un seul bouton)
+    const vusT = new Set(), vusS = new Set();
+    for (let i = 0; i < 8; i++) { await p.keyboard.press('Tab'); vusT.add(await actif(p)); }
+    for (let i = 0; i < 8; i++) { await p.keyboard.press('Shift+Tab'); vusS.add(await actif(p)); }
+    ch(vusT.size >= 2 && vusS.size >= 2, `[${nom}] 1b. Tab et Maj+Tab bouclent (${[...vusT].join(',')} / ${[...vusS].join(',')})`);
     // Échap ferme, focus rendu à #btnAide
     await p.keyboard.press('Escape'); await p.waitForTimeout(150);
     const ferme = await p.evaluate(() => document.getElementById('coach').classList.contains('cache'));

@@ -2,6 +2,9 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## v1.10.1 — 7 novembre 2026 (passe UX 10)
+- Tutoriel : Tab et Maj+Tab bouclent réellement dans la bulle. L'élément mis en lumière n'entre dans la boucle que s'il peut prendre le focus, et le focus passe au suivant si un élément le refuse. Test ajouté dans captures-v171.
+
 ## [1.10.0] — 6 novembre 2026
 
 Passe GD 10 : moral qui récompense la sobriété, défi watts rattrapable, potager moins gaspillé.

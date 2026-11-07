@@ -277,11 +277,20 @@ function focusables(el) { return el ? [...el.querySelectorAll('button, [href], i
 document.addEventListener('keydown', (ev) => {
   if (!coach.actif || ev.key !== 'Tab') return;
   const bulle = document.querySelector('.coach-bulle'), cible = document.querySelector(ETAPES[coach.i]?.sel);
-  const L = [...(cible && !cible.disabled && cible.offsetParent !== null ? [cible] : []), ...focusables(bulle)];
+  // v1.11.1 (passe UX 10) : la cible de l'étape n'entre dans la boucle que si elle peut prendre le focus
+  const SEL = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  const cibleOk = cible && !cible.disabled && cible.offsetParent !== null && cible.matches(SEL) && !bulle?.contains(cible);
+  const L = [...(cibleOk ? [cible] : []), ...focusables(bulle)];
   if (!L.length) return;
-  const i = L.indexOf(document.activeElement);
   ev.preventDefault();
-  L[i < 0 ? 0 : (i + (ev.shiftKey ? -1 : 1) + L.length) % L.length].focus();
+  const d = ev.shiftKey ? -1 : 1, avant = document.activeElement;
+  let i = L.indexOf(avant);
+  // on avance jusqu'à ce que le focus bouge vraiment (élément qui refuserait le focus)
+  for (let n = 0; n < L.length; n++) {
+    i = i < 0 ? (d > 0 ? 0 : L.length - 1) : (i + d + L.length) % L.length;
+    L[i].focus();
+    if (document.activeElement !== avant) break;
+  }
 }, true);
 export function etapeSuivante(s, sens = 1) {
   coach.i += sens;
