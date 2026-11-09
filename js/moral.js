@@ -88,7 +88,7 @@ export function moralJour(s, ctx) {
     ctx.msg(`🛍️ Coup de blues : achat compulsif en ligne (−${x} €).`, 'alerte');
   }
   // moral fragile (v0.8.1) : petites tentations d'achat
-  if (palierMoral(s.volonte).id === 'fragile' && r() < EP.tentation.proba) {
+  if (palierMoral(s.volonte).id === 'fragile' && r() < EP.tentation.proba + ((EP.tentation.probaBas ?? EP.tentation.proba) - EP.tentation.proba) * Math.max(0, Math.min(1, (40 - s.volonte) / 15))) {
     const x = Math.round(EP.tentation.min + (EP.tentation.max - EP.tentation.min) * r()); ctx.payer(s, x, 'imprevus');
     ctx.msg(`🛒 Moral fragile : petit achat pour se remonter (−${x} €).`, 'alerte');
   }

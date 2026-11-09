@@ -6,7 +6,7 @@
 export const PALIERS_MORAL = [
   { id: 'crise', min: 0, nom: 'Crise', ico: '🆘', effet: 'Arrêt forcé pour épuisement, consultations : coûteux.', conseil: 'Vacances, plaisirs, sorties : remonte d\'urgence au-dessus de 10.' },
   { id: 'deprime', min: 10, nom: 'Déprime', ico: '🌧️', effet: 'Gestes sautés, aucune nouvelle habitude, santé qui baisse, achats compulsifs.', conseil: 'Remets un petit budget plaisir et sors : la déprime coûte plus qu\'elle n\'économise.' },
-  { id: 'fragile', min: 25, nom: 'Fragile', ico: '🌥️', effet: 'Nouveaux gestes plus durs (+15 % de coût en moral), tentations d\'achat.', conseil: 'Un geste à la fois, et garde 10-20 €/semaine de plaisirs.' },
+  { id: 'fragile', min: 25, nom: 'Fragile', ico: '🌥️', effet: 'Nouveaux gestes plus durs (+15 % de coût en moral), tentations d\'achat, de plus en plus fréquentes quand le moral approche 25.', conseil: 'Un geste à la fois, et garde 10-20 €/semaine de plaisirs.' },
   { id: 'neutre', min: 40, nom: 'Stable', ico: '⛅', effet: 'Aucun effet particulier.', conseil: 'Au-dessus de 60 : habitudes plus faciles et meilleure négociation salariale.' },
   { id: 'epanoui', min: 60, nom: 'Épanoui', ico: '☀️', effet: 'Gestes −20 % de coût en moral, augmentation mieux négociée (+0,5 %/an).', conseil: 'Garde le cap : plaisirs variés, vie sociale, lumière.' },
 ];
@@ -22,7 +22,7 @@ export const palierMoral = (v) => trouver(PALIERS_MORAL, v);
 export const palierBE = (v) => trouver(PALIERS_BE, v);
 export const EFFETS_PALIERS = {
   coutVolonte: { epanoui: 0.8, neutre: 1, fragile: 1.15, deprime: 1, crise: 1 },
-  tentation: { proba: 0.08, min: 10, max: 35 },             // moral fragile : petits achats d'impulsion
+  tentation: { proba: 0.06, probaBas: 0.28, min: 10, max: 35 },   // moral fragile : petits achats d'impulsion ; v1.12 : 6 %/j à 40 de moral, jusqu'à 28 %/j à 25 (négliger son moral dans la durée coûte)
   sauteGeste: 0.3,                                         // déprime : chaque geste non acquis sauté 3 jours sur 10
   santeDeprime: 0.2,
   crise: { joursArret: 7, soins: 45, remonte: 30, delai: 90 },

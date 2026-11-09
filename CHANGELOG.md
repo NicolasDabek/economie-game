@@ -2,6 +2,19 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## v1.12.0 — 9 novembre 2026 (correctifs game design)
+- Moral « fragile » (25 à 39) : les petits achats d'impulsion deviennent plus fréquents quand le moral reste bas, de 6 %/jour à 40 de moral jusqu'à 28 %/jour à 25 (10 à 35 € chacun). Négliger son moral pendant des années coûte désormais clairement plus cher que suivre les conseils.
+- Texte du palier « Fragile » mis à jour.
+
+Économies sur 5 ans (graines 2026 / 7 / 1789) :
+
+| Profil | Avant | Après |
+|---|---|---|
+| Moral négligé | 28,5 / 33,6 / 37,5 % | 26,3 / 31,4 / 35,7 % |
+| Débutant guidé | 32,7 / 33,8 / 38,4 % | 32,5 / 33,7 / 38,4 % |
+| Malin | 33,7 / 36,7 / 39,9 % | 33,4 / 36,4 / 39,6 % |
+| Maître | 64,5 / 69,2 / 71,3 % | 64,3 / 69,1 / 71,1 % |
+
 ## v1.11.1 — 9 novembre 2026 (passe UX 11)
 - Échap ferme le menu ⋯ (`#menuPartie`) et rend le focus à `#btnMenu`.
 - Fermer les Réglages (bouton ou Échap) rend le focus à `#btnMenu` au lieu de la page.
