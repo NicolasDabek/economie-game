@@ -1,7 +1,7 @@
 // Onglets par domaine (v0.3) : Maison, Eau chaude, Cuisine, Linge, Électricité, Jardin, Budget
 import { TRANSPORT, STOCKAGE, COMBOS, PRINCIPES, DOMAINES_PRINCIPES, GESTES, JOURS_HABITUDE, HABITUDE_OUBLI, TARIFS, TEMPO, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, GRENIER, MEDIATHEQUE, CHANGEMENT_TARIF, ETE } from './data.js';
 import { chapitreDuJour } from './meteo.js';
-import { eur, fmtH, gestesActifs } from './simulation.js';
+import { eur, fmtH, gestesActifs, tempsLibre } from './simulation.js';
 import { modePossible, coutKm, tempsTransport } from './transport.js';
 import { contenantPossible, newton } from './combos.js';
 import { hasCheminee, typePuits, tSol, jourAn } from './passif.js';
@@ -93,7 +93,7 @@ export function rendreCuisine(s) {
   h += `<h3>🧊 Frigo</h3>` + ligne('Réglage', choixSet('sys.frigo.reglage', [[2, 'Très froid (1-2 °C)'], [4, '4 °C (conseillé)']], y.frigo.reglage));
   h += ligne('Plats chauds', ouiNon('sys.frigoGeste', y.frigoGeste, 'Laisser refroidir avant', 'Directement au frigo') + (' ' + tagGeste(s, 'frigo')));
   h += ligne('Givre', `<span>${Math.round(y.frigo.givre * 100)} %</span> <button class="btn" data-action="degivrer" ${y.frigo.givre < 0.1 ? 'disabled' : ''}>Dégivrer (1 h)</button>`);
-  h += rendreGardeManger(s);
+  h += rendreGardeManger(s, tempsLibre(s));
   h += aide('Un quart d\'heure de cuisine en plus par jour peut économiser plus que n\'importe quel équipement : les courses sont le premier poste. Mais « pâtes et riz » à tous les repas ruine le bien-être et la santé.');
   return h;
 }
@@ -199,7 +199,7 @@ export function rendreEncyclopedie(s) {
   h += connus.length ? '' : '<p class="aide">Aucun principe découvert ici pour l\'instant : joue, essaie, mesure.</p>';
   // fiches repliables : le titre et une phrase, le détail sur demande
   h += connus.map(([id, p]) => `<details class="principe-item repli ${p.transversal ? 'transversal' : ''}" ${etatUI.principeOuvert === id ? 'open' : ''}><summary data-principe-sum="${id}">${p.transversal ? '🔁 ' : ''}${p.titre} <small class="aide">· ${DOMAINES_PRINCIPES[p.dom]}</small></summary><p>${p.texte}</p>
-      <dl class="fiche"><dt>Quoi</dt><dd>${p.quoi}</dd><dt>Pourquoi ça marche</dt><dd>${p.pourquoi}</dd><dt>Dans le jeu</dt><dd>${p.comment}</dd><dt>Piège ou limite</dt><dd>${p.piege}</dd><dt>Se transpose à</dt><dd>${p.transfert}</dd></dl></details>`).join('');
+      <dl class="fiche"><dt>Quoi</dt><dd>${p.quoi}</dd><dt>Pourquoi ça marche</dt><dd>${p.pourquoi}</dd><dt>Dans le jeu</dt><dd>${p.comment}</dd><dt>Piège ou limite</dt><dd>${p.piege}</dd><dt>Se transpose à</dt><dd>${p.transfert}</dd>${p.sources ? `<dt>Sources</dt><dd>${p.sources.join(' · ')}</dd>` : ''}</dl></details>`).join('');
   if (caches.length) h += `<details class="a-decouvrir"><summary>🔒 ${caches.length} principe${caches.length > 1 ? 's' : ''} à découvrir (voir les indices)</summary>${caches.map(([, p]) => `<div class="principe-item verrou"><small>${DOMAINES_PRINCIPES[p.dom]}</small> · Indice : ${p.indice}</div>`).join('')}</details>`;
   return h;
 }

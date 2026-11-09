@@ -37,7 +37,8 @@ export function analyseROI(s, id) {
   const prix = prixPaye(s, id), occasion = prix < a.prix;
   const pj = parJour(s, id);
   const J = P.saisonChauffe ? FINANCE.joursChauffe : FINANCE.joursSaison;
-  const annuel = SAISONS.reduce((t, k) => t + pj[k].v * J[k], 0) + (climEviteeAn(s, id)?.an || 0);
+  // v1.11 (passe GD 11) : la clim mobile évitée n'est plus ajoutée au gain annuel réel : c'est une substitution théorique (theoriqueAn)
+  const annuel = SAISONS.reduce((t, k) => t + pj[k].v * J[k], 0);
   const infl = FINANCE[{ energie: 'inflationEnergie', eau: 'inflationEau', carburant: 'inflationCarburant', alim: 'inflationAlim' }[P.poste]] ?? 0.02;
   const vieAns = occasion ? Math.max(1, a.vie * 0.6) : a.vie;
   const mesure = r ? r.dernier : 0, entretienPaye = r ? r.entretien : 0;
@@ -77,6 +78,9 @@ export function analyseROI(s, id) {
     id, nom: a.nom, prix, prixNeuf: a.prix, occasion, mesure, entretienPaye, entretienAn: P.entretien || 0, jours, pj, annuel, vieAns,
     degr: P.degr || 0, residuelAuj, proj, atteint, payback, incertitude, note: P.note || '', serie: r ? r.serie : [],
     net5: proj.at(-1).net, net10, netVie, rentableAns, climEvitee, climEviteeFourchette: ce ? [ce.min, ce.max] : null, ratio: proj.at(-1).net / Math.max(1, prix),
+    // v1.11 (passe GD 11) : la fiche distingue économie réelle (mesure, signée : un coût d'usage la rend négative), substitution théorique
+    // (dépense que ce joueur n'aurait pas forcément engagée : sèche-linge ou clim qu'il n'a pas, clim mobile évitée) et confort.
+    reel: mesure, annuelReel: annuel, theorique: s.attributionTheorique?.[id] || 0, theoriqueAn: climEvitee, confort: !!P.confort, indirect: P.indirect || '',
   };
 }
 

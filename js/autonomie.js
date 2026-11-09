@@ -125,7 +125,8 @@ const num1 = (x) => x.toFixed(1).replace('.', ',');
 // ---------------------------------------------------------------- garde-manger
 function ajouterLot(A, lot, jour) {
   const duree = GARDE[lot.cat] ?? 7;
-  const memeJour = A.stock.find(l => l.nom === lot.nom && l.cat === lot.cat && l.entre === jour && !l.risque);
+  // v1.11 (passe GD 11) : un lot suspect ne fusionne jamais avec un lot sain (sinon le risque disparaissait ou contaminait toute la fournée)
+  const memeJour = !lot.risque && A.stock.find(l => l.nom === lot.nom && l.cat === lot.cat && l.entre === jour && !l.risque);
   if (memeJour) { memeJour.kg += lot.kg; return memeJour; }
   const l = { ...lot, entre: jour, fin: jour + duree };
   A.stock.push(l); return l;
@@ -148,12 +149,14 @@ function creditGarde(s, l, kg) {
   else if (puits) { s.attribution[puits] = (s.attribution[puits] || 0) + v; const A = etatAutonomie(s); A.stats.caveEur = (A.stats.caveEur || 0) + v; }   // v1.6 : part de la cave suivie à part
 }
 // consommation : les lots qui périment le plus tôt d'abord, jusqu'à la part fruits-légumes-œufs des courses
-function garderMangerJour(s, ctx, A, R) {
+export function garderMangerJour(s, ctx, A, R) {
   for (const l of A.stock) if (l.entre === s.jour && (l.cat === 'racines' || l.cat === 'courges')) l.fin = l.entre + dureeGarde(s, l.cat);
   let besoin = R.cout * (s.sys.regime === 'livraison' ? 0.1 : GARDE.partLegumes), maison = 0, achat = 0, lacto = false, chou = false;
   // v1.10 (passe GD 10) : récolte à conserver — les lots qui périment sous 5 j élargissent le budget frais (on mange plus avant de jeter)
+  // v1.11 (passe GD 11) : cet élargissement n'est plus automatique. Il suit une décision du joueur, le « menu antigaspi » de la semaine
+  // (action menuAntigaspi, 15 min, valable 7 jours) : sans elle, on mange au rythme habituel et ce qui périme est perdu.
   const urgent = A.stock.filter(l => l.kg > 0.2 && l.fin - s.jour <= 5 && l.fin - s.jour >= 0 && l.cat !== 'bocaux' && l.cat !== 'lacto');
-  if (urgent.length) besoin = Math.max(besoin, R.cout * Math.min(0.55, GARDE.partLegumes + 0.2));
+  if (urgent.length && (A.menuAntigaspiJusqua ?? -1) >= s.jour) besoin = Math.max(besoin, R.cout * Math.min(0.55, GARDE.partLegumes + 0.2));
   A.stock.sort((a, b) => a.fin - b.fin);
   // v1.8 (passe GD 8) : bocaux et lactofermentés remplacent aussi le rayon épicerie (conserves, sauces, choucroute) : budget à part
   let besoinConserves = R.cout * (s.sys.regime === 'livraison' ? 0 : GARDE.partConserves);
@@ -162,12 +165,19 @@ function garderMangerJour(s, ctx, A, R) {
     if (besoin <= 0 && !(conserve && besoinConserves > 0)) continue;
     const dispo = conserve ? besoin + besoinConserves : besoin;
     const kg = Math.min(l.kg, dispo / l.valeurKg);
+    // v1.11 (passe GD 11) : le lot suspect est la seule fraction ratée de la fournée (un bocal, modélisé à part dès la stérilisation).
+    // Connu le principe, il est écarté en entier ; sinon on en mange la part du jour (intoxication) et le reste est jeté après l'alerte :
+    // aucun kg suspect n'est plus ingéré ensuite, et les kg comme les euros perdus sont comptés dans le gaspillage.
     if (l.risque && kg > 0) {
-      l.risque = false;
-      if (s.principes.includes('douteJeter')) { const perte = Math.min(l.kg, CONSERVES.bocaux.kgParBocal); l.kg -= perte; A.stats.gaspilleKg += perte; ctx.msg('🫙 Un bocal bombé, couvercle qui ne tient plus : tu le jettes sans le goûter. Bonne réflexe.', 'info'); continue; }
-      ctx.d.sante -= 20; ctx.couts.imprevus += CUEILLETTE.intox.cout; A.stats.intox++;
-      ctx.msg('🤢 Intoxication : un bocal mal stérilisé (botulisme). Urgences, plusieurs jours de convalescence. Un bocal bombé ou qui sent mauvais se jette.', 'alerte');
+      const ecarter = (k) => { l.kg -= k; A.stats.gaspilleKg += k; A.stats.gaspilleEur += k * l.valeurKg; A.stats.suspectEcarteKg = (A.stats.suspectEcarteKg || 0) + k; A.stats.suspectEcarteEur = (A.stats.suspectEcarteEur || 0) + k * l.valeurKg; };
+      if (s.principes.includes('douteJeter')) { ecarter(l.kg); ctx.msg('🫙 Un bocal sans « pop » à l\'ouverture, couvercle qui ne tient plus : tu le jettes sans le goûter. Le reste de la fournée a gardé son vide, il se mange.', 'info'); continue; }
+      ctx.d.sante -= 20; ctx.couts.imprevus += CUEILLETTE.intox.cout; A.stats.intox++; A.stats.suspectIngereKg = (A.stats.suspectIngereKg || 0) + kg;
+      ctx.msg('🤢 Intoxication : un bocal mal stérilisé (botulisme). Urgences, plusieurs jours de convalescence. Un bocal bombé, sans bruit d\'ouverture ou qui sent mauvais se jette.', 'alerte');
       ctx.debloquer('douteJeter');
+      l.kg -= kg; { let v = kg * l.valeurKg; if (conserve) { const c = Math.min(v, besoinConserves); besoinConserves -= c; v -= c; } besoin -= v; }
+      maison += kg * l.valeurKg;
+      if (l.kg > 0) ecarter(l.kg);
+      continue;
     }
     l.kg -= kg; { let v = kg * l.valeurKg; if (conserve) { const c = Math.min(v, besoinConserves); besoinConserves -= c; v -= c; } besoin -= v; }
     // v1.5.3 : silo et cave sont crédités des kg mangés au-delà de la garde de base (sans eux, ces kg auraient pourri et été rachetés)
@@ -177,11 +187,42 @@ function garderMangerJour(s, ctx, A, R) {
   }
   // péremption
   let perdu = 0;
-  for (const l of A.stock) if (l.fin <= s.jour && l.kg > 0) { A.stats.gaspilleKg += l.kg; A.stats.gaspilleEur += l.kg * l.valeurKg; perdu += l.kg; l.kg = 0; }
+  for (const l of A.stock) if (l.fin <= s.jour && l.kg > 0) { A.stats.gaspilleKg += l.kg; A.stats.gaspilleEur += l.kg * l.valeurKg; perdu += l.kg;
+    const P = (A.stats.perdus ||= {}), k = sourceLot(l); P[k] = (P[k] || 0) + l.kg; l.kg = 0; }
   if (perdu > 1) { ctx.msg(`🗑️ ${num1(perdu)} kg du garde-manger perdus (périmés). Bocaux, lactofermentation ou silo les auraient sauvés.`, 'alerte'); ctx.debloquer('stockImmobilise'); }
   A.stock = A.stock.filter(l => l.kg > 0.01);
   if (lacto) ctx.d.sante += CONSERVES.lacto.santeJour;
   return { maison, achat, lacto, chou };
+}
+// v1.11 (passe GD 11) : origine d'un lot, pour le rapport de pertes par source (légumes du potager, œufs, cueillette, achats, conserves)
+export function sourceLot(l) {
+  if (l.cat === 'bocaux' || l.cat === 'lacto') return 'conserves';
+  if (!l.maison) return 'achats';
+  if (l.cat === 'oeufs') return 'oeufs';
+  if (l.cat === 'cueillette' || l.nom === CUEILLETTE.especes.chataignes?.nom) return 'cueillette';
+  return 'legumes';
+}
+// v1.11 (passe GD 11) : l'antigaspi jouable. Ce qui périme sous 5 j, ce qui peut réellement partir en bocaux ou en pot aujourd'hui
+// (capacité d'une fournée, temps, matériel), et les options proposées selon ces contraintes. libre = heures libres du jour.
+export function planAntigaspi(s, libre = Infinity) {
+  const A = etatAutonomie(s), B = CONSERVES.bocaux, L = CONSERVES.lacto;
+  const urgents = A.stock.filter(l => l.kg > 0.2 && l.fin - s.jour <= 5 && l.fin - s.jour >= 0 && l.cat !== 'bocaux' && l.cat !== 'lacto');
+  const urgentKg = urgents.reduce((x, l) => x + l.kg, 0);
+  const urgentBocal = urgents.filter(l => l.cat === 'frais' && l.bocal).reduce((x, l) => x + l.kg, 0);
+  const urgentLacto = urgents.filter(l => l.cat === 'frais' && l.lacto).reduce((x, l) => x + l.kg, 0);
+  const kb = kgBocaux(s), kl = kgLacto(s);
+  const bocauxKg = Math.min(B.kgMax, kb), lactoKg = s.possede.potLacto ? Math.min(L.kgMax, kl) : 0;
+  const manque = [];
+  if (kb >= 1 && !s.possede.sterilisateur) manque.push('stérilisateur (sinon marmite : risque ×6)');
+  if (kl >= 1 && !s.possede.potLacto) manque.push('pot à lactofermentation');
+  const menuActif = (A.menuAntigaspiJusqua ?? -1) >= s.jour;
+  const options = [];
+  if (urgentKg > 0.2 && !menuActif) options.push({ action: 'menuAntigaspi', lib: `Menu antigaspi 7 j (${CONSERVES.menu.temps * 60} min)`, temps: CONSERVES.menu.temps, possible: libre + 1e-9 >= CONSERVES.menu.temps });
+  if (bocauxKg >= 1) options.push({ action: 'bocaux', lib: `Bocaux ${num1(bocauxKg)} kg (${B.temps} h)`, temps: B.temps, possible: libre + 1e-9 >= B.temps });
+  if (lactoKg >= 1) options.push({ action: 'lacto', lib: `Lacto ${num1(lactoKg)} kg (${L.temps} h)`, temps: L.temps, possible: libre + 1e-9 >= L.temps });
+  const conservable = options.filter(o => o.possible && o.action !== 'menuAntigaspi').reduce((x, o) => x + (o.action === 'bocaux' ? bocauxKg : lactoKg), 0);
+  const tempsManquant = Math.max(0, options.filter(o => o.action !== 'menuAntigaspi').reduce((x, o) => x + o.temps, 0) - (Number.isFinite(libre) ? libre : Infinity));
+  return { urgentKg, urgentBocal, urgentLacto, bocauxKg, lactoKg, conservable, tempsManquant: Number.isFinite(tempsManquant) ? tempsManquant : 0, manque, menuActif, options };
 }
 export function aConsommerBientot(s, jours = 3) {
   const A = etatAutonomie(s);
@@ -380,10 +421,14 @@ export function actionAutonomie(s, action, v, o) {
       o.payer(s, elec, 'elec'); s.factureSemaine += elec; mensualiser(s, elec); s.depenses.eauChaudeEur = s.depenses.eauChaudeEur || 0;
       o.payer(s, n * C.capsule, 'nourriture');
       const risque = makeRng(s.seed * 7 + s.jour * 101)() < (s.possede.sterilisateur ? C.risqueSterilisateur : C.risqueMarmite);
-      ajouterLot(A, { cat: 'bocaux', nom: 'Bocaux', kg, valeurKg: C.valeurKg, coutKg: 0, maison: true, risque }, s.jour);
+      // v1.11 (passe GD 11) : un bocal raté (vide perdu) est un lot à part ; les autres bocaux de la fournée restent sains
+      const kgSuspect = risque ? Math.min(kg, C.kgParBocal) : 0;
+      if (kg - kgSuspect > 1e-9) ajouterLot(A, { cat: 'bocaux', nom: 'Bocaux', kg: kg - kgSuspect, valeurKg: C.valeurKg, coutKg: 0, maison: true }, s.jour);
+      if (kgSuspect > 0) ajouterLot(A, { cat: 'bocaux', nom: 'Bocaux', kg: kgSuspect, valeurKg: C.valeurKg, coutKg: 0, maison: true, risque: true }, s.jour);
       s.volonte -= C.moral; A.stats.bocaux += n;
       if (s.possede.sterilisateur) s.attribution.sterilisateur = (s.attribution.sterilisateur || 0) + kg * 0.5 + (C.risqueMarmite - C.risqueSterilisateur) * CUEILLETTE.intox.cout;   // v1.6 : intoxications évitées (espérance)
       o.msg(`🫙 ${n} bocaux stérilisés (${num1(kg)} kg) : ils se gardent un an. ${fmt(C.temps)} et un peu de fatigue (−${C.moral} moral).`, 'info');
+      if (!s.principes.includes('douteJeter') && A.stats.bocaux === n) o.msg('⚠️ Première fournée sans avoir lu les consignes de sécurité : un bocal raté ne se reconnaît qu\'à l\'ouverture. Onglet Cuisine, « Lire les consignes » (15 min).', 'alerte');
       o.debloquer('conserver'); return true;
     }
     case 'lacto': {
@@ -425,6 +470,22 @@ export function actionAutonomie(s, action, v, o) {
       if (A.cueillette.sorties >= 3) o.debloquer('cueillette');
       return true;
     }
+    // v1.11 (passe GD 11) : la prévention s'apprend avant l'hospitalisation. Lire les consignes (15 min) fait connaître « Dans le doute,
+    // on jette » sans intoxication ; ne pas les lire laisse le risque intact (rien n'est supprimé globalement).
+    case 'consignesConserve': {
+      if (s.principes.includes('douteJeter') || !o.prendreTemps(s, CONSERVES.consignes.temps)) return false;
+      A.consignesLues = s.jour;
+      o.debloquer('douteJeter'); if (!s.principes.includes('douteJeter')) s.principes.push('douteJeter');
+      o.msg('📖 Consignes lues (ANSES) : barème du stérilisateur tenu, joints neufs, et à l\'ouverture un bocal sans « pop », bombé ou qui sent mauvais se jette sans goûter.', 'info');
+      return true;
+    }
+    // v1.11 (passe GD 11) : décider de cuisiner d'abord ce qui périme cette semaine (élargit la part du garde-manger dans les repas)
+    case 'menuAntigaspi': {
+      if ((A.menuAntigaspiJusqua ?? -1) >= s.jour || !o.prendreTemps(s, CONSERVES.menu.temps)) return false;
+      A.menuAntigaspiJusqua = s.jour + CONSERVES.menu.jours - 1; A.stats.menus = (A.stats.menus || 0) + 1;
+      o.msg(`🍲 Menu antigaspi pour ${CONSERVES.menu.jours} jours : les repas partent de ce qui périme d'abord (soupes, poêlées, omelettes).`, 'info');
+      return true;
+    }
     case 'declarer': { if (A.poules.declare || !s.possede.poules || !o.prendreTemps(s, POULES.declaration)) return false; A.poules.declare = true; o.msg('📝 Poules déclarées en mairie (Cerfa 15472) : tu seras prévenu en cas d\'influenza aviaire.', 'info'); return true; }
     case 'bois': {
       const sec = v === 'sec', st = 2, prix = st * (sec ? BOIS.prixSec : BOIS.prixVert);
@@ -455,6 +516,14 @@ function prendre(A, f, kg) {
   for (const l of A.stock.filter(x => x.cat === 'frais' && x[f]).sort((a, b) => a.fin - b.fin)) { const k = Math.min(l.kg, reste); l.kg -= k; reste -= k; nom ||= l.nom; if (reste <= 0) break; }
   A.stock = A.stock.filter(l => l.kg > 0.01);
   return nom;
+}
+// v1.11 (passe GD 11) : ancienne sauvegarde où tout un lot de bocaux portait le risque. Migration prudente : la fraction
+// suspecte (un bocal) reste suspecte, le reste de la fournée devient un lot sain distinct ; rien n'est blanchi ni jeté.
+export function migrerLotsSuspects(s) {
+  const A = s.autonomie; if (!A?.stock) return 0;
+  let n = 0; const kb = CONSERVES.bocaux.kgParBocal;
+  for (const l of [...A.stock]) if (l.risque && l.kg > kb + 1e-9) { const sain = { ...l, kg: l.kg - kb }; delete sain.risque; l.kg = kb; A.stock.push(sain); n++; }
+  return n;
 }
 export function partirEnVacances(s, jours) { etatAutonomie(s).absentJusqua = s.jour + jours; }
 // estimation pour le calendrier du tableau de bord

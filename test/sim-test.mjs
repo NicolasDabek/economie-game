@@ -11,7 +11,9 @@ import { deposer, retirer } from '../js/finance.js';
 import { changerTarif, faireReleves, resilier, renegocier, revendre, degivrer, prendreMediatheque } from '../js/systemes.js';
 let GRAINE = 2026, ANNEES = 5, SCEN = 'standard';
 let HOOK = null;
-import { actionAutonomie, kgBocaux, kgLacto, tauxAutosuffisance, etatAutonomie, lotSec } from '../js/autonomie.js';
+import { actionAutonomie, kgBocaux, kgLacto, tauxAutosuffisance, etatAutonomie, lotSec, planAntigaspi } from '../js/autonomie.js';
+// v1.11 (passe GD 11) : suivi du rappel « récolte à conserver » par le maître : 'quotidien' (maître), 'hebdo' (maître hebdo), 'aucun' (maître témoin)
+let SUIVI = 'quotidien';
 import { prendreTemps, payer, tempsLibre, actions, jourSuivant, scoreFinal, acheter, acheterVetement, planifierLessive, resoudreDilemme, choixDilemme, aererVetement, repriser, reparerMachine, laverMain, linge, remplissage } from '../js/simulation.js';
 
 function jouer(s, chaqueJour, dilemmes = {}) {
@@ -126,6 +128,9 @@ ajoute('malin', () => {
   const s = maligne(); return s;
 });
 ajoute('maître', () => maitre());
+// v1.11 (passe GD 11) : mêmes achats et réglages que le maître ; seul change le suivi du rappel antigaspi
+ajoute('maître hebdo', () => maitre());
+ajoute('maître témoin', () => maitre());
 // v1.4 (passe GD 3, §3.3) : « premiers pas » = 3 gestes faciles et gratuits, rien d'autre (palier Malin atteignable vite)
 export function premiersPas() {
   const s = nouvellePartie(GRAINE, ANNEES, SCEN);
@@ -207,12 +212,26 @@ const HOOKS = {
     if (j === 22) acheter(s, 'cet');
     if (j === 140) acheter(s, 'guideCueillette');
     if (j >= 200 && !s.possede.potagerGrand && s.argent > 300) acheter(s, 'potagerGrand');
-    if (j > 60 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); }
+    if (j > 60 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (SUIVI === 'quotidien') { if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); } }
     // v1.10 (passe GD 10) : stérilisateur dès juin ; bocaux/lacto chaque jour dès qu'il y a 1 kg (rappel « récolte à conserver »)
     if (j >= 120 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
-    if (j > 120) {
-      if (s.possede.sterilisateur && kgBocaux(s) >= 1) actionAutonomie(s, 'bocaux', null, oA);
-      if (kgLacto(s) >= 1) actionAutonomie(s, 'lacto', null, oA);
+    // v1.11 (passe GD 11) : le maître consulte le rappel chaque jour, le maître hebdo une fois par semaine, le témoin jamais.
+    // Consulter = menu antigaspi s'il y a des kg urgents, puis bocaux et lacto selon ce que permettent le temps et le matériel.
+    // Le maître hebdo consulte le samedi (j % 7 === 5) et y consacre son après-midi : plusieurs fournées tant que le temps libre le permet.
+    const consulte = SUIVI === 'quotidien' ? j > 120 : SUIVI === 'hebdo' ? j > 120 && j % 7 === 5 : false;
+    if (consulte) {
+      const libre0 = tempsLibre(s);
+      // menu antigaspi renouvelé dès qu'il expire tant que le garde-manger contient du frais (ou s'il y a des kg urgents)
+      if (planAntigaspi(s, tempsLibre(s)).urgentKg > 0.2 || etatAutonomie(s).stock.some(l => l.kg > 1 && l.cat !== 'bocaux' && l.cat !== 'lacto')) actionAutonomie(s, 'menuAntigaspi', null, oA);
+      for (let k = 0; k < (j % 7 === 5 ? 3 : 1); k++) {   // le samedi, plusieurs fournées si le temps le permet
+        // bocaux : grosses fournées le samedi ; en semaine, seulement si une fournée utile (≥ 4 kg) périme sous 5 j
+        const samedi = j % 7 === 5, P = planAntigaspi(s, tempsLibre(s));
+        const b = s.possede.sterilisateur && kgBocaux(s) >= 1 && (samedi || P.urgentBocal >= 4) && actionAutonomie(s, 'bocaux', null, oA);
+        const l = kgLacto(s) >= 1 && actionAutonomie(s, 'lacto', null, oA);
+        if (!b && !l) break;
+      }
+      // contrôle : les actions antigaspi ne rendent jamais le temps libre ni un lot négatifs
+      const A = etatAutonomie(s); if (A.stock.some(x => !(x.kg >= -1e-9)) || (libre0 >= -1e-9 && tempsLibre(s) < -1e-9)) s._negatif = (s._negatif || 0) + 1;
     }
     // v1.5 : choucroute maison. Le pot n'a rien à fermenter si le potager n'a pas de choux (les haricots partent en bocaux) : on achète les choux d'automne.
     if (s.possede.potLacto && estLe(j, 9, 15) && actionAutonomie(s, 'acheterSaison', 'choux', oA)) actionAutonomie(s, 'lacto', null, oA);   // 10 kg une fois par an (2 pots de 5 kg)
@@ -249,6 +268,8 @@ HOOKS.autosuffisant = (s) => {
   if (j > 70 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (kgBocaux(s) >= 2 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); }
   // v1.8 (passe GD 8) : l'été, le surplus part en bocaux chaque jour (il pourrissait entre deux séances, 64 à 190 kg sur 5 ans)
   else if (j > 70) { if (s.possede.sterilisateur && kgBocaux(s) >= 1) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 1) actionAutonomie(s, 'lacto', null, oA); }
+  // v1.11 (passe GD 11) : il suit aussi le rappel chaque jour : menu antigaspi quand des kg périment sous 5 j
+  if (j > 70 && planAntigaspi(s, tempsLibre(s)).urgentKg > 0.2) actionAutonomie(s, 'menuAntigaspi', null, oA);
   // v1.5 (passe GD 4) : ce que fait un vrai foyer autosuffisant, comme le maître : cueillette (guide), choucroute d'automne, arrosage économe
   if (an1 && j >= 90) for (const id of ['oyas', 'goutte', 'lombri', 'silo']) if (!s.possede[id]) acheter(s, id, id === 'oyas' || id === 'lombri');
   if (an1 && j >= 140) for (const id of ['guideCueillette', 'potLacto', 'sechoir']) if (!s.possede[id]) acheter(s, id);
@@ -275,6 +296,8 @@ HOOKS['bien-être négligé'] = (s) => {
   HOOKS.malin(s);
   s.central.consigneNuit = Math.min(s.central.consigneNuit, 14); s.sys.plaisirs = 0;
 };
+HOOKS['maître hebdo'] = (s) => { SUIVI = 'hebdo'; try { HOOKS['maître'](s); } finally { SUIVI = 'quotidien'; } };
+HOOKS['maître témoin'] = (s) => { SUIVI = 'aucun'; try { HOOKS['maître'](s); } finally { SUIVI = 'quotidien'; } };
 const _jouer = jouer;
 
 function lancer(graine) {
@@ -327,7 +350,11 @@ for (const g of (SEUL && SEUL !== 'profils' ? [] : graines)) {
       console.log(`   JALONS ${nom} graine ${g} : alimentation maison ${ta.alim.toFixed(1)} % · 10 % ${J.p10 !== undefined ? 'j' + J.p10 : '—'} · 25 % ${J.p25 !== undefined ? 'j' + J.p25 : '—'}`);
       if (nom === 'autosuffisant' && J.p10 === undefined) { ok = false; console.log(`✗ ${g} autosuffisant sans le jalon potager 10 %`); } }
     // v1.10 : stats potager pour le contrôle du gaspillage
-    { const st = etatAutonomie(s).stats || {}; r.gaspilleKg = st.gaspilleKg || 0; r.produitKg = st.produitKg || 0; }
+    { const st = etatAutonomie(s).stats || {}; r.gaspilleKg = st.gaspilleKg || 0; r.produitKg = st.produitKg || 0; r.gaspilleEur = st.gaspilleEur || 0; r.negatif = s._negatif || 0;
+      r.perdus = st.perdus || {}; r.legumesKg = (st.produitKg || 0) - (st.cueilliKg || 0); r.cueilliKg = st.cueilliKg || 0; r.oeufs = st.oeufs || 0; r.menus = st.menus || 0; r.intox = st.intox || 0; r.suspectEcarteKg = st.suspectEcarteKg || 0; r.suspectIngereKg = st.suspectIngereKg || 0;
+      // v1.11 (passe GD 11) : rapport de pertes par source (légumes / œufs / cueillette séparés ; achats et conserves à part)
+      if (['maître', 'maître hebdo', 'maître témoin', 'autosuffisant'].includes(nom)) { const P = r.perdus, pc = (a, b) => (b > 0 ? (100 * a / b).toFixed(1) : '—');
+        console.log(`   ANTIGASPI ${nom} graine ${g} : pertes ${r.gaspilleKg.toFixed(0)}/${r.produitKg.toFixed(0)} kg (${pc(r.gaspilleKg, r.produitKg)} %), ${r.gaspilleEur.toFixed(2)} € · légumes ${(P.legumes || 0).toFixed(0)}/${r.legumesKg.toFixed(0)} kg (${pc(P.legumes || 0, r.legumesKg)} %) · œufs ${(P.oeufs || 0).toFixed(0)}/${r.oeufs.toFixed(0)} (${pc(P.oeufs || 0, r.oeufs)} %) · cueillette ${(P.cueillette || 0).toFixed(0)}/${r.cueilliKg.toFixed(0)} kg (${pc(P.cueillette || 0, r.cueilliKg)} %) · achats ${(P.achats || 0).toFixed(0)} kg · conserves ${(P.conserves || 0).toFixed(1)} kg · menus ${r.menus} · intox ${r.intox} · suspect écarté ${r.suspectEcarteKg.toFixed(1)} kg, ingéré ${r.suspectIngereKg.toFixed(2)} kg`); } }
     (tous[nom] ||= []).push(r);
     if (g === 2026 && nom === 'maître') {
       console.log('   domaines maître :', r.domaines.map(d => `${d.nom} ${d.valeur.toFixed(0)}`).join(' · '));
@@ -368,6 +395,12 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   // v1.8 (passe GD 8) : cible +4 points ; avec des prix sourcés seulement (légumes ×1,91 bio, œuf bio 0,49 €, bocaux 6,3 €/kg, lacto 6 €/kg inchangé), on mesure +3,9 à +4,4 : plancher +3,5
   ch(R('autosuffisant')[i].pct >= R('malin')[i].pct + 3.5, `autosuffisant ${R('autosuffisant')[i].pct.toFixed(1)} % ≥ malin ${R('malin')[i].pct.toFixed(1)} % + 3,5 (cible 4)`);
   // v1.10 (passe GD 10) : gaspillage potager ≤ 25 % de la production
+  // v1.11 (passe GD 11) : le maître qui ne consulte le rappel qu'une fois par semaine reste ≤ 30 % ; jamais de temps ou de stock négatif ;
+  // le témoin (mêmes paramètres, sans suivi) est rapporté pour mesurer l'effet du seul suivi
+  { const h = R('maître hebdo')[i], te = R('maître témoin')[i], ratio = h.produitKg > 1 ? h.gaspilleKg / h.produitKg : 0, rt = te.produitKg > 1 ? te.gaspilleKg / te.produitKg : 0;
+    console.log(`   GASPI-SUIVI graine ${graines[i]} : hebdo ${(ratio * 100).toFixed(1)} % · témoin ${(rt * 100).toFixed(1)} % · quotidien ${(100 * R('maître')[i].gaspilleKg / Math.max(1, R('maître')[i].produitKg)).toFixed(1)} %`);
+    ch(h.produitKg < 1 || ratio <= 0.30, `gaspillage maître hebdo ${(ratio * 100).toFixed(1)} % ≤ 30 % (témoin sans suivi ${(rt * 100).toFixed(1)} %, maître quotidien ${(100 * R('maître')[i].gaspilleKg / Math.max(1, R('maître')[i].produitKg)).toFixed(1)} %)`);
+    for (const qui of ['maître', 'maître hebdo', 'maître témoin']) ch(!R(qui)[i].negatif, `${qui} : les actions antigaspi ne rendent jamais le temps libre ni un stock négatifs`); }
   for (const qui of ['maître', 'autosuffisant']) {
     const rr = R(qui)[i], prod = rr.produitKg || 0, gas = rr.gaspilleKg || 0, ratio = prod > 1 ? gas / prod : 0;
     console.log(`   GASPILLAGE ${qui} graine ${graines[i]} : ${gas.toFixed(0)} kg / ${prod.toFixed(0)} kg produits (${(ratio * 100).toFixed(0)} %)`);

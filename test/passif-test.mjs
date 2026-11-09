@@ -46,12 +46,14 @@ for (const seed of [2026, 7, 1789]) {
   const combo = partie(seed, ['chemineeDIY', 'puitsDIY', 'kitRadon'], { ...SAISONS, ete: { mode: 'purge', puitsMode: 'auto', debit: 'hygro' } });
   console.log("gaz ref", ref.st.gaz.toFixed(0), "chem", ch.st.gaz.toFixed(0), "combo", combo.st.gaz.toFixed(0), "attr chem", ch.s.attribution.chemineeDIY.toFixed(0), "attr combo", (combo.s.attribution.chemineeDIY + combo.s.attribution.puitsDIY).toFixed(0));
   const a1 = ans(ch.s, 'chemineeDIY'), a2 = ans(pp.s, 'puitsPro'), a3 = ans(combo.s, 'puitsDIY'), a3c = ans(combo.s, 'chemineeDIY');
-  const ansCombo = (a3.r.prix + a3c.r.prix) / Math.max(1e-6, a3.r.annuel + a3c.r.annuel - a3.r.entretienAn);
+  // v1.11 (passe GD 11) : scénario explicite « le puits remplace une clim mobile » : la clim évitée est une substitution théorique (theoriqueAn),
+  // ajoutée ici à la main et non plus incluse dans le gain réel du puits
+  const ansCombo = (a3.r.prix + a3c.r.prix) / Math.max(1e-6, a3.r.annuel + a3.r.theoriqueAn + a3c.r.annuel - a3.r.entretienAn);
   // écart mesuré sur les après-midi chauds (salon de référence ≥ 25 °C), là où la clim de la Terre sert
   const chauds = ref.st.tSalonEteApm.map((t, i) => [t, combo.st.tSalonEteApm[i]]).filter(([t]) => t >= 25);
   const dT = moy(chauds.map(([a, b]) => a - b));
   tab.push({ seed, chem: a1.ans, puitsPro: a2.ans, combo: ansCombo, dT, combos: Object.keys(combo.s.combos).filter(k => ['climTerre', 'respirationHiver', 'purgeNocturne', 'sechoirTirage', 'caveNaturelle'].includes(k)) });
-  console.log(`graine ${seed} : cheminée DIY ${a1.r.annuel.toFixed(0)} €/an → ${a1.ans.toFixed(1)} ans · puits pro ${a2.r.annuel.toFixed(0)} €/an → ${a2.ans.toFixed(0)} ans · puits DIY + cheminée (clim évitée ${a3.r.climEvitee.toFixed(0)} €/an) ${(a3.r.annuel + a3c.r.annuel).toFixed(0)} €/an → ${ansCombo.toFixed(1)} ans · salon été 14-18 h ${dT.toFixed(1)} °C plus frais · combos ${tab.at(-1).combos.join(', ')}`);
+  console.log(`graine ${seed} : cheminée DIY ${a1.r.annuel.toFixed(0)} €/an → ${a1.ans.toFixed(1)} ans · puits pro ${a2.r.annuel.toFixed(0)} €/an → ${a2.ans.toFixed(0)} ans · puits DIY + cheminée (clim évitée, théorique, ${a3.r.climEvitee.toFixed(0)} €/an) ${(a3.r.annuel + a3.r.theoriqueAn + a3c.r.annuel).toFixed(0)} €/an → ${ansCombo.toFixed(1)} ans · salon été 14-18 h ${dT.toFixed(1)} °C plus frais · combos ${tab.at(-1).combos.join(', ')}`);
   verif(a1.ans >= 4 && a1.ans <= 8, `${seed} cheminée DIY seule : retour ${a1.ans.toFixed(1)} ans`);
   verif(Math.abs(ch.s.attribution.chemineeDIY - (ref.st.gaz - ch.st.gaz)) < 0.4 * (ref.st.gaz - ch.st.gaz), `${seed} gain attribué cohérent avec le gaz réellement économisé`);
   verif(a2.ans > 50, `${seed} puits pro seul : jamais ou presque (gain ${a2.r.annuel.toFixed(0)} €/an, entretien ${a2.r.entretienAn} €/an)`);

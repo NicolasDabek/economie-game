@@ -22,7 +22,13 @@ export function lessiveDuJour(s, v) {
       if (L.temp === 30 && ++s.l30 >= 5) debloquer(s, 'trenteDegres');
       const kL = SC.linge || 1;   // v1.3 : une famille lave deux fois plus de linge (une « lessive » = kL machines)
       // v1.10 : sécher dehors évite un cycle de sèche-linge (~2,5 kWh, ADEME) ; crédité à la corde
-      if (dehors) s.attribution.corde = (s.attribution.corde || 0) + kL * LESSIVE.secheLingeKwh * PRIX.elecKwh;
+      // v1.11 (passe GD 11) : seule la part de sèche-linge que CE joueur utilisait (ses séchages hors corde) est une économie réelle ;
+      // le reste (un étendoir gratuit aurait fait l'affaire) est une substitution théorique, suivie à part et jamais comptée en euros.
+      const H = (s.sechagesHorsCorde ||= { air: 0, machine: 0 });
+      if (!dehors && !L.laverie) H[L.sechage === 'machine' ? 'machine' : 'air']++;
+      if (dehors) { const n = H.air + H.machine, p = n ? H.machine / n : 0, v = kL * LESSIVE.secheLingeKwh * PRIX.elecKwh;
+        s.attribution.corde = (s.attribution.corde || 0) + v * p;
+        s.attributionTheorique ||= {}; s.attributionTheorique.corde = (s.attributionTheorique.corde || 0) + v * (1 - p); }
       const kwh = (LESSIVE.kwh[L.temp] + (L.sechage === 'machine' ? LESSIVE.secheLingeKwh : 0)) * kL;
       const heures = L.hc ? [22, 23, 0] : L.midi ? [12, 13, 14] : [19, 20, 21];
       let reste = kwh * 1000; for (const h of heures) { const x = Math.min(2200 * kL, reste); ctx.elecH[h] += x; reste -= x; }

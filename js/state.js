@@ -7,7 +7,7 @@ import { genererMeteo } from './meteo.js';
 import { nouvelEtatSystemes } from './systemes.js';
 import { nouvelEtatTransport } from './transport.js';
 import { nouvelEtatFinance } from './finance.js';
-import { nouvelEtatAutonomie, PLAN_CONSEILLE, nbPlanches } from './autonomie.js';
+import { nouvelEtatAutonomie, PLAN_CONSEILLE, nbPlanches, migrerLotsSuspects } from './autonomie.js';
 // Format de sauvegarde : 3 (v0.3) … 7 (v0.7) ; 8 = v1.0 (champs ajoutés en v0.8–v0.9 complétés par défaut) ; 9 = v1.1 (autosuffisance) ; 10 = v1.3 (scénarios de départ)
 export const VERSION_SAUVEGARDE = 10;
 // ancien calendrier (v0.5 : 3 chapitres de 56, 28 et 42 jours) -> jour calendaire depuis le 1er décembre 2026
@@ -108,6 +108,7 @@ export function charger(stockage = globalThis.localStorage) {
     if (s.version === 9) migrerV9(s);
     if (s.version !== VERSION_SAUVEGARDE || !fini(s.seed) || !fini(s.jour) || !fini(s.argent)) return mettreDeCote(stockage, txt);
     completer(s, nouvellePartie(s.seed, s.annees || CAMPAGNE.anneesDefaut, s.scenario));
+    migrerLotsSuspects(s);   // v1.11 : lot de bocaux entièrement « à risque » d'avant la passe GD 11
     appliquerScenario(s);
     s.meteo = genererMeteo(s.seed, s.annees);
     appliquerIndices(s);

@@ -3,7 +3,7 @@
 // Maison (poêle et bois), Eau chaude (ballon thermodynamique, toilettes sèches), tableau de bord (taux).
 import { CULTURES, POTAGER, CONSERVES, BOIS, CET, POULES, CUEILLETTE, GARDE } from './data.js';
 import { etatAutonomie, nbPlanches, previsionPlanche, calendrier, kgStock, valeurStock, argentImmobilise, dureeGarde, kgBocaux, kgLacto, achatsSaison,
-  cueillettePossible, especesDuMois, secheresseActive, boisDisponible, lotSec, saisonChauffe, tauxAutosuffisance, JALONS_POTAGER, JALON_NOM } from './autonomie.js';
+  cueillettePossible, especesDuMois, secheresseActive, boisDisponible, lotSec, saisonChauffe, tauxAutosuffisance, JALONS_POTAGER, JALON_NOM, planAntigaspi } from './autonomie.js';
 import { chapitreDuJour, dateDuJour } from './meteo.js';
 
 const eur = (x) => x.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: x < 100 ? 2 : 0 });
@@ -74,9 +74,19 @@ export function rendreJardinAutonomie(s, tagGeste) {
 }
 
 // ---------------------------------------------------------------- Cuisine : garde-manger
-export function rendreGardeManger(s) {
+export function rendreGardeManger(s, libre = Infinity) {
   const A = etatAutonomie(s);
   let h = `<h3>🥫 Garde-manger</h3>`;
+  // v1.11 (passe GD 11) : la sécurité des conserves se lit AVANT la première fournée, sans attendre une intoxication
+  if (!s.principes.includes('douteJeter') && (s.possede.potager || s.possede.sterilisateur || kgBocaux(s) > 0))
+    h += `<div class="carte alerte-conserve" role="note"><b>⚠️ Avant ta première fournée</b><p class="aide">Conseil réel (ANSES) : suis le barème du stérilisateur (température, durée, nombre de bocaux), joints neufs ; une simple ébullition ne détruit pas les spores du botulisme. À l'ouverture, un bocal sans « pop », bombé ou qui sent mauvais se jette sans goûter. Dans le jeu, le risque de bocal raté (1 % au stérilisateur, 6 % à la marmite) est une mécanique, pas une statistique.</p>${bouton('consignesConserve', null, `Lire les consignes (${Math.round(CONSERVES.consignes.temps * 60)} min)`, libre + 1e-9 < CONSERVES.consignes.temps)}</div>`;
+  // v1.11 (passe GD 11) : antigaspi jouable — kg urgents, ce qui peut réellement être conservé aujourd'hui, et le choix selon les contraintes
+  const P = planAntigaspi(s, libre);
+  if (P.urgentKg > 0.2) {
+    h += `<div class="carte antigaspi"><b>🫙 À sauver sous 5 jours : ${num(P.urgentKg)} kg</b> <small class="aide">(dont ${num(P.urgentBocal)} kg pour bocaux, ${num(P.urgentLacto)} kg pour lacto)</small>`;
+    h += `<p class="aide">Conservable aujourd'hui : ${num(P.conservable)} kg (fournée max ${CONSERVES.bocaux.kgMax} kg, pot ${CONSERVES.lacto.kgMax} kg)${P.tempsManquant > 0 ? ` · il manque ${num(P.tempsManquant)} h de temps libre pour tout faire` : ''}${P.manque.length ? ` · matériel manquant : ${P.manque.join(', ')}` : ''}${P.menuActif ? ` · menu antigaspi actif jusqu'au jour ${A.menuAntigaspiJusqua + 1}` : ''}.</p>`;
+    h += P.options.map(o => bouton(o.action, null, o.lib, !o.possible)).join(' ') + '</div>';
+  }
   const lots = [...A.stock].sort((a, b) => a.fin - b.fin);
   if (!lots.length) h += aide('Vide. Le potager, les poules, la cueillette et les achats de saison le remplissent ; il remplace jusqu\'à 35 % des courses du jour, les produits qui périment le plus tôt d\'abord.');
   else {
@@ -142,7 +152,7 @@ export function alertesAutonomie(s) {
   if (cal.semer.length) out.push({ t: `🌱 À semer : ${cal.semer.slice(0, 3).join(', ')}`, aller: 'jardin' });
   // v1.10 (passe GD 10) : rappel « récolte à conserver » (fenêtre 5 j) pour limiter le gaspillage du potager ≤ 25 %
   const bientot = A.stock.filter(l => l.maison && l.fin - s.jour <= 5 && l.fin - s.jour >= 0 && l.kg > 0.5 && l.cat !== 'bocaux' && l.cat !== 'lacto');
-  if (bientot.length) out.push({ t: `🫙 Récolte à conserver : ${num(bientot.reduce((x, l) => x + l.kg, 0))} kg à bocaux ou lacto sous ${Math.min(...bientot.map(l => l.fin - s.jour))} j`, aller: 'cuisine' });
+  if (bientot.length) { const P = planAntigaspi(s); out.push({ t: `🫙 Récolte à conserver : ${num(bientot.reduce((x, l) => x + l.kg, 0))} kg sous ${Math.min(...bientot.map(l => l.fin - s.jour))} j · ${P.options.length ? P.options.map(o => o.lib.split(' (')[0].toLowerCase()).join(', ') : 'à manger vite'}${P.manque.length ? ` · manque ${P.manque[0].split(' (')[0]}` : ''}`, aller: 'cuisine' }); }
   if (secheresseActive(s)) out.push({ t: '🚱 Arrêté sécheresse : pas d\'arrosage au robinet', aller: 'jardin' });
   if (s.possede.poele) {
     if (A.poele.mode !== 'eteint' && A.bois.some(l => l.st > 0 && !lotSec(s, l)) && !A.bois.some(l => l.st > 0 && lotSec(s, l))) out.push({ t: '💨 Bois encore humide : il encrasse le conduit', aller: 'maison' });

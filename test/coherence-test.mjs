@@ -104,6 +104,32 @@ partie('débutant', 7, 3, { jour: (s) => { if (s.jour % 3 === 0) for (const r of
   for (const [lib, val, re] of PAIRES) { const v = doc(re); if (!Number.isFinite(v)) ko(`prix.md : « ${lib} » introuvable`); else if (Math.abs(v - val) > 1e-9) ko(`prix ${lib} : data.js ${val} ≠ prix.md ${v}`); else bons++; }
   console.log(`✓ ${bons}/${PAIRES.length} prix conformes à docs/prix.md`);
 }
+// v1.11 (passe GD 11) : euros réels, substitution théorique et confort distincts (corde, ventilateur, clim)
+{ const { planifierLessive } = await import('../js/simulation.js');
+  const { LESSIVE } = await import('../js/data.js');
+  const av = (s, n, f) => { for (let i = 0; i < n && !s.fini; i++) { if (s.dilemme) resoudreDilemme(s, choixDilemme(s).filter(o => o.possible !== false).at(-1).id); s.tempsUtilise = 0; f?.(s, i); jourSuivant(s); } };
+  // une partie (machine maintenue en état pour isoler le séchage) : 120 j sans rien, puis 30 j de lessives tous les 3 j avec le séchage « avant », achat de la corde, puis 30 j avec « après »
+  const partie = (avant, apres) => { const s = nouvellePartie(2026, 1); s.argent += 2000; av(s, 120);
+    av(s, 30, (x, i) => { x.machine.enPanne = false; x.machine.usure = 0; if (i % 3 === 0) planifierLessive(x, { temp: 30, sechage: avant }); });
+    s.tempsUtilise = 0; if (!acheter(s, 'corde')) ko('achat corde impossible'); const lin0 = s.depenses.linge, att0 = s.attribution.corde || 0, th0 = s.attributionTheorique?.corde || 0;
+    av(s, 30, (x, i) => { x.machine.enPanne = false; x.machine.usure = 0; if (i % 3 === 0) planifierLessive(x, { temp: 30, sechage: apres }); });
+    return { s, linge: s.depenses.linge - lin0, att: (s.attribution.corde || 0) - att0, th: (s.attributionTheorique?.corde || 0) - th0 }; };
+  const sansSL = partie('air', 'dehors'), avecSL = partie('machine', 'dehors'), temoinSL = partie('machine', 'machine');
+  const reelle = temoinSL.linge - avecSL.linge;   // économie réelle correspondante : mêmes lessives au sèche-linge
+  if (!(sansSL.att === 0 && sansSL.th > 0)) ko(`corde sans sèche-linge : ${sansSL.att} € réels (attendu 0), ${sansSL.th.toFixed(2)} € théoriques`);
+  else console.log(`✓ corde, joueur sans sèche-linge : 0 € réel, ${sansSL.th.toFixed(2)} € de substitution théorique (non comptée)`);
+  if (!(avecSL.att > 0 && avecSL.att <= reelle + 0.01 && avecSL.th === 0)) ko(`corde avec sèche-linge : ${avecSL.att.toFixed(2)} € attribués pour ${reelle.toFixed(2)} € réellement économisés`);
+  else console.log(`✓ corde, joueur au sèche-linge : ${avecSL.att.toFixed(2)} € attribués ≤ ${reelle.toFixed(2)} € réellement économisés (tolérance 0,01 €)`);
+  // ventilateur : un été entier ventilateur allumé, clim éteinte ; sans clim / avec clim possédée mais éteinte
+  const ete = (clim) => { const s = nouvellePartie(2026, 1); s.argent += 2000; av(s, 150); acheter(s, 'ventilateur'); if (clim) acheter(s, 'clim'); s.ventilateur = true; s.climActive = false; av(s, 150, (x) => { x.ventilateur = true; x.climActive = false; });
+    return { s, reel: s.attribution.ventilateur || 0, th: s.attributionTheorique?.ventilateur || 0, canicule: s.joursCanicule || 0 }; };
+  const vS = ete(false), vC = ete(true);
+  if (!(vS.reel <= 0 && vC.th === 0 && Math.abs((vS.reel + vS.th) - (vC.reel + vC.th)) <= 0.01)) ko(`ventilateur : sans clim réel ${vS.reel.toFixed(2)} € / théorique ${vS.th.toFixed(2)} € ; avec clim réel ${vC.reel.toFixed(2)} € / théorique ${vC.th.toFixed(2)} € (double attribution ou fuite)`);
+  else console.log(`✓ ventilateur (${vS.canicule} j de canicule) : sans clim ${vS.reel.toFixed(2)} € réels (coût d'usage) + ${vS.th.toFixed(2)} € théoriques ; avec clim éteinte ${vC.reel.toFixed(2)} € réels ; aucune double attribution (somme identique à 0,01 €)`);
+  const fiche = tableauROI(vS.s).find(x => x.id === 'ventilateur');
+  if (!fiche || fiche.reel !== fiche.mesure || !fiche.confort || Math.abs(fiche.theorique - vS.th) > 1e-9) ko('fiche ventilateur : réel / théorique / confort non distingués');
+  else console.log(`✓ fiche ventilateur : réel ${fiche.reel.toFixed(2)} €, théorique ${fiche.theorique.toFixed(2)} €, confort`);
+}
 { const pk = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version;
   if (pk !== VERSION) { ok = false; console.log(`✗ version : package.json ${pk} ≠ js/version.js ${VERSION}`); } else console.log(`✓ version ${VERSION} (package.json = interface)`); }
 console.log(ok ? 'OK' : 'ÉCHEC'); process.exit(ok ? 0 : 1);

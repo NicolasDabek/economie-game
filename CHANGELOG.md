@@ -2,6 +2,28 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## v1.11.0 — 9 novembre 2026 (passe GD 11)
+
+### Sécurité des conserves (P0)
+- Un bocal raté est désormais un lot à part (0,5 kg) dès la stérilisation : le reste de la fournée reste sain et n'est plus jeté ni « blanchi ». Un lot suspect ne fusionne jamais avec un lot sain.
+- Principe connu : le bocal suspect est écarté en entier. Sinon : intoxication sur la part mangée ce jour-là, puis le reste est jeté après l'alerte (aucun kg suspect ingéré ensuite). Les kg et les euros jetés entrent dans le gaspillage (`gaspilleKg`, `gaspilleEur`, `suspectEcarteKg/Eur`, `suspectIngereKg`).
+- Migration prudente : un ancien lot entièrement « à risque » devient 0,5 kg suspect + le reste sain (aucune version de sauvegarde changée).
+
+### Prévention avant l'hospitalisation (P1)
+- Avant la première fournée, l'onglet Cuisine affiche les consignes réelles (ANSES, santé.fr, ministère de l'Agriculture) et un bouton « Lire les consignes (15 min) » qui fait connaître « Dans le doute, on jette » sans intoxication. Ne pas les lire laisse le risque intact (6 % marmite, 1 % stérilisateur, inchangés).
+- Textes alignés sur les données : 2 h et 6,3 €/kg (au lieu de 3 h et ~5 €/kg). Mécanique de jeu et conseil sanitaire réel séparés, sources affichées dans l'encyclopédie.
+
+### Antigaspi jouable (P1)
+- L'élargissement de la consommation à l'approche de la péremption n'est plus automatique : il suit une décision, le « menu antigaspi » (15 min, 7 jours).
+- Garde-manger : kg à sauver sous 5 j, capacité réellement conservable aujourd'hui (fournée, pot, temps libre), matériel manquant, et options menu / bocaux / lacto selon ces contraintes. Le rappel du tableau de bord reprend ces options.
+- Simulations : « maître hebdo » (consulte le rappel le samedi seulement) et « maître témoin » (mêmes achats, aucun suivi), avec rapport de pertes séparé légumes / œufs / cueillette / achats / conserves. Graines 2026/7/1789 : maître 21,6/21,8/22,6 %, hebdo 20,6/21,4/21,6 %, témoin 75,1/78,0/76,8 %. Aucun besoin alimentaire ni production augmentés.
+
+### Euros réels, substitution théorique et confort (P1)
+- Corde à linge : seule la part de sèche-linge que le joueur utilisait réellement est une économie réelle ; le reste est une substitution théorique, suivie à part.
+- Ventilateur : la clim « du voisin » évitée n'est réelle que si le joueur possède une clim éteinte ; sinon théorique ; rien avec la clim de la Terre (déjà comptée au puits).
+- Puits canadien : la clim mobile évitée n'entre plus dans le gain annuel réel (`theoriqueAn`) ; le scénario « le puits remplace une clim » du test passif l'ajoute explicitement, seuil 12-25 ans inchangé.
+- Fiche de rentabilité : réel (signé, coût d'usage), substitution théorique et confort distincts.
+
 ## v1.10.1 — 7 novembre 2026 (passe UX 10)
 - Tutoriel : Tab et Maj+Tab bouclent réellement dans la bulle. L'élément mis en lumière n'entre dans la boucle que s'il peut prendre le focus, et le focus passe au suivant si un élément le refuse. Test ajouté dans captures-v171.
 

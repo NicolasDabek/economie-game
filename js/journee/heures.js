@@ -115,7 +115,11 @@ export function heuresDuJour(s, v) {
     else gazBase += (rb.rad.salon + rb.rad.chambre + rb.rad.cuisine) / 1000 / RENDEMENT_CHAUDIERE;
     climBase += rb.climElec / 1000;
     // v1.5.3 / v1.10 : chaque heure de canicule au ventilateur (clim éteinte) évite ce que la clim du voisin consomme ; plus besoin d'avoir une clim pour que le gain soit mesuré
-    if (ventilo && jm.canicule && !r.climElec && rb.climElec > 0) s.attribution.ventilateur = (s.attribution.ventilateur || 0) + Math.max(0, rb.climElec - ETE.ventilateur) / 1000 * prix;
+    // v1.11 (passe GD 11) : économie réelle seulement si le joueur possède une clim qu'il laisse éteinte ; sans clim, c'est une substitution
+    // théorique (suivie à part, pas en euros). Avec la « clim de la Terre » (puits + cheminée), la clim évitée est déjà comptée au puits : rien ici.
+    if (ventilo && jm.canicule && !r.climElec && rb.climElec > 0) { const v = Math.max(0, rb.climElec - ETE.ventilateur) / 1000 * prix;
+      if (s.possede.clim) s.attribution.ventilateur = (s.attribution.ventilateur || 0) + v;
+      else if (!s.combos?.climTerre) { s.attributionTheorique ||= {}; s.attributionTheorique.ventilateur = (s.attributionTheorique.ventilateur || 0) + v; } }
 
     // ressenti et confort
     const P = s.pieces[occ];
