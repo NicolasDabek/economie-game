@@ -118,14 +118,20 @@ export function rendreMaison(s) {
     const grand = id === 'salon';
     return `<g class="piece-svg" tabindex="0" role="button" data-piece-clic="${id}" aria-label="${PIECES[id].nom} : ${voit ? temp : 'température inconnue'}${hygro ? `, humidité ${Math.round(hr)} %` : ''}. Régler son chauffage.">
       <rect class="fondP" x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${voit ? couleurTemp(p.t) : 'url(#hachures)'}" stroke="${pire === id ? '#dc2626' : '#475569'}" stroke-width="${pire === id ? 4 : 2}"/>
-      <text x="${x + 12}" y="${y + 24}" font-size="15" font-weight="700" fill="#0f172a">${PIECES[id].nom}</text>
+      <text class="lib-nom" x="${x + 12}" y="${y + 26}" font-size="15" font-weight="700" fill="#0f172a">${PIECES[id].nom}</text>
       <text x="${x + w - 12}" y="${y + 26}" font-size="22" text-anchor="end">${occ}</text>
       <text x="${x + 12}" y="${y + (grand ? 110 : 62)}" font-size="${grand ? 40 : 28}" font-weight="800" fill="#0f172a">${temp}</text>
-      <text x="${x + 12}" y="${y + h - 12}" font-size="12.5" fill="#1e293b">${info}</text>
+      <text class="lib-p" x="${x + 12}" y="${y + h - 12}" font-size="12.5" fill="#1e293b">${info}</text>
       ${humide ? `<text x="${x + w - 14}" y="${y + h - 10}" font-size="18" text-anchor="end">💧</text>` : ''}
-      ${pire === id ? `<text x="${x + w - 12}" y="${y + (grand ? 60 : 56)}" font-size="11.5" font-weight="700" fill="#b91c1c" text-anchor="end">la plus coûteuse</text>` : ''}
+      ${pire === id ? `<text class="lib-p" x="${x + w - 12}" y="${y + (grand ? 60 : 56)}" font-size="11.5" font-weight="700" fill="#b91c1c" text-anchor="end">la plus coûteuse</text>` : ''}
     </g>`;
   }).join('');
+  // v1.11.1 (passe UX 11) : sur mobile, les libellés du plan passent dans une liste HTML lisible (≥ 12 px)
+  const liste = `<ul class="maison-liste" aria-hidden="true">${ext ? `<li><b>Dehors</b> ${Math.round(ext.tMoy)} °C</li>` : ''}${ORDRE_PIECES.map(id => {
+    const p = s.pieces[id], hr = humiditeRelative(p);
+    const info = voit ? `${deg(p.t)} · hier ${d ? eur(d.eur[id]) : '—'}${hygro ? ` · 💧 ${Math.round(hr)} %` : ''}` : (hygro ? `💧 ${Math.round(hr)} %` : 'Thermomètre requis');
+    return `<li${pire === id ? ' class="pire"' : ''}><b>${PIECES[id].nom}</b> ${info}${pire === id ? ' · <strong>la plus coûteuse</strong>' : ''}</li>`;
+  }).join('')}</ul>`;
   const deco = sa === 'hiver' ? '<path d="M110 100 300 22 490 100" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".9"/>' : sa === 'ete' ? '<circle cx="545" cy="40" r="20" fill="#fbbf24"/>' : sa === 'automne' ? '<text x="520" y="50" font-size="22">🍂</text>' : '<text x="520" y="50" font-size="22">🌱</text>';
   $('maison').innerHTML = `<svg viewBox="0 0 600 350" role="group" aria-label="Plan de la maison">
     <defs><linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
@@ -135,8 +141,8 @@ export function rendreMaison(s) {
     <path d="M30 112 300 18 570 112z" fill="#7c4a3a"/>${deco}
     <rect x="40" y="110" width="520" height="228" rx="6" fill="#f8fafc" stroke="#334155" stroke-width="4"/>
     ${pieces}
-    ${ext ? `<g><rect x="12" y="12" width="128" height="30" rx="15" fill="rgba(255,255,255,.85)"/><text x="76" y="32" font-size="13" text-anchor="middle" fill="#0f172a">Dehors ${Math.round(ext.tMoy)} °C</text></g>` : ''}
-  </svg><div class="legende-temp" aria-hidden="true">10 °C <i></i> 24 °C ${voit ? '' : '· pièces hachurées : achète un thermomètre pour voir'}</div>`;
+    ${ext ? `<g class="lib-p"><rect x="12" y="12" width="128" height="30" rx="15" fill="rgba(255,255,255,.85)"/><text x="76" y="32" font-size="13" text-anchor="middle" fill="#0f172a">Dehors ${Math.round(ext.tMoy)} °C</text></g>` : ''}
+  </svg>${liste}<div class="legende-temp" aria-hidden="true">10 °C <i></i> 24 °C ${voit ? '' : '· pièces hachurées : achète un thermomètre pour voir'}</div>`;
   const buee = !hygro && ORDRE_PIECES.some(id => humiditeRelative(s.pieces[id]) > 75) ? ' 💧 De la buée sur les vitres…' : '';
   $('aideMaison').innerHTML = (voit
     ? (pire ? `Pièce la plus coûteuse hier : <b>${PIECES[pire].nom}</b>.` : 'Passe une journée pour voir les coûts par pièce.')

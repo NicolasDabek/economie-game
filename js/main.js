@@ -148,7 +148,7 @@ document.addEventListener('click', (e) => {
   if (b.closest('.menu-liste')) $('menuPartie').open = false;   // v1.2.1 : le menu se referme après un choix
   if (b.id === 'btnAnnuler') { annuler(); return; }
   if (b.id === 'btnReglages') { ouvrirReglages(); return; }
-  if (b.id === 'reglagesFermer') { $('reglages').classList.add('cache'); return; }
+  if (b.id === 'reglagesFermer') { $('reglages').classList.add('cache'); $('btnMenu').focus(); return; }
   if (d.pref) { prefs[d.pref] = d.v; sauverPrefs(); appliquerPrefs(); return; }
   if (d.choix) {
     const v = d.v;
@@ -273,7 +273,7 @@ document.addEventListener('guide-rendre', () => rendreTout(s));
 document.addEventListener('keydown', (e) => {
   const g = e.target.closest?.('[data-piece-clic]');
   if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); return; }
-  if (e.key === 'Escape') { if (!$('reglages').classList.contains('cache')) $('reglages').classList.add('cache'); else if (!$('confirmation').classList.contains('cache')) $('confirmation').classList.add('cache'); else if (coachActif()) arreterTutoriel(); return; }
+  if (e.key === 'Escape') { if (!$('reglages').classList.contains('cache')) { $('reglages').classList.add('cache'); $('btnMenu').focus(); } else if ($('menuPartie').open) { $('menuPartie').open = false; $('btnMenu').focus(); } else if (!$('confirmation').classList.contains('cache')) $('confirmation').classList.add('cache'); else if (coachActif()) arreterTutoriel(); return; }
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
   if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); annuler(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return;

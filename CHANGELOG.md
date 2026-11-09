@@ -2,6 +2,13 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## v1.11.1 — 9 novembre 2026 (passe UX 11)
+- Échap ferme le menu ⋯ (`#menuPartie`) et rend le focus à `#btnMenu`.
+- Fermer les Réglages (bouton ou Échap) rend le focus à `#btnMenu` au lieu de la page.
+- Plan de la maison sur mobile : noms des pièces agrandis dans le plan (≥ 12 px affichés) ; températures d'hier, coûts, humidité, « Thermomètre requis », « la plus coûteuse » et température extérieure passent dans une liste lisible sous le plan.
+- Liens des objectifs : zone tactile de 44 px de haut.
+- Test ajouté : `test/captures-v1111.cjs` (bureau 1280 et mobile 390).
+
 ## v1.11.0 — 9 novembre 2026 (passe GD 11)
 
 ### Sécurité des conserves (P0)

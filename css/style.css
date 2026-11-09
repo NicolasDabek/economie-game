@@ -338,7 +338,7 @@ kbd{display:inline-block;min-width:1.6em;text-align:center;padding:1px 6px;borde
 .actions button.primaire{background:var(--accent);color:var(--accent-txt);border-color:var(--accent)}
 .puce{display:inline-block;width:.75em;height:.75em;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .panneau table{display:block;max-width:100%;overflow-x:auto}
-.objectif button.lien{min-height:24px;padding:2px 0}
+.objectif button.lien{min-height:44px;padding:2px 0}
 .lien{min-height:24px}
 
 /* v1.1 : autosuffisance */
@@ -603,3 +603,8 @@ fieldset.scenarios legend{font-weight:700;padding:0 6px}
 .auto-jalons{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0}
 .badge-jalon{font-size:.85rem;padding:.15rem .5rem;border-radius:1rem;border:1px solid var(--bord,#ccc);opacity:.7}
 .badge-jalon.acquis{opacity:1;font-weight:600;border-color:var(--ok,#1e8449)}
+
+/* v1.11.1 (passe UX 11) : plan de la maison lisible sur mobile */
+.maison-liste{display:none;list-style:none;margin:.5rem 0 0;padding:0;gap:.25rem;font-size:.875rem}
+.maison-liste .pire strong{color:#b91c1c}
+@media (max-width:600px){#maison svg .lib-p{display:none}#maison svg .lib-nom{font-size:23px}.maison-liste{display:grid}}
