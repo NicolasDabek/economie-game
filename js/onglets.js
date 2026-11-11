@@ -71,7 +71,7 @@ export function rendreEau(s) {
     h += ligne('Eau froide du début', ouiNon('sys.douche.recupEau', d.recupEau, 'Récupérer dans le seau', 'Perdue', !s.possede.seau) + (' ' + tagGeste(s, 'recupEau')));
   }
   h += ligne('Fréquence', choixSet('sys.douche.frequence', [['quotidienne', 'Chaque jour'], ['unJourSurDeux', 'Un jour sur deux']], d.frequence));
-  h += aide(`Pommeau : ${s.possede.pommeau ? DOUCHE.debitEco : DOUCHE.debitVieux} l/min. La douche au seau économise beaucoup… mais l'hygiène et le bien-être en pâtissent. Une douche trop courte ou trop rare fait baisser l'hygiène.`);
+  h += aide(`Pommeau : ${s.possede.pommeau ? DOUCHE.debitEco : DOUCHE.debitVieux} l/min. La douche au seau économise beaucoup… mais l'hygiène et le bien-être en pâtissent. Hygiène visée avec du linge propre : 7 min ou plus ≈ 100, 5 min ≈ 89, 3 min ≈ 76, seau ≈ 78, un jour sur deux ≈ 70 (toilette au lavabo entre deux). Au-delà de 7 min, l'eau chaude coûte sans rien ajouter.`);
   h += rendreEauAutonomie(s);
   return h;
 }

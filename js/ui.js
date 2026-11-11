@@ -11,7 +11,7 @@ import { FINANCE, STOCKAGE, ROI_ITEMS } from './data.js';
 import { COMBOS, SC, SCENARIOS, TARIFS, horsScenario } from './data.js';
 import { dateDuJour, anneeDuJour } from './meteo.js';
 import { ROUTINES, routineDispo } from './simulation.js';
-import { palierMoral, palierBE } from './paliers.js';
+import { palierMoral, palierBE, palierHyg } from './paliers.js';
 import { rendreNavigation, rendreGuide } from './guide.js';
 import { isolationVetements, encombrement, scoreFinal, eur, tempsLibre, tempsBudget, tempsGestes, fmtH, humiditeRelative, coutLessive, remplissage, linge, tempsLessive, coutParUsage, capitalInvesti, choixDilemme, titreDilemme, moyennes, seuilRechutes, evenementsAVenir, prixGaz, LAVAGE_MAIN } from './simulation.js';
 const eur0 = (v) => `${Math.round(v).toLocaleString('fr-FR')} €`;
@@ -56,8 +56,10 @@ export function rendreJauges(s) {
   const PM = palierMoral(s.volonte), PB = palierBE(s.bienetre);
   TIPS[3] += ` Palier ${PM.ico} ${PM.nom} : ${PM.effet} Pour remonter : ${PM.conseil}`;
   TIPS[5] += ` Palier ${PB.ico} ${PB.nom} : ${PB.effet} Pour remonter : ${PB.conseil}`;
-  const PAL = { 3: PM, 5: PB };
-  const nivPal = (p) => ['epanoui', 'neutre', 'forme', 'correct'].includes(p.id) ? 'ok' : ['fragile', 'fatigue'].includes(p.id) ? 'warn' : 'mal';
+  const PH = palierHyg(s.hygiene);
+  TIPS[4] += ` Palier ${PH.ico} ${PH.nom} : ${PH.effet} ${PH.conseil}`;
+  const PAL = { 3: PM, 4: PH, 5: PB };
+  const nivPal = (p) => ['epanoui', 'neutre', 'forme', 'correct', 'propre', 'impeccable'].includes(p.id) ? 'ok' : ['fragile', 'fatigue', 'limite'].includes(p.id) ? 'warn' : 'mal';
   const prec = etatJauges.prec, mem = {};
   const html = j.map(([l, v, max, txt], i) => {
     const pct = Math.max(0, Math.min(100, v / max * 100));

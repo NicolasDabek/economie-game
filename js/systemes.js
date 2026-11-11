@@ -1,6 +1,7 @@
 // Systèmes du quotidien : eau chaude, cuisine, électricité, jardin, budget.
 // Chaque journée remplit un contexte : électricité heure par heure (W), chaleur dégagée dans les pièces,
 // coûts par domaine et effets sur santé, hygiène, bien-être et moral.
+import { HYGIENE as HYG } from './paliers.js';
 import { ELEC, BALLON, DOUCHE, VAISSELLE, REGIMES, CUISINE, ABONNEMENTS, REABONNEMENT, PLAISIRS, MEDIATHEQUE, GRENIER, PRIX, TARIFS, CHANGEMENT_TARIF } from './data.js';
 import { makeRng } from './rng.js';
 import { alimentationAutonome, arrosageJour } from './autonomie.js';
@@ -228,8 +229,12 @@ export function systemesJour(s, ctx) {
   ctx.litres = litresEau;
 
   // hygiène corporelle et de la cuisine
-  let dh = -2.5 * (jm.canicule ? 1.5 : 1);
-  if (doucheAuj) dh += y.douche.seau ? 3.2 : Math.min(5, 1.2 + y.douche.minutes * 0.6);
+  // v2.0 : jauge à l'équilibre. On se salit d'autant plus vite qu'on est propre (−4,5/j à 100, −2,25/j à 50) ;
+  // la douche ramène vers un niveau qui dépend de sa durée : 10 min ≈ 100, 7 min ≈ 100, 5 min ≈ 89, 3 min ≈ 76, seau ≈ 78.
+  // Un jour sur deux : toilette au lavabo les jours sans douche (≈ 70 avec 5 min). Avant : +2 net par jour, la jauge restait collée à 99.
+  let dh = -HYG.perte * s.hygiene * (jm.canicule ? HYG.canicule : 1);
+  if (doucheAuj) dh += y.douche.seau ? HYG.seau : Math.min(HYG.doucheMax, HYG.doucheBase + y.douche.minutes * HYG.doucheMin);
+  else dh += HYG.lavabo;
   if (y.douche.seau) ctx.d.bienetre -= 1.2;
   if (y.douche.minutes >= 8 && !y.douche.seau) ctx.d.bienetre += 0.3;
   dh += y.vaisselle === 'bassine' ? 0.4 : 0.5;

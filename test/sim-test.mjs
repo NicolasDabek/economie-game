@@ -456,6 +456,10 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
   // v1.10 (passe GD 10) : moral inversé corrigé — malin devant l'inaction et le confort maximal
   ch(mo('malin') >= mo('ne rien toucher') + 3, `moral malin ${mo('malin').toFixed(0)} ≥ ne rien toucher ${mo('ne rien toucher').toFixed(0)} + 3`);
   ch(mo('malin') >= mo('tout à fond') + 1, `moral malin ${mo('malin').toFixed(0)} ≥ tout à fond ${mo('tout à fond').toFixed(0)} + 1`);
+  // v2.0 : l'hygiène n'est plus une jauge plate à 99 : le maître (douche 6 min, vélo) paie sa sobriété sans tomber sous 65, l'excès d'eau chaude dépasse 95
+  const hy = (n) => R(n)[i].moy.hygiene;
+  ch(hy('tout à fond') >= 95 && hy('maître') >= 65 && hy('maître') <= hy('tout à fond') - 10, `hygiène étagée : tout à fond ${hy('tout à fond').toFixed(0)}, maître ${hy('maître').toFixed(0)}`);
+  ch(hy('austère extrême') < 50, `hygiène austère extrême ${hy('austère extrême').toFixed(0)} < 50`);
   ch(mo('débutant guidé') <= mo('malin') + 5, `moral débutant ${mo('débutant guidé').toFixed(0)} ≤ malin ${mo('malin').toFixed(0)} + 5`);
   // v1.6 : hystérésis de ±2 points : le même maître a le même titre sur les 3 graines
   TITRES_M.push(R('maître')[i].titre);

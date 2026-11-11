@@ -17,9 +17,20 @@ export const PALIERS_BE = [
   { id: 'correct', min: 50, nom: 'Correct', ico: '🙂', effet: 'Aucun effet particulier.', conseil: 'Au-dessus de 70 : sommeil réparateur, santé et moral en hausse.' },
   { id: 'forme', min: 70, nom: 'En forme', ico: '😄', effet: 'Sommeil réparateur : santé +0,15/j, moral +2, temps libre plus ressourçant.', conseil: 'Continue : temps libre, lumière, petits plaisirs.' },
 ];
+// v2.0 : paliers d'hygiène. Effets cumulés avec ceux déjà en place (santé −0,8/j sous 35, sorties réduites sous 40, dentiste sous 50).
+export const PALIERS_HYGIENE = [
+  { id: 'sale', min: 0, nom: 'Sale', ico: '🤢', effet: 'Gêne sociale (bien-être −1,5/j), santé −0,8/j, dentiste, augmentation compromise.', conseil: 'Lessive tout de suite et douches chaque jour : c\'est urgent.' },
+  { id: 'negligee', min: 30, nom: 'Négligée', ico: '😬', effet: 'Bien-être −0,8/j, moins de sorties, caries (dentiste) ; sous 35 la santé baisse.', conseil: 'Lance une lessive et reprends des douches d\'au moins 5 min.' },
+  { id: 'limite', min: 50, nom: 'Limite', ico: '🫤', effet: 'On se sent moins net : bien-être −0,4/j.', conseil: 'Douche de 5 min chaque jour, ou toilette au lavabo entre deux douches.' },
+  { id: 'propre', min: 70, nom: 'Propre', ico: '🧼', effet: 'Aucun effet particulier.', conseil: 'Au-dessus de 90 : on se sent bien dans sa peau (bien-être +0,3/j).' },
+  { id: 'impeccable', min: 90, nom: 'Impeccable', ico: '✨', effet: 'Bien dans sa peau : bien-être +0,3/j.', conseil: 'Garde des douches de 7 min : au-delà, l\'eau chaude coûte sans rien ajouter.' },
+];
+// Dynamique de la jauge (v2.0) : perte proportionnelle au niveau, gains par la douche, le lavabo et la vaisselle (systemes.js).
+export const HYGIENE = { perte: 0.045, canicule: 1.25, seau: 3.0, doucheBase: 2.0, doucheMin: 0.3, doucheMax: 4.6, lavabo: 1.5 };
 const trouver = (P, v) => [...P].reverse().find(p => v >= p.min) || P[0];
 export const palierMoral = (v) => trouver(PALIERS_MORAL, v);
 export const palierBE = (v) => trouver(PALIERS_BE, v);
+export const palierHyg = (v) => trouver(PALIERS_HYGIENE, v);
 export const EFFETS_PALIERS = {
   coutVolonte: { epanoui: 0.8, neutre: 1, fragile: 1.15, deprime: 1, crise: 1 },
   tentation: { proba: 0.06, probaBas: 0.28, min: 10, max: 35 },   // moral fragile : petits achats d'impulsion ; v1.12 : 6 %/j à 40 de moral, jusqu'à 28 %/j à 25 (négliger son moral dans la durée coûte)
@@ -33,4 +44,5 @@ export const EFFETS_PALIERS = {
   seuilMaladieEpuise: 50,
   burnout: { joursArret: 14, soins: 40, remonte: 40, delai: 120 },
   seuilBEAugm: 35,
+  beHygiene: { impeccable: 0.3, propre: 0, limite: -0.4, negligee: -0.8, sale: 0 },   // v2.0 (sale : −1,5 déjà appliqué)
 };

@@ -2,7 +2,7 @@
 
 Jeu de gestion dans le navigateur où l'on **gagne en dépensant moins**. Depuis la v0.6, la partie est une **campagne de 3, 5 ou 10 ans** (5 par défaut). Chaque année a ses quatre saisons. On la vit dans une petite maison mal isolée de 3 pièces. Le but est de dépenser bien moins que le voisin qui vit sans réfléchir, sans sacrifier son confort, sa santé, son moral, son hygiène ni son bien-être.
 
-**Version 1.0.0** · [Jouer en ligne](https://nicolasdabek.github.io/economie-game/) · [Journal des versions](CHANGELOG.md)
+**Version 2.0.0** · [Jouer en ligne](https://nicolasdabek.github.io/economie-game/) · [Journal des versions](CHANGELOG.md)
 
 ![Tableau de bord](docs/img/tableau.png)
 

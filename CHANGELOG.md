@@ -2,6 +2,27 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## v2.0.0 — 11 novembre 2026 (version 2)
+
+La v2 clôt la série de passes de game design et d'interface commencée en v1.0 : toutes les jauges ont maintenant un vrai poids dans les décisions, et l'ordre des profils (maître > autosuffisant > malin > débutant guidé > moral négligé) tient sur les trois graines de test.
+
+### Hygiène : une jauge qui compte enfin
+- Avant, une douche rapportait plus que ce qu'on perdait dans la journée : la jauge restait collée à 99 pour presque tous les joueurs, et raccourcir sa douche ne coûtait rien.
+- Désormais, la jauge cherche un équilibre : on se salit d'autant plus vite qu'on est propre (−4,5/jour à 100). Le niveau atteint dépend de la durée et de la fréquence des douches : 7 min ou plus ≈ 100, 5 min ≈ 89, 3 min ≈ 76, seau ≈ 78, un jour sur deux ≈ 70 (toilette au lavabo les autres jours), avec du linge propre.
+- Linge sale porté : −2/jour (au lieu de −3,5, trop fort avec le nouvel équilibre). Une lessive par semaine donne environ 86, une tous les 4 jours environ 96.
+- Cinq paliers visibles, comme pour le moral et le bien-être : ✨ Impeccable (90+, bien-être +0,3/j), 🧼 Propre (70+), 🫤 Limite (50+, bien-être −0,4/j), 😬 Négligée (30+, bien-être −0,8/j en plus des effets existants) et 🤢 Sale.
+- Le palier apparaît sous la jauge, dans le tableau de bord et dans les alertes ; l'écran Douche indique le niveau d'hygiène visé pour chaque durée.
+- Test ajouté : l'hygiène doit rester étagée (tout à fond ≥ 95, maître entre 65 et tout à fond − 10, austère extrême < 50).
+
+Moyennes sur 5 ans (graine 2026) : hygiène tout à fond 99, ne rien toucher 86, malin 84, maître 75, austère extrême 44.
+
+| Profil | Économies 5 ans (graines 2026 / 7 / 1789) |
+|---|---|
+| Maître | 64,2 / 69,0 / 71,1 % |
+| Malin | 33,4 / 36,4 / 39,5 % |
+| Débutant guidé | 33,2 / 36,0 / 38,9 % |
+| Moral négligé | 26,5 / 31,5 / 35,7 % |
+
 ## v1.12.0 — 9 novembre 2026 (correctifs game design)
 - Moral « fragile » (25 à 39) : les petits achats d'impulsion deviennent plus fréquents quand le moral reste bas, de 6 %/jour à 40 de moral jusqu'à 28 %/jour à 25 (10 à 35 € chacun). Négliger son moral pendant des années coûte désormais clairement plus cher que suivre les conseils.
 - Texte du palier « Fragile » mis à jour.

@@ -8,7 +8,7 @@ import { faireReleves, resilier, reabonner, prendreMediatheque } from './systeme
 import { deposer } from './finance.js';
 import { valeurs } from './finance.js';
 import { tableauROI, estimationAchat } from './roi.js';
-import { palierMoral, palierBE } from './paliers.js';
+import { palierMoral, palierBE, palierHyg } from './paliers.js';
 import { arbitrer, PROTEGE } from './arbitre.js';
 import { carteAutosuffisance, alertesAutonomie } from './onglets-autonomie.js';
 import { leviersWatts, LEVIERS_WATTS, suggestionWatts } from './annee.js';
@@ -308,7 +308,7 @@ export function alertes(s) {
   if (s.volonte < 40) A.push(['mal', `${pm.ico} Moral ${pm.nom.toLowerCase()} : ${pm.effet}`, 'budget']);
   if (s.bienetre < 50) A.push(['mal', `${pb.ico} Bien-être ${pb.nom.toLowerCase()} : ${pb.effet}`, 'budget']);
   if (s.sante < 45) A.push(['mal', `❤️ Santé à ${Math.round(s.sante)} % : sous 40, maladie et jours de carence.`, 'maison']);
-  if (s.hygiene < 45) A.push(['warn', `🧼 Hygiène à ${Math.round(s.hygiene)} % : lance une lessive.`, 'linge']);
+  if (s.hygiene < 50) { const ph = palierHyg(s.hygiene); A.push([s.hygiene < 30 ? 'mal' : 'warn', `${ph.ico} Hygiène ${ph.nom.toLowerCase()} (${Math.round(s.hygiene)} %) : ${ph.effet} ${ph.conseil}`, 'linge']); }
   if (s.argent < 0) A.push(['mal', `💶 Découvert : ${eur(s.argent)}. Les agios courent.`, 'banque']);
   const pv = prevision(s.meteo, s.jour, s.seed);
   if (pv[0]?.tempo === 'rouge' && s.sys.tarif === 'tempo') A.push(['warn', '🔴 Jour Tempo rouge demain : électricité très chère de 6 h à 22 h, décale lessive et ballon.', 'elec']);
@@ -325,7 +325,7 @@ export function alertes(s) {
 const CAUSES = {
   confort: (s) => s.confort < 60 ? 'froid ou courants d\'air : vérifie le chauffage et les couches' : 'température agréable',
   sante: (s) => s.sante < 60 ? 'froid, humidité ou alimentation : surveille-la' : 'bonne forme',
-  hygiene: (s) => s.hygiene < 60 ? 'linge sale ou douches trop courtes' : 'linge propre',
+  hygiene: (s) => s.hygiene < 70 ? 'linge sale, douches trop courtes ou trop espacées' : 'linge propre',
 };
 export function rendreTableau(s, etat = {}) {
   const r = scoreFinal(s), v = s.fin ? valeurs(s) : { livrets: 0, total: 0 };
@@ -357,10 +357,10 @@ export function rendreTableau(s, etat = {}) {
   const ej = etat.prec || {};
   const J = [['😊', 'Confort', 'confort', s.confort, null, CAUSES.confort(s)], ['❤️', 'Santé', 'sante', s.sante, null, CAUSES.sante(s)],
     ['💪', 'Moral', 'volonte', s.volonte, palierMoral(s.volonte), (s.mor?.raisons || []).slice(0, 2).map(([k, x]) => `${{ plaisirs: 'plaisirs', social: 'vie sociale', lumiere: 'jours courts', monotonie: 'repas monotones', vacances: 'vacances', stress: 'stress', controle: 'budget maîtrisé', sommeil: 'sommeil' }[k] || k} ${x > 0 ? '+' : ''}${Math.round(x)}`).join(', ') || 'stable'],
-    ['🧼', 'Hygiène', 'hygiene', s.hygiene, null, CAUSES.hygiene(s)], ['🌻', 'Bien-être', 'bienetre', s.bienetre, palierBE(s.bienetre), `${Math.round(Math.max(0, tempsLibre(s)) * 10) / 10} h libres aujourd'hui · plaisirs ${s.sys.plaisirs} €/sem.`],
+    ['🧼', 'Hygiène', 'hygiene', s.hygiene, palierHyg(s.hygiene), CAUSES.hygiene(s)], ['🌻', 'Bien-être', 'bienetre', s.bienetre, palierBE(s.bienetre), `${Math.round(Math.max(0, tempsLibre(s)) * 10) / 10} h libres aujourd'hui · plaisirs ${s.sys.plaisirs} €/sem.`],
     ['⏳', 'Temps libre', 'libre', Math.max(0, tempsLibre(s)) / 6 * 100, null, 'pour les gestes et les chantiers']];
   const jauges = `<div class="tb-carte"><h3>Tes jauges</h3><div class="tb-jauges">${J.map(([ic, nom, k, val, pal, cause]) => {
-    const niv = pal ? (['epanoui', 'neutre', 'forme', 'correct'].includes(pal.id) ? 'ok' : ['fragile', 'fatigue'].includes(pal.id) ? 'warn' : 'mal') : val >= 60 ? 'ok' : val >= 40 ? 'warn' : 'mal';
+    const niv = pal ? (['epanoui', 'neutre', 'forme', 'correct', 'propre', 'impeccable'].includes(pal.id) ? 'ok' : ['fragile', 'fatigue', 'limite'].includes(pal.id) ? 'warn' : 'mal') : val >= 60 ? 'ok' : val >= 40 ? 'warn' : 'mal';
     const avant = ej[`${ic} ${nom}`]; const tend = avant === undefined || k === 'libre' ? '' : val > avant + 0.5 ? '▲' : val < avant - 0.5 ? '▼' : '▬';
     return `<div class="tb-jauge niv-${niv}"><div class="l"><span>${ic} ${nom}</span><b>${k === 'libre' ? `${Math.round(Math.max(0, tempsLibre(s)) * 10) / 10} h` : pct(val)} <span aria-label="tendance">${tend}</span></b></div><div class="progres"><div style="width:${Math.max(0, Math.min(100, val))}%"></div></div>${pal ? `<small class="pal">${pal.ico} ${pal.nom} · ${pal.effet}</small>` : ''}<small>${cause}</small></div>`;
   }).join('')}</div></div>`;

@@ -3,10 +3,11 @@ import { VETEMENTS } from '../data.js';
 import { chapitreDuJour } from '../meteo.js';
 import { suivreROI } from '../roi.js';
 import { nouvelEtatMoral, moralJour, santeJour, paliersJour } from '../moral.js';
-import { palierBE, EFFETS_PALIERS as EP } from '../paliers.js';
+import { palierBE, palierHyg, EFFETS_PALIERS as EP } from '../paliers.js';
 import { coutBaseVariable, coutVariable, debloquer, msg, payer, tempsLibre, vetementsPortes, eur } from '../simulation.js';
 
 // v1.7 : la surconsommation ne compte que la consommation : ni équipements (investissement), ni pannes, ni santé, ni salaire perdu, ni dégâts
+const HYG_SALE = 2;
 const HORS_CONSO = ['equipement', 'remplacements', 'sante', 'logement', 'revenus', 'imprevus'];
 export function jaugesDuJour(s, v) {
   const { ctx, hiver, ete, faits, invites, deprime, coutVolonte, sommeC, nC, froid, chaud, humMax, sommeil, nS } = v;
@@ -45,7 +46,7 @@ export function jaugesDuJour(s, v) {
   s.confort = s.confort * 0.6 + confortJour * 0.4;
   // hygiène : corps (douche), vêtements, cuisine, moisissures
   let dHyg = ctx.d.hygiene;
-  if (sale) dHyg -= 3.5;
+  if (sale) dHyg -= HYG_SALE;   // v2.0 : −2/j (la jauge est désormais à l'équilibre ; −3,5 la faisait plonger)
   if (s.moisissure >= 3) dHyg -= 1.5;
   s.hygiene = Math.max(0, Math.min(100, s.hygiene + dHyg));
   // bien-être : plaisirs, repos, alimentation, social, lumière, sommeil
@@ -56,6 +57,7 @@ export function jaugesDuJour(s, v) {
   if (sommeilScore < 60) dBE -= 1.5; else if (sommeilScore > 85) dBE += 0.5;
   if (s.rideaux === 'fermes') dBE -= 1;                 // vivre dans le noir
   if (s.hygiene < 30) dBE -= 1.5;                       // gêne sociale
+  dBE += EP.beHygiene[palierHyg(s.hygiene).id] || 0;     // v2.0 : paliers d'hygiène
   if (invites) dBE += s.invites.mode === 'pull' ? -1 : 2;
   if (faits.ventNuit && !s.possede.moustiquaire) dBE -= 1; // moustiques
   s.bienetre = Math.max(0, Math.min(100, s.bienetre + dBE - 0.08 * (s.bienetre - 55)));
