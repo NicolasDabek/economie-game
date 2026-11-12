@@ -255,7 +255,7 @@ export function choixCampagne(s, id, outils) {
     case 'rentree': return [
       { id: 'neuf', texte: 'Fournitures, chaussures et inscription au sport à neuf (180 €)', effet: '+6 bien-être.' },
       { id: 'occasion', texte: 'Occasion, vide-greniers et club associatif (70 €, 2 h)', effet: '+5 bien-être, il faut 2 h de temps libre.', possible: outils.tempsLibre(s) >= 2 },
-      { id: 'rien', texte: 'Faire l\'impasse cette année', effet: '−5 bien-être, −3 moral.' },
+      { id: 'rien', texte: 'Faire l\'impasse cette année', effet: '−5 bien-être, −3 moral. Refus social : au 2e en un an, 8 semaines d\'isolement.' },
     ];
     case 'impots': return [{ id: 'ok', texte: 'Compris', effet: 'Le prélèvement à la source est déjà déduit de ton salaire.' }];
     case 'canicule': return [{ id: 'ok', texte: 'Compris', effet: 'Volets, nuits ouvertes, ventilateur, cuisson dehors… ou clim.' }];
@@ -279,6 +279,7 @@ export function titreCampagne(s, id) {
     default: return { titre: id, texte: '' };
   }
 }
+// v2.1 (passe GD 12) : le temps des options (comparer, negocier, occasion) est vérifié et débité par resoudreDilemme (COUT_TEMPS_DILEMME).
 export function resoudreCampagne(s, id, choix, outils) {
   const e = s.eco;
   if (id.startsWith('appareil-')) {
@@ -292,11 +293,11 @@ export function resoudreCampagne(s, id, choix, outils) {
     outils.debloquer('precaution');
     return;
   }
-  if (id === 'assurance' && choix === 'comparer') { e.remise = Math.max(0.75, e.remise * 0.93); s.tempsUtilise += 1; outils.debloquer('renegocier'); }
-  if (id === 'renego' && choix === 'negocier') { e.remise = Math.max(0.75, e.remise * 0.95); s.tempsUtilise += 0.5; outils.debloquer('renegocier'); }
+  if (id === 'assurance' && choix === 'comparer') { e.remise = Math.max(0.75, e.remise * 0.93); outils.debloquer('renegocier'); }
+  if (id === 'renego' && choix === 'negocier') { e.remise = Math.max(0.75, e.remise * 0.95); outils.debloquer('renegocier'); }
   if (id === 'rentree') {
     if (choix === 'neuf') { outils.payer(s, 180, 'plaisirs'); s.bienetre = Math.min(100, s.bienetre + 6); }
-    if (choix === 'occasion') { outils.payer(s, 70, 'plaisirs'); s.tempsUtilise += 2; s.bienetre = Math.min(100, s.bienetre + 5); outils.debloquer('occasion'); }
+    if (choix === 'occasion') { outils.payer(s, 70, 'plaisirs'); s.bienetre = Math.min(100, s.bienetre + 5); outils.debloquer('occasion'); }
     if (choix === 'rien') { s.bienetre = Math.max(0, s.bienetre - 5); s.volonte -= 3; }
   }
   if (id === 'vacances') { const v = VACANCES[choix]; if (choix !== 'rester' && s.autonomie) { s.autonomie.absentJusqua = s.jour + 14; if (s.possede?.poules) outils.msg('🐔 Pendant les vacances, le voisin nourrit les poules et garde les œufs.', 'info'); } if (v.cout) outils.payer(s, v.cout, 'plaisirs'); if (s.mor) s.mor.vacances = { jour: s.jour, effet: v.effet }; if (choix === 'rester') s.mor && (s.mor.adapt *= 0.8); outils.msg(`🏖️ ${v.nom}${v.cout ? ` (−${eur0(v.cout)})` : ''}.`, 'info'); return; }

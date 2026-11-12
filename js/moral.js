@@ -3,10 +3,24 @@
 // La santé a un coût : consultations, arrêts maladie, soins dentaires négligés, dégâts de moisissure.
 // Un moral bas se paie aussi : achats compulsifs, rechutes plus chères, augmentation individuelle perdue.
 // Sources des chiffres : voir docs/prix.md, section v0.7.
-import { MORAL, SANTE_COUTS } from './data.js';
+import { MORAL, SANTE_COUTS, ISOLEMENT } from './data.js';
 import { makeRng } from './rng.js';
 import { valeurs } from './finance.js';
 import { palierMoral, palierBE, EFFETS_PALIERS as EP } from './paliers.js';
+
+/** v2.1 : refus ou acceptation d'une occasion sociale (dilemmes barbecue, rentrée, invités). */
+export function choixSocial(s, cle, msg) {
+  const I = ISOLEMENT, m = s.mor || (s.mor = nouvelEtatMoral());
+  if (I.accepte.includes(cle)) { m.refusSociaux = []; m.isolement = null; return; }
+  if (!I.refus.includes(cle)) return;
+  const avant = (m.refusSociaux || []).filter(j => s.jour - j < I.fenetre);
+  m.refusSociaux = [...avant, s.jour];
+  if (avant.length >= 1) {
+    m.isolement = { jusqua: s.jour + I.duree, be: Math.min(I.beMax, I.beJour * avant.length) };
+    msg?.(`🫥 ${avant.length + 1}e refus social en un an : on t'invite moins. Isolement pendant 8 semaines (vie sociale divisée par deux, bien-être −${String(m.isolement.be).replace('.', ',')}/j). Accepter la prochaine occasion, même à petit prix, y met fin.`, 'alerte');
+  }
+}
+export const isolementActif = (s) => !!(s.mor?.isolement && s.jour < s.mor.isolement.jusqua);
 
 export function nouvelEtatMoral() {
   return { adapt: 0, plaisirs: null, regime: null, regimeJours: 0, social: 0.5, vacances: null, panne: -999, picRisque: 0,
@@ -27,7 +41,7 @@ export function moralJour(s, ctx) {
   m.adapt += (M.adaptMax - m.adapt) / M.adaptJours;
   d.plaisirs = p > 0 ? M.plaisir * NIVEAU_PLAISIR[p] * (1 - m.adapt) : -M.privation;
   // vie sociale : sorties, invitations, hygiène (la gêne isole)
-  const socJour = Math.min(1, NIVEAU_PLAISIR[p] * 0.8 + (s.transport?.teletravail >= 3 ? 0 : 0.2)) * (s.hygiene < 40 ? 0.4 : 1);
+  const socJour = Math.min(1, NIVEAU_PLAISIR[p] * 0.8 + (s.transport?.teletravail >= 3 ? 0 : 0.2)) * (s.hygiene < 40 ? 0.4 : 1) * (isolementActif(s) ? ISOLEMENT.social : 1);
   m.social += (socJour - m.social) / 30;
   d.social = M.social * (m.social - 0.5);
   // lumière : blues de l'hiver (jours courts), atténué par les rideaux ouverts

@@ -2,6 +2,37 @@
 
 Toutes les versions ont été publiées sur la branche `master` et sur GitHub Pages.
 
+## v2.1.0 — 11 novembre 2026 (passe GD 12)
+
+### Dilemmes : le temps passe par une règle commune
+- Les quatre options qui prennent du temps (comparer l'assurance 1 h, renégocier 30 min, rentrée d'occasion 2 h, barbecue maison 1 h) sont débitées par le même mécanisme : grisées quand le temps libre manque ou un jour de chantier, refusées sans rien débiter, et le même verdict après sauvegarde et rechargement. Nouveau test `test/dilemmes-test.mjs`.
+- Le simulateur refuse désormais tout identifiant d'option inconnu ou impossible (9 identifiants corrigés dans les profils de test).
+
+### Comparer et renégocier, c'est du jeu habile
+- Le malin, l'autosuffisant et le maître comparent l'assurance et renégocient ; le malin pose aussi des mousseurs, une jaquette sur le ballon et passe en heures creuses. Les profils « moral négligé » et « bien-être négligé » laissent la paperasse de côté.
+
+### Refuser toutes les occasions sociales ne paie plus
+- Une fois, refuser (barbecue décliné, rentrée sans rien, « prenez un pull ») ne coûte que l'effet immédiat. Dès le 2e refus sur 12 mois, 8 semaines d'isolement : la vie sociale compte à moitié dans le moral, et le bien-être baisse de 0,35 par jour et par refus antérieur (au plus 1,05). Accepter la prochaine occasion, même à petit prix, y met fin. Les options l'annoncent. Ordres de grandeur : Fondation de France, « Les solitudes en France » ; Holt-Lunstad et al., 2015. Aucun prix modifié.
+
+### Antigaspi : plus de suivi, moins de pertes
+- Le maître lit les consignes de conserve avant sa première fournée (0 kg suspect ingéré) et ne fait plus ses fournées qu'en grosses séances le samedi : fermenter d'avance en semaine remplissait des pots qui remplaçaient les œufs frais, d'où plus de pertes qu'au suivi hebdomadaire.
+
+| Graine | Malin (frugal) | Malin refuse tout | Débutant guidé | Autosuffisant |
+|---|---|---|---|---|
+| 2026 | 34,9 % · moral 68,9 · bien-être 70,4 | 34,8 % · moral 63,8 · bien-être 66,5 | 33,2 % | 40,1 % |
+| 7 | 38,1 % · 69,5 · 70,5 | 38,4 % · 63,7 · 65,9 | 36,0 % | 43,3 % |
+| 1789 | 41,3 % · 69,4 · 70,3 | 41,5 % · 63,6 · 65,7 | 38,9 % | 46,2 % |
+
+Avant (v2.0.0) : malin 33,4 / 36,4 / 39,5 %, débutant 33,2 / 36,0 / 38,9 %, autosuffisant 38,6 / 41,7 / 44,7 %.
+
+| Graine | Pertes maître quotidien | Hebdo | Témoin |
+|---|---|---|---|
+| 2026 | 131 kg · 20,9 % · 274,81 € | 133 kg · 21,4 % · 288,78 € | 486 kg · 76,2 % · 2 062,42 € |
+| 7 | 134 kg · 21,3 % · 286,30 € | 135 kg · 21,4 % · 297,42 € | 492 kg · 77,2 % · 2 081,22 € |
+| 1789 | 136 kg · 21,7 % · 302,48 € | 137 kg · 21,9 % · 314,18 € | 483 kg · 76,0 % · 2 050,27 € |
+
+Avant : quotidien 22,0 / 22,6 / 23,1 %, hebdo 21,3 / 21,4 / 21,9 % (ordre inversé), et 0,01 à 0,04 kg suspect ingéré selon la graine (maître quotidien ou hebdo).
+
 ## v2.0.0 — 11 novembre 2026 (version 2)
 
 La v2 clôt la série de passes de game design et d'interface commencée en v1.0 : toutes les jauges ont maintenant un vrai poids dans les décisions, et l'ordre des profils (maître > autosuffisant > malin > débutant guidé > moral négligé) tient sur les trois graines de test.

@@ -2,7 +2,7 @@
 import { VETEMENTS } from '../data.js';
 import { chapitreDuJour } from '../meteo.js';
 import { suivreROI } from '../roi.js';
-import { nouvelEtatMoral, moralJour, santeJour, paliersJour } from '../moral.js';
+import { nouvelEtatMoral, moralJour, santeJour, paliersJour, isolementActif } from '../moral.js';
 import { palierBE, palierHyg, EFFETS_PALIERS as EP } from '../paliers.js';
 import { coutBaseVariable, coutVariable, debloquer, msg, payer, tempsLibre, vetementsPortes, eur } from '../simulation.js';
 
@@ -58,6 +58,7 @@ export function jaugesDuJour(s, v) {
   if (s.rideaux === 'fermes') dBE -= 1;                 // vivre dans le noir
   if (s.hygiene < 30) dBE -= 1.5;                       // gêne sociale
   dBE += EP.beHygiene[palierHyg(s.hygiene).id] || 0;     // v2.0 : paliers d'hygiène
+  if (isolementActif(s)) dBE -= s.mor.isolement.be;       // v2.1 : refus sociaux répétés
   if (invites) dBE += s.invites.mode === 'pull' ? -1 : 2;
   if (faits.ventNuit && !s.possede.moustiquaire) dBE -= 1; // moustiques
   s.bienetre = Math.max(0, Math.min(100, s.bienetre + dBE - 0.08 * (s.bienetre - 55)));

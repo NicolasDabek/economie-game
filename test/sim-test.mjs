@@ -19,9 +19,18 @@ import { prendreTemps, payer, tempsLibre, actions, jourSuivant, scoreFinal, ache
 function jouer(s, chaqueJour, dilemmes = {}) {
   while (!s.fini) {
     if (s.dilemme) {
-      const voulu = dilemmes[s.dilemme];
-      const opts = choixDilemme(s).filter(o => o.possible !== false);
-      resoudreDilemme(s, opts.find(o => o.id === voulu) ? voulu : dilemmes.premier ? opts[0].id : opts.at(-1).id);
+      // v2.1 (passe GD 12) : choix strict. Un identifiant inconnu est une erreur ; un choix impossible aussi,
+      // sauf repli explicite : un tableau ['preter', 'pull'] essaie les options dans l'ordre.
+      const cle = s.dilemme.startsWith('chap-') ? null : s.dilemme;
+      const tous = choixDilemme(s), opts = tous.filter(o => o.possible !== false);
+      let choix = null;
+      if (cle && cle in dilemmes) {
+        const liste = [].concat(dilemmes[cle]);
+        for (const v of liste) if (!tous.some(o => o.id === v)) throw new Error(`sim-test : choix « ${v} » inconnu pour le dilemme « ${cle} » (options : ${tous.map(o => o.id).join(', ')})`);
+        choix = liste.find(v => opts.some(o => o.id === v));
+        if (!choix) throw new Error(`sim-test : aucun choix possible parmi [${liste}] pour « ${cle} » au jour ${s.jour}`);
+      } else choix = dilemmes.premier ? opts[0].id : opts.at(-1).id;
+      if (resoudreDilemme(s, choix) === false) throw new Error(`sim-test : « ${choix} » refusé pour « ${cle} »`);
     }
     chaqueJour(s); if (HOOK) HOOK(s);
     jourSuivant(s);
@@ -34,7 +43,7 @@ function naive() {
   const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   s.central = { consigneJour: 22, consigneNuit: 21 };
   return jouer(s, (s) => { if (s.jour % 3 === 2) planifierLessive(s, { temp: 40, sechage: 'machine' }); },
-    { invites: 'chauffer', promo: 'acheter', panne: 'technicien' });
+    { invites: 'chauffer', promo: ['acheter', 'attendre'], panne: ['technicien', 'laverie'] });
 }
 function defaut() { // ne touche à rien : thermostat 20/18, fenêtre entrouverte, lessive 40 °C hebdo
   const s = nouvellePartie(GRAINE, ANNEES, SCEN);
@@ -46,7 +55,12 @@ function glacial() {
   return jouer(s, (s) => { if (s.jour % 4 === 3) planifierLessive(s, { temp: 30, sechage: 'air' }); }, { panne: 'laverie', vacances: 'rester' });
 }
 // Malin : équipements bon marché, consignes basses, quelques couches, sans optimiser à fond
-function maligne() {
+// v2.1 (passe GD 12) : le malin compare l'assurance, renégocie et prend les options sociales frugales ; moral négligé et
+// bien-être négligé gardent leur table à part (laisser, ignorer, refuser) ; « malin refuse tout » mesure l'impasse sociale.
+const DIL_MALIN = { assurance: ['comparer', 'laisser'], renego: ['negocier', 'ignorer'], barbecue: ['maison', 'decliner'], rentree: ['occasion', 'rien'] };
+const DIL_NEGLIGE = { assurance: 'laisser', renego: 'ignorer', barbecue: 'decliner', rentree: 'rien' };
+const DIL_REFUS = { assurance: ['comparer', 'laisser'], renego: ['negocier', 'ignorer'], barbecue: 'decliner', rentree: 'rien', invites: 'pull' };
+function maligne(dil = DIL_MALIN) {
   const s = nouvellePartie(GRAINE, ANNEES, SCEN);
   return jouer(s, (s) => {
     if (s.jour === 0) { acheter(s, 'thermometre'); acheter(s, 'purge'); acheterVetement(s, 'sweat'); acheterVetement(s, 'polaire'); acheterVetement(s, 'chaussettes'); s.aeration = 'breve'; }
@@ -55,7 +69,7 @@ function maligne() {
     if (s.jour === 10) s.rideaux = 'nuit';
     if (s.jour % 7 === 6) planifierLessive(s, { temp: 30, sechage: 'air' });
     if (s.jour < 5) s.central = { consigneJour: 19, consigneNuit: 15 };
-  }, { invites: 'preter', promo: 'attendre', panne: 'laverie', vacances: 'econome' });
+  }, { invites: ['preter', 'chauffer'], promo: 'attendre', panne: 'laverie', vacances: 'econome', ...dil });
 }
 // Maître : tout l'arsenal, introduit progressivement pour ménager la volonté
 export function maitre() {
@@ -76,7 +90,7 @@ export function maitre() {
     for (const id of ['souscouche', 'chaussettes']) if (s.vetements[id].salete >= 75) laverMain(s, id);
     if (s.machine.enPanne) reparerMachine(s, 'diy');
     if (linge(s).length && (remplissage(s) >= 0.75 || Object.values(s.vetements).some(v => v.possede && v.porte && v.salete >= 88))) planifierLessive(s, { temp: 30, sechage: 'air' });
-  }, { invites: 'preter', promo: 'attendre', panne: 'diy', vacances: 'econome' });
+  }, { invites: ['preter', 'chauffer'], promo: 'attendre', panne: 'diy', vacances: 'econome', ...DIL_MALIN });
 }
 // --- saisons (v0.6 : chaque année) : alléger les vêtements, stratégies d'été, retour du froid, vêtements usés rachetés
 // le jour j de la partie (qui commence le 1er décembre 2026) tombe-t-il le d du mois m (0-11) ?
@@ -104,7 +118,7 @@ ajoute('tout à fond', () => {
     saisons(s, false);
     if (deb(s, 'ete')) { acheter(s, 'clim'); s.climActive = true; s.climConsigne = 23; }
     if (s.jour % 3 === 2) planifierLessive(s, { temp: 40, sechage: 'machine' });
-  }, { invites: 'chauffer', promo: 'acheter', panne: 'technicien', livraison: 'accepter', robot: 'acheter', promoPerissable: 'acheter', canicule: 'clim', barbecue: 'aller' });
+  }, { invites: 'chauffer', promo: ['acheter', 'attendre'], panne: ['technicien', 'laverie'], livraison: 'commander', robot: 'acheter', promoPerissable: 'acheter', barbecue: 'achat' });
 });
 ajoute('glacial', () => {
   const s = glacial(); return s;
@@ -122,7 +136,7 @@ ajoute('austère extrême', () => {
     if (s.jour === 1) { faireReleves(s, c); for (const id of ['cloud', 'assurance', 'appli']) resilier(s, id, c); renegocier(s, c); }
     saisons(s, true);
     if (s.jour % 14 === 13) planifierLessive(s, { temp: 30, sechage: 'air' });
-  }, { invites: 'refuser', promo: 'attendre', panne: 'laverie', livraison: 'refuser', robot: 'refuser', promoPerissable: 'refuser', canicule: 'subir', barbecue: 'refuser', vacances: 'rester' });
+  }, { invites: 'pull', promo: 'attendre', panne: 'laverie', livraison: 'attendre', robot: 'attendre', promoPerissable: 'passer', barbecue: 'decliner', vacances: 'rester' });
 });
 ajoute('malin', () => {
   const s = maligne(); return s;
@@ -150,17 +164,21 @@ export function debutant() {
 }
 ajoute('débutant guidé', debutant);
 // v0.8.1 : économiser en laissant une jauge vers 30 doit coûter plus cher que le malin
-ajoute('moral négligé', () => maligne());
-ajoute('bien-être négligé', () => maligne());
+ajoute('moral négligé', () => maligne(DIL_NEGLIGE));
+ajoute('bien-être négligé', () => maligne(DIL_NEGLIGE));
 ajoute('autosuffisant', () => maligne());
+ajoute('malin refuse tout', () => maligne(DIL_REFUS));
 
 // enrichit malin et maître avec les nouveaux systèmes via un hook
 const HOOKS = {
-  malin(s) {
+  malin(s, admin = true) {
     const c = actions(s), j = s.jour;
-    if (j === 2) { acheter(s, 'pommeau'); s.sys.ballon.consigne = 55; s.sys.douche.minutes = 7; }
-    if (j === 3) { acheter(s, 'multiprise'); s.sys.regime = 'maison'; s.sys.plaisirs = 20; }
+    if (j === 2) { acheter(s, 'pommeau'); acheter(s, 'mousseurs');   // v2.1 : le malin pose aussi les mousseurs (8 € les deux, docs/prix.md)
+    s.sys.ballon.consigne = 55; s.sys.douche.minutes = 7; }
+    if (j === 3) { acheter(s, 'multiprise'); acheter(s, 'jaquette'); s.sys.regime = 'maison'; s.sys.plaisirs = 20; }
     if (j === 6) { faireReleves(s, c); }
+    // v2.1 (GD 12) : le malin passe aussi en heures creuses ; les profils négligés laissent la paperasse (comme l'assurance)
+    if (j === 8 && admin) { changerTarif(s, 'hphc', c); s.sys.ballon.mode = 'hc'; }
     if (j === 7) { resilier(s, 'cloud', c); resilier(s, 'appli', c); }
     if (j === 20) acheter(s, 'led');
     if (j === 9) { calculerCoutReel(s, c); }
@@ -212,9 +230,11 @@ const HOOKS = {
     if (j === 22) acheter(s, 'cet');
     if (j === 140) acheter(s, 'guideCueillette');
     if (j >= 200 && !s.possede.potagerGrand && s.argent > 300) acheter(s, 'potagerGrand');
-    if (j > 60 && j % 3 === 0) { actionAutonomie(s, 'pailler', null, oA); if (SUIVI === 'quotidien') { if (kgBocaux(s) >= 4 && s.possede.sterilisateur) actionAutonomie(s, 'bocaux', null, oA); if (kgLacto(s) >= 2) actionAutonomie(s, 'lacto', null, oA); } }
+    if (j > 60 && j % 3 === 0) actionAutonomie(s, 'pailler', null, oA);   // v2.1 (GD 12) : plus de fournées « par avance » (elles périmaient en pot)
     // v1.10 (passe GD 10) : stérilisateur dès juin ; bocaux/lacto chaque jour dès qu'il y a 1 kg (rappel « récolte à conserver »)
     if (j >= 120 && !s.possede.sterilisateur) acheter(s, 'sterilisateur', true);
+    // v2.1 (passe GD 12) : le maître lit les consignes ANSES (15 min) avant sa première fournée ; le témoin ne fait pas de conserves
+    if (j >= 120 && SUIVI !== 'aucun' && !s.principes.includes('douteJeter')) actionAutonomie(s, 'consignesConserve', null, oA);
     // v1.11 (passe GD 11) : le maître consulte le rappel chaque jour, le maître hebdo une fois par semaine, le témoin jamais.
     // Consulter = menu antigaspi s'il y a des kg urgents, puis bocaux et lacto selon ce que permettent le temps et le matériel.
     // Le maître hebdo consulte le samedi (j % 7 === 5) et y consacre son après-midi : plusieurs fournées tant que le temps libre le permet.
@@ -224,10 +244,11 @@ const HOOKS = {
       // menu antigaspi renouvelé dès qu'il expire tant que le garde-manger contient du frais (ou s'il y a des kg urgents)
       if (planAntigaspi(s, tempsLibre(s)).urgentKg > 0.2 || etatAutonomie(s).stock.some(l => l.kg > 1 && l.cat !== 'bocaux' && l.cat !== 'lacto')) actionAutonomie(s, 'menuAntigaspi', null, oA);
       for (let k = 0; k < (j % 7 === 5 ? 3 : 1); k++) {   // le samedi, plusieurs fournées si le temps le permet
-        // bocaux : grosses fournées le samedi ; en semaine, seulement si une fournée utile (≥ 4 kg) périme sous 5 j
         const samedi = j % 7 === 5, P = planAntigaspi(s, tempsLibre(s));
-        const b = s.possede.sterilisateur && kgBocaux(s) >= 1 && (samedi || P.urgentBocal >= 4) && actionAutonomie(s, 'bocaux', null, oA);
-        const l = kgLacto(s) >= 1 && actionAutonomie(s, 'lacto', null, oA);
+        const b = s.possede.sterilisateur && kgBocaux(s) >= 1 && samedi && actionAutonomie(s, 'bocaux', null, oA);   // v2.1 (GD 12) : bocaux le samedi seulement (un bocal garde 1 an : rien ne presse en semaine)
+        // v2.1 (passe GD 12) : conserves le samedi seulement. En semaine, fermenter ce qui périme remplissait des pots que l'on mangeait
+        // à la place des œufs frais (pertes d'œufs et de pots en hausse) : le suivi quotidien sert au menu antigaspi, pas aux fournées.
+        const l = kgLacto(s) >= 1 && samedi && actionAutonomie(s, 'lacto', null, oA);
         if (!b && !l) break;
       }
       // contrôle : les actions antigaspi ne rendent jamais le temps libre ni un lot négatifs
@@ -287,17 +308,18 @@ HOOKS.autosuffisant = (s) => {
 };
 // moral négligé : le malin, mais plaisirs au minimum (10 €/sem.), plus de streaming ni de musique, tout en télétravail (isolé)
 HOOKS['moral négligé'] = (s) => {
-  HOOKS.malin(s); const c = actions(s);
+  HOOKS.malin(s, false); const c = actions(s);
   s.sys.plaisirs = 10; s.transport.teletravail = 5; if (s.jour > 3) s.sys.regime = 'batch';
   if (s.jour === 5) { resilier(s, 'streaming', c); resilier(s, 'musique', c); }
 };
 // bien-être négligé : le malin, mais zéro plaisir et chambre à 14 °C la nuit (sommeil et loisirs sacrifiés)
 HOOKS['bien-être négligé'] = (s) => {
-  HOOKS.malin(s);
+  HOOKS.malin(s, false);
   s.central.consigneNuit = Math.min(s.central.consigneNuit, 14); s.sys.plaisirs = 0;
 };
 HOOKS['maître hebdo'] = (s) => { SUIVI = 'hebdo'; try { HOOKS['maître'](s); } finally { SUIVI = 'quotidien'; } };
 HOOKS['maître témoin'] = (s) => { SUIVI = 'aucun'; try { HOOKS['maître'](s); } finally { SUIVI = 'quotidien'; } };
+HOOKS['malin refuse tout'] = (s) => HOOKS.malin(s);
 const _jouer = jouer;
 
 function lancer(graine) {
@@ -401,6 +423,18 @@ for (let i = 0; i < (SEUL && SEUL !== 'profils' ? 0 : graines.length); i++) {
     console.log(`   GASPI-SUIVI graine ${graines[i]} : hebdo ${(ratio * 100).toFixed(1)} % · témoin ${(rt * 100).toFixed(1)} % · quotidien ${(100 * R('maître')[i].gaspilleKg / Math.max(1, R('maître')[i].produitKg)).toFixed(1)} %`);
     ch(h.produitKg < 1 || ratio <= 0.30, `gaspillage maître hebdo ${(ratio * 100).toFixed(1)} % ≤ 30 % (témoin sans suivi ${(rt * 100).toFixed(1)} %, maître quotidien ${(100 * R('maître')[i].gaspilleKg / Math.max(1, R('maître')[i].produitKg)).toFixed(1)} %)`);
     for (const qui of ['maître', 'maître hebdo', 'maître témoin']) ch(!R(qui)[i].negatif, `${qui} : les actions antigaspi ne rendent jamais le temps libre ni un stock négatifs`); }
+  // v2.1 (passe GD 12, point 5) : plus de suivi = moins de pertes (tolérance 0,5 pt) ; consignes lues = 0 kg suspect ingéré
+  { const tx = (q) => 100 * R(q)[i].gaspilleKg / Math.max(1, R(q)[i].produitKg), q = tx('maître'), h = tx('maître hebdo'), t = tx('maître témoin');
+    ch(q <= h + 0.5 && h <= t + 0.5, `pertes antigaspi ordonnées : quotidien ${q.toFixed(1)} % ≤ hebdo ${h.toFixed(1)} % ≤ témoin ${t.toFixed(1)} % (± 0,5 pt)`);
+    for (const qui of ['maître', 'maître hebdo']) ch(R(qui)[i].suspectIngereKg === 0, `${qui} : consignes lues, 0 kg suspect ingéré (obtenu ${R(qui)[i].suspectIngereKg.toFixed(2)} kg)`); }
+  // v2.1 (passe GD 12, point 3) : comparer l'assurance et renégocier, c'est du jeu habile
+  ch(R('malin')[i].pct >= R('débutant guidé')[i].pct + 1.5, `malin ${R('malin')[i].pct.toFixed(1)} % ≥ débutant guidé ${R('débutant guidé')[i].pct.toFixed(1)} % + 1,5`);
+  // v2.1 (passe GD 12, point 4) : refuser toutes les occasions sociales ne domine plus l'option frugale
+  { const f = R('malin')[i], rf = R('malin refuse tout')[i];
+    console.log(`   SOCIAL graine ${graines[i]} : frugal ${f.pct.toFixed(2)} % moral ${f.moy.moral.toFixed(1)} bien-être ${f.moy.bienetre.toFixed(1)} · refuse tout ${rf.pct.toFixed(2)} % moral ${rf.moy.moral.toFixed(1)} bien-être ${rf.moy.bienetre.toFixed(1)} · débutant ${R('débutant guidé')[i].pct.toFixed(2)} % · autosuffisant ${R('autosuffisant')[i].pct.toFixed(2)} %`);
+    ch(f.moy.bienetre - rf.moy.bienetre >= 3, `refus social : bien-être moyen ${rf.moy.bienetre.toFixed(1)} ≤ frugal ${f.moy.bienetre.toFixed(1)} − 3`);
+    ch(f.moy.moral - rf.moy.moral >= 2, `refus social : moral moyen ${rf.moy.moral.toFixed(1)} ≤ frugal ${f.moy.moral.toFixed(1)} − 2`);
+    ch(Math.abs(rf.pct - f.pct) <= 0.5, `refus social : écart d'économies ${Math.abs(rf.pct - f.pct).toFixed(2)} pt ≤ 0,5 (refus ${rf.pct.toFixed(1)} %, frugal ${f.pct.toFixed(1)} %)`); }
   for (const qui of ['maître', 'autosuffisant']) {
     const rr = R(qui)[i], prod = rr.produitKg || 0, gas = rr.gaspilleKg || 0, ratio = prod > 1 ? gas / prod : 0;
     console.log(`   GASPILLAGE ${qui} graine ${graines[i]} : ${gas.toFixed(0)} kg / ${prod.toFixed(0)} kg produits (${(ratio * 100).toFixed(0)} %)`);

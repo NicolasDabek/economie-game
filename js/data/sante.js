@@ -42,3 +42,12 @@ export const VACANCES = {
 // lavage d'un vêtement à la main : 8 l d'eau tiède (≈0,25 kWh pour la chauffer), 9 min, 3 centimes de savon
 export const LAVAGE_MAIN = { litres: 8, kwh: 0.25, temps: 0.15, volonte: 1, savon: 0.03 };
 
+
+// v2.1 (passe GD 12) : l'impasse sociale répétée isole. Refuser une fois (barbecue, rentrée, invités « prenez un pull ») ne coûte
+// que l'effet immédiat ; dès le 2e refus sur 12 mois glissants, 8 semaines d'isolement : la vie sociale ne compte plus qu'à moitié
+// dans le moral et le bien-être baisse de 0,35/j par refus antérieur (au plus 1,05/j). Accepter une option sociale, même frugale,
+// remet le compteur à zéro. Ordres de grandeur : Fondation de France, « Les solitudes en France » (édition 2024 : 21 % des Français
+// se sentent régulièrement seuls, solitude liée à un moindre bien-être déclaré) ; Holt-Lunstad et al., 2015 (méta-analyse :
+// l'isolement social pèse sur la santé autant que les grands facteurs de risque). Valeurs de jeu calibrées par sim-test.
+export const ISOLEMENT = { fenetre: 365, duree: 56, beJour: 0.35, beMax: 1.05, social: 0.5,
+  refus: ['barbecue:decliner', 'rentree:rien', 'invites:pull'], accepte: ['barbecue:maison', 'barbecue:achat', 'rentree:occasion', 'rentree:neuf', 'invites:preter', 'invites:chauffer'] };

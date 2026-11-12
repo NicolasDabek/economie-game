@@ -8,7 +8,7 @@ import { suivreROI } from './roi.js';
 import { financeJour, gainFinancier, valeurLiquidation, valeurs } from './finance.js';
 import { appliquerIndices, debutJourCampagne, mensualiser, choixCampagne, titreCampagne, resoudreCampagne, resteAVivre, leviersWatts } from './annee.js';
 import { anneeDuJour, dateDuJour } from './meteo.js';
-import { nouvelEtatMoral, moralJour, santeJour, coutRechute, paliersJour } from './moral.js';
+import { nouvelEtatMoral, moralJour, santeJour, coutRechute, paliersJour, choixSocial } from './moral.js';
 import { palierMoral, palierBE, EFFETS_PALIERS as EP } from './paliers.js';
 import { makeRng } from './rng.js';
 import { surAchat, poeleJour, poeleConsommer, autonomieSoir, actionAutonomie, etatAutonomie, valeurStock, tauxAutosuffisance } from './autonomie.js';
@@ -377,14 +377,22 @@ export function titreDilemme(s) {
 const refus = (s) => (s.sys.refusTentations >= 2 ? 'La règle des 48 h est devenue un réflexe : aucun effort.' : 'Un peu frustrant (−2 bien-être).');
 const EST_CAMPAGNE = (id) => !!id && (id.startsWith('appareil-') || ['regul', 'assurance', 'renego', 'rentree', 'impots', 'canicule', 'bilan', 'vacances'].includes(id));
 const OUTILS = { tempsLibre: (s) => tempsLibre(s) };
+// v2.1 (passe GD 12) : options de dilemme qui prennent du temps libre. Un seul endroit vérifie et débite :
+// l'option est impossible si le temps libre du jour (0 un jour de chantier) ne suffit pas, et resoudreDilemme passe par prendreTemps.
+export const COUT_TEMPS_DILEMME = { 'assurance:comparer': 1, 'renego:negocier': 0.5, 'rentree:occasion': 2, 'barbecue:maison': 1 };
+const coutTempsDilemme = (id, choix) => COUT_TEMPS_DILEMME[`${id}:${choix}`] || 0;
 export function choixDilemme(s) {
+  return choixBruts(s).map(o => { const h = s.dilemme ? coutTempsDilemme(s.dilemme, o.id) : 0;
+    return h ? { ...o, temps: h, possible: o.possible !== false && tempsLibre(s) + 1e-9 >= h } : o; });
+}
+function choixBruts(s) {
   if (s.dilemme?.startsWith('chap-')) return [{ id: 'ok', texte: 'Continuer', effet: 'Ta maison, tes équipements, tes habitudes et ton argent te suivent.' }];
   if (EST_CAMPAGNE(s.dilemme)) return choixCampagne(s, s.dilemme, OUTILS);
   switch (s.dilemme) {
     case 'invites': return [
       { id: 'chauffer', texte: 'Chauffer le salon à 21 °C pendant deux jours', effet: 'Coûte du gaz, invités ravis.' },
       { id: 'preter', texte: 'Leur prêter plaid et bouillotte', effet: 'Gratuit et chaleureux. Il faut avoir un plaid ou une bouillotte.', possible: s.possede.bouillotte || s.vetements.plaid.possede },
-      { id: 'pull', texte: '« Prenez un pull, on vit à 18 °C ici »', effet: 'Gratuit mais tendu (−10 moral, bien-être en baisse).' },
+      { id: 'pull', texte: '« Prenez un pull, on vit à 18 °C ici »', effet: 'Gratuit mais tendu (−10 moral, bien-être en baisse). Refus social : au 2e en un an, 8 semaines d\'isolement.' },
     ];
     case 'promo': return [
       { id: 'acheter', texte: 'Acheter la doudoune premier prix à 12,50 €', effet: 'Bonne affaire… si tu en avais besoin. Elle s\'usera vite.', possible: !s.vetements.doudoune.possede && s.argent >= 12.5 },
@@ -408,7 +416,7 @@ export function choixDilemme(s) {
     case 'barbecue': return [
       { id: 'maison', texte: 'Apporter une salade et un pain maison (5 €, 1 h)', effet: '+6 bien-être, les voisins adorent.', possible: tempsLibre(s) >= 1 },
       { id: 'achat', texte: 'Acheter chips et boissons (15 €)', effet: '+6 bien-être.' },
-      { id: 'decliner', texte: 'Décliner pour économiser', effet: '−4 bien-être.' },
+      { id: 'decliner', texte: 'Décliner pour économiser', effet: '−4 bien-être. Refus social : au 2e en un an, 8 semaines d\'isolement.' },
     ];
     case 'hausse': return [{ id: 'ok', texte: 'Compris', effet: 'Chaque kWh de gaz coûte désormais 12 % de plus.' }];
     case 'panne': return [
@@ -429,6 +437,8 @@ export function resoudreDilemme(s, choix) {
   if (!id) return;
   const opt = choixDilemme(s).find(o => o.id === choix);
   if (!opt || opt.possible === false) return false;
+  if (opt.temps && !prendreTemps(s, opt.temps)) return false;
+  choixSocial(s, `${id}:${choix}`, (t, ty) => msg(s, t, ty));
   if (EST_CAMPAGNE(id)) {
     resoudreCampagne(s, id, choix, { payer: (s2, m, p) => payer(s2, m, p), msg: (t, ty) => msg(s, t, ty), debloquer: (x) => debloquer(s, x) });
     if (id === 'rentree') s.base.plaisirs = (s.base.plaisirs || 0) + 180;
@@ -454,7 +464,7 @@ export function resoudreDilemme(s, choix) {
     if (choix === 'passer') debloquer(s, 'prixKilo');
   }
   if (id === 'barbecue') {
-    if (choix === 'maison') { payer(s, 5, 'plaisirs'); s.tempsUtilise += 1; debloquer(s, 'partager'); debloquer(s, 'faireSoiMeme'); s.bienetre = Math.min(100, s.bienetre + 6); }
+    if (choix === 'maison') { payer(s, 5, 'plaisirs'); debloquer(s, 'partager'); debloquer(s, 'faireSoiMeme'); s.bienetre = Math.min(100, s.bienetre + 6); }
     if (choix === 'achat') { payer(s, 15, 'plaisirs'); s.bienetre = Math.min(100, s.bienetre + 6); }
     if (choix === 'decliner') s.bienetre = Math.max(0, s.bienetre - 4);
   }
